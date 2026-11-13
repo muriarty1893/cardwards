@@ -81,10 +81,14 @@ static func validate(s: GameState, a: Action) -> String:
 		Action.Type.BEGIN_ATTACKS:
 			if s.phase != GameState.Phase.MAIN:
 				return "Can't do that now"
+		Action.Type.ATTACK:
+			if s.phase != GameState.Phase.ATTACK:
+				return "Can't do that now"
+			if not a.lane in attackers(s):
+				return "Can't attack"
 		Action.Type.END_TURN:
-			pass
-		_:
-			return "Can't do that now"
+			if s.phase != GameState.Phase.ATTACK:
+				return "Can't do that now"
 	return ""
 
 
@@ -197,9 +201,44 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 		Action.Type.BEGIN_ATTACKS:
 			s.phase = GameState.Phase.ATTACK
 			ev.append(GameEvent.make(&"phase_changed", {"phase": int(s.phase)}))
+		Action.Type.ATTACK:
+			_attack(s, a, ev)
 		Action.Type.END_TURN:
 			_end_turn(s, ev)
 	return ev
+
+
+static func attackers(s: GameState) -> Array[int]:
+	var out: Array[int] = []
+	if s.turn == 1 or s.phase == GameState.Phase.OVER:
+		return out
+	for l: int in GameState.LANES:
+		var cr: GameState.CreatureState = s.players[s.active].lanes[l].creature
+		if cr and not cr.acted and not cr.is_frozen():
+			out.append(l)
+	return out
+
+
+static func has_defender(s: GameState, lane: int) -> bool:
+	return s.players[s.opponent(s.active)].lanes[lane].creature != null
+
+
+static func _attack(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
+	var p: int = a.player
+	var foe: int = s.opponent(p)
+	var cr: GameState.CreatureState = s.players[p].lanes[a.lane].creature
+	cr.acted = true
+	var atk: int = effective_attack(s, p, a.lane)
+	if has_defender(s, a.lane):
+		ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "hit": int(a.hit), "target": "creature"}))
+		var d: int = Combat.attack_damage(atk, a.hit, a.blocked, has_ice_wall(s, foe, a.lane))
+		deal_creature_damage(s, foe, a.lane, d, ev, a.hit, a.blocked)
+		if d > 0 and cr.card.trigger == &"on_deal_damage":
+			Abilities.run(s, p, a.lane, cr.card, [], ev)
+	else:
+		ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "hit": int(a.hit), "target": "hero"}))
+		damage_hero(s, foe, Combat.hero_damage(atk, a.hit), ev)
+	resolve_deaths(s, ev)
 
 
 static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
@@ -235,9 +274,14 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 	resolve_deaths(s, ev)
 	if s.phase == GameState.Phase.OVER:
 		return
-	for lane: GameState.LaneState in s.players[p].lanes:
-		if lane.creature:
-			lane.creature.acted = false
+	for l: int in GameState.LANES:
+		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+		if cr == null:
+			continue
+		cr.acted = false
+		if cr.freeze_turn >= 0 and cr.freeze_turn < s.turn:
+			cr.freeze_turn = -1
+			ev.append(GameEvent.make(&"unfrozen", {"player": p, "lane": l}))
 	s.active = s.opponent(p)
 	s.turn += 1
 	ev.append_array(start_turn(s))
