@@ -89,3 +89,22 @@ func test_click_boop() -> bool:
 	assert_eq(s.players[1].hero_hp, 23, "magmaw boop hit the hero")
 	m.queue_free()
 	return true
+
+
+func test_pause_blocks_play() -> bool:
+	var m: MatchController = await _load_match()
+	var s: GameState = m.state
+	s.players[0].hand.clear()
+	s.players[0].hand.append(CardDB.card(&"cinderpup"))
+	m.refresh_ui()
+	m.hud.pause_button.pressed.emit()
+	assert_true(m.hud.is_paused(), "pause menu open")
+	assert_true(not m.hand.enabled and not m.input.enabled, "hand and board input off while paused")
+	m.input.on_drag_started(0)
+	m.input.on_dropped(0, _island_screen(m, 0, 2))
+	assert_eq(s.players[0].hand.size(), 1, "card not played while paused")
+	assert_eq(s.players[0].lanes[2].creature, null, "lane still empty")
+	m.hud.close_pause()
+	assert_true(m.hand.enabled and m.input.enabled, "input back after resume")
+	m.queue_free()
+	return true

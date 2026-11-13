@@ -105,6 +105,8 @@ func _build_ui() -> void:
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	timing_bar = TimingBar.new()
 	root.add_child(timing_bar)
+	hud.pause_overlay.reparent(root)
+	hud.pause_changed.connect(func(_open: bool) -> void: refresh_ui())
 	results = Results.new()
 	root.add_child(results)
 	results.rematch.connect(func() -> void: get_tree().reload_current_scene())
@@ -138,10 +140,11 @@ func refresh_ui() -> void:
 					break
 		playable.append(ok and state.active == HUMAN)
 	hand.show_hand(cards, playable)
-	var can_act: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and not busy
+	var paused: bool = hud.is_paused()
+	var can_act: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and not busy and not paused
 	input.enabled = can_act
 	hand.enabled = can_act
-	hud.set_input_enabled(can_act)
+	hud.set_input_enabled(can_act or paused)
 
 
 ## Validate, apply, and play the resulting events with input locked.

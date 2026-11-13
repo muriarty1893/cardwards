@@ -5,6 +5,7 @@ extends Control
 
 signal end_turn_pressed
 signal menu_requested
+signal pause_changed(open: bool)
 
 const TRAY_H := 184.0
 const TRAY_MARGIN := 60.0
@@ -19,7 +20,8 @@ var _refs: Dictionary = {}
 var _orb_label: Label
 var _deck_label: Label
 var _discard_label: Label
-var _pause: Control
+## Full-screen pause menu. The match moves it above the hand so it takes the mouse first.
+var pause_overlay: Control
 
 
 func _init() -> void:
@@ -53,6 +55,20 @@ func refresh(s: GameState, human: int) -> void:
 	var mine: bool = s.active == human and s.phase != GameState.Phase.OVER
 	_you.modulate = Color.WHITE if mine else Color(0.82, 0.82, 0.82)
 	_rival.modulate = Color.WHITE if not mine else Color(0.82, 0.82, 0.82)
+
+
+func is_paused() -> bool:
+	return pause_overlay.visible
+
+
+func close_pause() -> void:
+	pause_overlay.visible = false
+	pause_changed.emit(false)
+
+
+func _open_pause() -> void:
+	pause_overlay.visible = true
+	pause_changed.emit(true)
 
 
 func set_input_enabled(on: bool) -> void:
@@ -253,21 +269,21 @@ func _build_pause() -> void:
 	pause_button.offset_top = -70
 	pause_button.offset_bottom = -14
 	add_child(pause_button)
-	_pause = Control.new()
-	_pause.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_pause.mouse_filter = Control.MOUSE_FILTER_STOP
-	_pause.visible = false
-	_pause.z_index = 50
+	pause_overlay = Control.new()
+	pause_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause_overlay.visible = false
+	pause_overlay.z_index = 50
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.45)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_pause.add_child(dim)
+	pause_overlay.add_child(dim)
 	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", UiStyle.panel(Color(1, 1, 1, 0.97), 22))
 	box.set_anchors_preset(Control.PRESET_CENTER)
 	box.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	box.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_pause.add_child(box)
+	pause_overlay.add_child(box)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 14)
 	box.add_child(vb)
@@ -276,10 +292,10 @@ func _build_pause() -> void:
 	title.custom_minimum_size = Vector2(280, 0)
 	vb.add_child(title)
 	var resume := MenuButtons.big("RESUME", Palette.GOLD)
-	resume.pressed.connect(func() -> void: _pause.visible = false)
+	resume.pressed.connect(close_pause)
 	vb.add_child(resume)
 	var menu := MenuButtons.big("QUIT TO MENU", Color.WHITE)
 	menu.pressed.connect(func() -> void: menu_requested.emit())
 	vb.add_child(menu)
-	add_child(_pause)
-	pause_button.pressed.connect(func() -> void: _pause.visible = true)
+	add_child(pause_overlay)
+	pause_button.pressed.connect(_open_pause)
