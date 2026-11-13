@@ -4,6 +4,10 @@ extends TestCase
 
 func test_full_match_through_view() -> bool:
 	var tree := Engine.get_main_loop() as SceneTree
+	var session: Node = tree.root.get_node("Session")
+	session.set("player_deck", &"blaze_rush")
+	session.set("ai_deck", &"deep_freeze")
+	session.set("seed", 1)
 	var m := (load("res://view/match.tscn") as PackedScene).instantiate() as MatchController
 	tree.root.add_child(m)
 	await tree.process_frame

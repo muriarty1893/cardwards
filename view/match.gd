@@ -15,6 +15,7 @@ var toast: Toast
 var input: InputController
 var player: EventPlayer
 var timing_bar: TimingBar
+var results: Results
 var ai: AIPlayer
 var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
 const AI_PAUSE := 0.6
@@ -26,8 +27,10 @@ var building_views: Array[Array] = [[null, null, null, null], [null, null, null,
 
 
 func _ready() -> void:
-	state = Rules.setup(CardDB.deck(&"blaze_rush"), CardDB.deck(&"deep_freeze"), 1)
-	ai = AIPlayer.new(AI, difficulty, 1 + 7919)
+	var seed: int = Session.match_seed()
+	difficulty = Session.difficulty
+	state = Rules.setup(CardDB.deck(Session.player_deck), CardDB.deck(Session.resolve_ai_deck(seed)), seed)
+	ai = AIPlayer.new(AI, difficulty, seed + 7919)
 	var opening: Array[GameEvent] = Rules.start_turn(state)
 	if "--demo-board" in OS.get_cmdline_user_args():
 		var ais: Array[AIPlayer] = [AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 11), AIPlayer.new(1, AIPlayer.Difficulty.MEDIUM, 12)]
@@ -46,6 +49,9 @@ func _ready() -> void:
 	_build_ui()
 	sync_all()
 	refresh_ui()
+	if "--demo-results" in OS.get_cmdline_user_args():
+		results.show_result(true, 9)
+		return
 	if "--auto-attack" in OS.get_cmdline_user_args():
 		_demo_attack()
 		return
@@ -99,6 +105,10 @@ func _build_ui() -> void:
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	timing_bar = TimingBar.new()
 	root.add_child(timing_bar)
+	results = Results.new()
+	root.add_child(results)
+	results.rematch.connect(func() -> void: get_tree().reload_current_scene())
+	results.menu.connect(func() -> void: get_tree().change_scene_to_file("res://menus/main_menu.tscn"))
 	input = InputController.new()
 	input.match_ctl = self
 	add_child(input)
@@ -141,6 +151,9 @@ func perform(a: Action) -> void:
 		return
 	var events: Array[GameEvent] = Rules.apply(state, a)
 	await player.play(events)
+	if state.phase == GameState.Phase.OVER and not results.visible:
+		await get_tree().create_timer(0.6 / pace).timeout
+		results.show_result(state.winner == HUMAN, state.turn)
 
 
 func _on_action_requested(a: Action) -> void:
