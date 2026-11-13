@@ -60,7 +60,7 @@ sound design beyond placeholder SFX, mobile builds.
 
 - Each player uses a pre-made deck: 30 cards plus 4 lands.
 - Lands are placed in lanes 1–4 in the order the deck defines.
-- Hero health: 25. Shuffle the deck with the match seed and draw 5 cards.
+- Hero health: 25 (also the maximum; healing never raises it above 25). Shuffle the deck with the match seed and draw 5 cards.
 - A coin flip (from the seed) decides who goes first.
 
 ### 4.2 Turn structure
