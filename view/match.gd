@@ -13,6 +13,7 @@ var hud: Hud
 var hand: Hand
 var toast: Toast
 var input: InputController
+var player: EventPlayer
 var busy: bool = false
 var creature_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
 var building_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
@@ -40,6 +41,24 @@ func _ready() -> void:
 	_build_ui()
 	sync_all()
 	refresh_ui()
+	if "--auto-attack" in OS.get_cmdline_user_args():
+		_demo_attack()
+
+
+func _demo_attack() -> void:
+	state.turn = 3
+	_demo_put(0, 1, &"flarebeak")
+	_demo_put(1, 1, &"glacier_tortoise")
+	sync_all()
+	busy = true
+	await perform(Action.begin_attacks(HUMAN))
+	await perform(Action.attack(HUMAN, 1, Action.Hit.CRIT, false))
+
+
+func _demo_put(p: int, l: int, id: StringName) -> void:
+	var c := GameState.CreatureState.new()
+	c.card = CardDB.card(id)
+	state.players[p].lanes[l].creature = c
 
 
 func _build_ui() -> void:
@@ -65,6 +84,9 @@ func _build_ui() -> void:
 	add_child(input)
 	hand.card_drag_started.connect(input.on_drag_started)
 	hand.card_dropped.connect(input.on_dropped)
+	player = EventPlayer.new()
+	player.m = self
+	add_child(player)
 	input.action_requested.connect(_on_action_requested)
 	hud.end_turn_pressed.connect(_on_end_turn_pressed)
 
@@ -91,27 +113,60 @@ func refresh_ui() -> void:
 	hud.set_input_enabled(can_act)
 
 
-## Temporary until event playback (Task 12): apply and resync.
+## Validate, apply, and play the resulting events with input locked.
+func perform(a: Action) -> void:
+	var err: String = Rules.validate(state, a)
+	if err != "":
+		toast.show_message(err)
+		return
+	var events: Array[GameEvent] = Rules.apply(state, a)
+	await player.play(events)
+
+
 func _on_action_requested(a: Action) -> void:
-	Rules.apply(state, a)
-	sync_all()
+	busy = true
+	refresh_ui()
+	await perform(a)
+	busy = false
 	refresh_ui()
 
 
 ## Temporary until the timing bar (Task 13): attack with NORMAL hits, then let the AI play.
 func _on_end_turn_pressed() -> void:
 	input.cancel()
-	Rules.apply(state, Action.begin_attacks(HUMAN))
-	for lane: int in Rules.attackers(state):
-		Rules.apply(state, Action.attack(HUMAN, lane, Action.Hit.NORMAL, false))
-	if state.phase != GameState.Phase.OVER:
-		Rules.apply(state, Action.end_turn(HUMAN))
-	if state.phase != GameState.Phase.OVER and state.active == AI:
-		var ai := AIPlayer.new(AI, AIPlayer.Difficulty.MEDIUM, state.turn)
-		var ev: Array[GameEvent] = []
-		AIRunner.play_turn(state, ai, AIPlayer.new(HUMAN, AIPlayer.Difficulty.EASY, 0), ev)
-	sync_all()
+	busy = true
 	refresh_ui()
+	await perform(Action.begin_attacks(HUMAN))
+	for lane: int in Rules.attackers(state):
+		await perform(Action.attack(HUMAN, lane, Action.Hit.NORMAL, false))
+	if state.phase != GameState.Phase.OVER:
+		await perform(Action.end_turn(HUMAN))
+	var ai := AIPlayer.new(AI, AIPlayer.Difficulty.MEDIUM, state.turn)
+	while state.phase == GameState.Phase.MAIN and state.active == AI:
+		await perform(ai.choose_main_action(state))
+	for lane: int in Rules.attackers(state):
+		if state.phase == GameState.Phase.OVER:
+			break
+		await perform(Action.attack(AI, lane, ai.roll_hit(), false))
+	if state.phase == GameState.Phase.ATTACK and state.active == AI:
+		await perform(Action.end_turn(AI))
+	busy = false
+	refresh_ui()
+
+
+## If playback and state ever disagree, rebuild from the state.
+func verify_views() -> void:
+	for p: int in 2:
+		for l: int in 4:
+			var lane: GameState.LaneState = state.players[p].lanes[l]
+			var cv: CreatureView = creature_views[p][l]
+			var bv: BuildingView = building_views[p][l]
+			var ok_c: bool = (lane.creature == null and cv == null) or (lane.creature != null and cv != null and cv.card == lane.creature.card)
+			var ok_b: bool = (lane.building == null and bv == null) or (lane.building != null and bv != null and bv.card == lane.building)
+			if not ok_c or not ok_b:
+				push_warning("View out of sync at p%d lane %d; resyncing" % [p, l])
+				sync_all()
+				return
 
 
 ## Rebuild every piece from the state. Used at match start and as a fallback.
@@ -126,13 +181,13 @@ func sync_all() -> void:
 				building_views[p][l] = null
 			var lane: GameState.LaneState = state.players[p].lanes[l]
 			if lane.building:
-				_place_building(p, l, lane.building)
+				place_building(p, l, lane.building)
 			if lane.creature:
-				_place_creature(p, l, lane.creature.card)
+				place_creature(p, l, lane.creature.card)
 	refresh_pieces()
 
 
-func _place_creature(p: int, l: int, c: CardData) -> CreatureView:
+func place_creature(p: int, l: int, c: CardData) -> CreatureView:
 	var v := CreatureView.create(c)
 	add_child(v)
 	v.position = board.anchor(p, l)
@@ -141,7 +196,7 @@ func _place_creature(p: int, l: int, c: CardData) -> CreatureView:
 	return v
 
 
-func _place_building(p: int, l: int, c: CardData) -> BuildingView:
+func place_building(p: int, l: int, c: CardData) -> BuildingView:
 	var v := BuildingView.create(c)
 	add_child(v)
 	var off: Vector3 = BuildingView.OFFSET if p == HUMAN else -BuildingView.OFFSET
