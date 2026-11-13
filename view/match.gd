@@ -14,6 +14,12 @@ var hand: Hand
 var toast: Toast
 var input: InputController
 var player: EventPlayer
+var timing_bar: TimingBar
+var ai: AIPlayer
+var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
+const AI_PAUSE := 0.6
+## Divides AI pauses (tests speed this up).
+var pace: float = 1.0
 var busy: bool = false
 var creature_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
 var building_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
@@ -21,9 +27,8 @@ var building_views: Array[Array] = [[null, null, null, null], [null, null, null,
 
 func _ready() -> void:
 	state = Rules.setup(CardDB.deck(&"blaze_rush"), CardDB.deck(&"deep_freeze"), 1)
-	state.first_player = HUMAN
-	state.active = HUMAN
-	Rules.start_turn(state)
+	ai = AIPlayer.new(AI, difficulty, 1 + 7919)
+	var opening: Array[GameEvent] = Rules.start_turn(state)
 	if "--demo-board" in OS.get_cmdline_user_args():
 		var ais: Array[AIPlayer] = [AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 11), AIPlayer.new(1, AIPlayer.Difficulty.MEDIUM, 12)]
 		AIRunner.play_match(state, ais, 6)
@@ -43,6 +48,19 @@ func _ready() -> void:
 	refresh_ui()
 	if "--auto-attack" in OS.get_cmdline_user_args():
 		_demo_attack()
+		return
+	_begin(opening)
+
+
+func _begin(opening: Array[GameEvent]) -> void:
+	busy = true
+	refresh_ui()
+	await get_tree().create_timer(0.4).timeout
+	await player.play(opening)
+	if state.active == AI:
+		await _ai_turn()
+	busy = false
+	refresh_ui()
 
 
 func _demo_attack() -> void:
@@ -79,6 +97,8 @@ func _build_ui() -> void:
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	toast.offset_top = 80
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	timing_bar = TimingBar.new()
+	root.add_child(timing_bar)
 	input = InputController.new()
 	input.match_ctl = self
 	add_child(input)
@@ -131,27 +151,54 @@ func _on_action_requested(a: Action) -> void:
 	refresh_ui()
 
 
-## Temporary until the timing bar (Task 13): attack with NORMAL hits, then let the AI play.
 func _on_end_turn_pressed() -> void:
+	if busy or state.active != HUMAN:
+		return
 	input.cancel()
 	busy = true
 	refresh_ui()
 	await perform(Action.begin_attacks(HUMAN))
 	for lane: int in Rules.attackers(state):
-		await perform(Action.attack(HUMAN, lane, Action.Hit.NORMAL, false))
-	if state.phase != GameState.Phase.OVER:
-		await perform(Action.end_turn(HUMAN))
-	var ai := AIPlayer.new(AI, AIPlayer.Difficulty.MEDIUM, state.turn)
-	while state.phase == GameState.Phase.MAIN and state.active == AI:
-		await perform(ai.choose_main_action(state))
-	for lane: int in Rules.attackers(state):
 		if state.phase == GameState.Phase.OVER:
 			break
-		await perform(Action.attack(AI, lane, ai.roll_hit(), false))
-	if state.phase == GameState.Phase.ATTACK and state.active == AI:
-		await perform(Action.end_turn(AI))
+		var hit: Action.Hit = await timing_bar.run_attack()
+		var blocked: bool = false
+		if Rules.has_defender(state, lane):
+			blocked = ai.roll_block()
+			await timing_bar.simulate_block(blocked)
+		await perform(Action.attack(HUMAN, lane, hit, blocked))
+	if state.phase != GameState.Phase.OVER:
+		await perform(Action.end_turn(HUMAN))
+	if state.phase != GameState.Phase.OVER and state.active == AI:
+		await _ai_turn()
 	busy = false
 	refresh_ui()
+
+
+## The AI's whole turn, shown step by step. Ends after the AI's END_TURN (human's turn started).
+func _ai_turn() -> void:
+	for i: int in AIRunner.MAX_MAIN_ACTIONS:
+		if state.phase != GameState.Phase.MAIN:
+			break
+		await get_tree().create_timer(AI_PAUSE / pace).timeout
+		var a: Action = ai.choose_main_action(state)
+		await perform(a)
+		if a.type == Action.Type.BEGIN_ATTACKS:
+			break
+	if state.phase == GameState.Phase.MAIN:
+		await perform(Action.begin_attacks(AI))
+	for lane: int in Rules.attackers(state):
+		if state.phase == GameState.Phase.OVER:
+			return
+		var hit: Action.Hit = ai.roll_hit()
+		await timing_bar.simulate_attack(hit)
+		var blocked: bool = false
+		if Rules.has_defender(state, lane):
+			blocked = await timing_bar.run_block()
+		await perform(Action.attack(AI, lane, hit, blocked))
+	if state.phase == GameState.Phase.ATTACK:
+		await get_tree().create_timer(AI_PAUSE * 0.5 / pace).timeout
+		await perform(Action.end_turn(AI))
 
 
 ## If playback and state ever disagree, rebuild from the state.

@@ -7,7 +7,14 @@ func _load_match() -> MatchController:
 	var m := (load("res://view/match.tscn") as PackedScene).instantiate() as MatchController
 	tree.root.add_child(m)
 	await tree.process_frame
-	await tree.process_frame
+	m.player.speed = 8.0
+	m.pace = 8.0
+	# Wait out the opening (and the AI's first turn if it won the coin flip).
+	var waited: int = 0
+	while (m.busy or m.state.active != MatchController.HUMAN) and waited < 3000:
+		await tree.process_frame
+		waited += 1
+	assert_true(not m.busy and m.state.active == MatchController.HUMAN, "human's turn reached")
 	return m
 
 
