@@ -1,5 +1,4 @@
 .superpowers/
 .playwright-mcp/
 .godot/
-*.import
 export/
