@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="DeckData" format=3]
+
+[ext_resource type="Script" path="res://core/deck_data.gd" id="1_deck"]
+[ext_resource type="Resource" path="res://data/cards/snowmite.tres" id="2_snowmite"]
+[ext_resource type="Resource" path="res://data/cards/iceling.tres" id="3_iceling"]
+[ext_resource type="Resource" path="res://data/cards/frostfang.tres" id="4_frostfang"]
+[ext_resource type="Resource" path="res://data/cards/glacier_tortoise.tres" id="5_glacier_tortoise"]
+[ext_resource type="Resource" path="res://data/cards/rimewing.tres" id="6_rimewing"]
+[ext_resource type="Resource" path="res://data/cards/blizzard_titan.tres" id="7_blizzard_titan"]
+[ext_resource type="Resource" path="res://data/cards/ice_wall.tres" id="8_ice_wall"]
+[ext_resource type="Resource" path="res://data/cards/frost_spire.tres" id="9_frost_spire"]
+[ext_resource type="Resource" path="res://data/cards/cold_snap.tres" id="10_cold_snap"]
+[ext_resource type="Resource" path="res://data/cards/avalanche.tres" id="11_avalanche"]
+[ext_resource type="Resource" path="res://data/cards/cinderpup.tres" id="12_cinderpup"]
+[ext_resource type="Resource" path="res://data/cards/ashmite.tres" id="13_ashmite"]
+[ext_resource type="Resource" path="res://data/cards/flarebeak.tres" id="14_flarebeak"]
+[ext_resource type="Resource" path="res://data/cards/kiln_tower.tres" id="15_kiln_tower"]
+[ext_resource type="Resource" path="res://data/cards/fireball.tres" id="16_fireball"]
+
+[resource]
+script = ExtResource("1_deck")
+id = &"deep_freeze"
+display_name = "Deep Freeze"
+lands = Array[int]([3, 3, 1, 3])
+cards = Array[Resource]([ExtResource("2_snowmite"), ExtResource("2_snowmite"), ExtResource("3_iceling"), ExtResource("3_iceling"), ExtResource("4_frostfang"), ExtResource("4_frostfang"), ExtResource("5_glacier_tortoise"), ExtResource("5_glacier_tortoise"), ExtResource("6_rimewing"), ExtResource("6_rimewing"), ExtResource("7_blizzard_titan"), ExtResource("7_blizzard_titan"), ExtResource("8_ice_wall"), ExtResource("8_ice_wall"), ExtResource("9_frost_spire"), ExtResource("9_frost_spire"), ExtResource("10_cold_snap"), ExtResource("10_cold_snap"), ExtResource("11_avalanche"), ExtResource("11_avalanche"), ExtResource("12_cinderpup"), ExtResource("12_cinderpup"), ExtResource("13_ashmite"), ExtResource("13_ashmite"), ExtResource("14_flarebeak"), ExtResource("14_flarebeak"), ExtResource("15_kiln_tower"), ExtResource("15_kiln_tower"), ExtResource("16_fireball"), ExtResource("16_fireball")])

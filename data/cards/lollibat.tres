@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"lollibat"
+display_name = "Lollibat"
+kind = 0
+land = 2
+level = 1
+cost = 1
+attack = 3
+health = 3
+trigger = &"on_boop"
+ability_id = &"move_self"
+target = &"own_empty_lane"
+text = "Boop: move this creature to one of your empty lanes."

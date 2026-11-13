@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"glimmer_morel"
+display_name = "Glimmer Morel"
+kind = 0
+land = 0
+level = 2
+cost = 1
+attack = 3
+health = 6
+trigger = &"on_boop"
+ability_id = &"heal_all_own_1"
+target = &"none"
+text = "Boop: heal all your creatures 1."

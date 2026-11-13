@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="DeckData" format=3]
+
+[ext_resource type="Script" path="res://core/deck_data.gd" id="1_deck"]
+[ext_resource type="Resource" path="res://data/cards/cinderpup.tres" id="2_cinderpup"]
+[ext_resource type="Resource" path="res://data/cards/ashmite.tres" id="3_ashmite"]
+[ext_resource type="Resource" path="res://data/cards/flarebeak.tres" id="4_flarebeak"]
+[ext_resource type="Resource" path="res://data/cards/magmaw.tres" id="5_magmaw"]
+[ext_resource type="Resource" path="res://data/cards/blazehorn.tres" id="6_blazehorn"]
+[ext_resource type="Resource" path="res://data/cards/inferno_drake.tres" id="7_inferno_drake"]
+[ext_resource type="Resource" path="res://data/cards/kiln_tower.tres" id="8_kiln_tower"]
+[ext_resource type="Resource" path="res://data/cards/smokestack.tres" id="9_smokestack"]
+[ext_resource type="Resource" path="res://data/cards/fireball.tres" id="10_fireball"]
+[ext_resource type="Resource" path="res://data/cards/ember_rain.tres" id="11_ember_rain"]
+[ext_resource type="Resource" path="res://data/cards/gumdrop.tres" id="12_gumdrop"]
+[ext_resource type="Resource" path="res://data/cards/taffy_snail.tres" id="13_taffy_snail"]
+[ext_resource type="Resource" path="res://data/cards/lollibat.tres" id="14_lollibat"]
+[ext_resource type="Resource" path="res://data/cards/sugar_shack.tres" id="15_sugar_shack"]
+[ext_resource type="Resource" path="res://data/cards/sugar_rush.tres" id="16_sugar_rush"]
+
+[resource]
+script = ExtResource("1_deck")
+id = &"blaze_rush"
+display_name = "Blaze Rush"
+lands = Array[int]([1, 1, 2, 1])
+cards = Array[Resource]([ExtResource("2_cinderpup"), ExtResource("2_cinderpup"), ExtResource("3_ashmite"), ExtResource("3_ashmite"), ExtResource("4_flarebeak"), ExtResource("4_flarebeak"), ExtResource("5_magmaw"), ExtResource("5_magmaw"), ExtResource("6_blazehorn"), ExtResource("6_blazehorn"), ExtResource("7_inferno_drake"), ExtResource("7_inferno_drake"), ExtResource("8_kiln_tower"), ExtResource("8_kiln_tower"), ExtResource("9_smokestack"), ExtResource("9_smokestack"), ExtResource("10_fireball"), ExtResource("10_fireball"), ExtResource("11_ember_rain"), ExtResource("11_ember_rain"), ExtResource("12_gumdrop"), ExtResource("12_gumdrop"), ExtResource("13_taffy_snail"), ExtResource("13_taffy_snail"), ExtResource("14_lollibat"), ExtResource("14_lollibat"), ExtResource("15_sugar_shack"), ExtResource("15_sugar_shack"), ExtResource("16_sugar_rush"), ExtResource("16_sugar_rush")])

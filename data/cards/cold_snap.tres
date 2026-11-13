@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"cold_snap"
+display_name = "Cold Snap"
+kind = 2
+land = 3
+level = 0
+cost = 0
+attack = 0
+health = 0
+trigger = &"on_play"
+ability_id = &"freeze_target"
+target = &"any_creature"
+text = "Freeze a creature."

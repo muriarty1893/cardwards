@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"taffy_snail"
+display_name = "Taffy Snail"
+kind = 0
+land = 2
+level = 1
+cost = 1
+attack = 1
+health = 5
+trigger = &"on_play"
+ability_id = &"gain_magic_1"
+target = &"none"
+text = "On play: gain 1 magic."

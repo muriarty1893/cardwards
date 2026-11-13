@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"elder_shroomhulk"
+display_name = "Elder Shroomhulk"
+kind = 0
+land = 0
+level = 3
+cost = 2
+attack = 5
+health = 10
+trigger = &"on_boop"
+ability_id = &"heal_all_own_3"
+target = &"none"
+text = "Boop: heal all your creatures 3."

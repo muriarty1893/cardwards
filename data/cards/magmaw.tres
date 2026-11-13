@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"magmaw"
+display_name = "Magmaw"
+kind = 0
+land = 1
+level = 2
+cost = 1
+attack = 4
+health = 4
+trigger = &"on_boop"
+ability_id = &"dmg_enemy_hero_2"
+target = &"none"
+text = "Boop: deal 2 damage to the enemy hero."

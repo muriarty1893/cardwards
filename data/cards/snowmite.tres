@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"snowmite"
+display_name = "Snowmite"
+kind = 0
+land = 3
+level = 1
+cost = 1
+attack = 1
+health = 4
+trigger = &"on_boop"
+ability_id = &"freeze_opposing"
+target = &"none"
+text = "Boop: freeze the opposing creature."

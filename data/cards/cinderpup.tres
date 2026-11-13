@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"cinderpup"
+display_name = "Cinderpup"
+kind = 0
+land = 1
+level = 1
+cost = 1
+attack = 3
+health = 2
+trigger = &""
+ability_id = &""
+target = &"none"
+text = ""

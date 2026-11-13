@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"frostfang"
+display_name = "Frostfang"
+kind = 0
+land = 3
+level = 1
+cost = 1
+attack = 3
+health = 4
+trigger = &"on_deal_damage"
+ability_id = &"freeze_damaged"
+target = &"none"
+text = "After it damages a creature, freeze that creature."

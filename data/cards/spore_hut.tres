@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"spore_hut"
+display_name = "Spore Hut"
+kind = 1
+land = 0
+level = 0
+cost = 1
+attack = 0
+health = 0
+trigger = &"start_of_turn"
+ability_id = &"heal_lane_creature_1"
+target = &"none"
+text = "Start of your turn: heal the creature in this lane 1."

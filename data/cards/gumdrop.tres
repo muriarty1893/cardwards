@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"gumdrop"
+display_name = "Gumdrop"
+kind = 0
+land = 2
+level = 1
+cost = 1
+attack = 2
+health = 3
+trigger = &"on_boop"
+ability_id = &"draw_1"
+target = &"none"
+text = "Boop: draw a card."

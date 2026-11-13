@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"blizzard_titan"
+display_name = "Blizzard Titan"
+kind = 0
+land = 3
+level = 3
+cost = 2
+attack = 6
+health = 9
+trigger = &"on_boop"
+ability_id = &"freeze_all_enemy"
+target = &"none"
+text = "Boop: freeze all enemy creatures."

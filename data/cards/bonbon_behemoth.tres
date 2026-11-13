@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"bonbon_behemoth"
+display_name = "Bonbon Behemoth"
+kind = 0
+land = 2
+level = 3
+cost = 2
+attack = 5
+health = 8
+trigger = &"on_boop"
+ability_id = &"draw_2"
+target = &"none"
+text = "Boop: draw 2 cards."

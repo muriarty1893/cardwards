@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"swap_trick"
+display_name = "Swap Trick"
+kind = 2
+land = 2
+level = 0
+cost = 0
+attack = 0
+health = 0
+trigger = &"on_play"
+ability_id = &"swap_two"
+target = &"own_two_creatures"
+text = "Swap two of your creatures between lanes."

@@ -17,9 +17,9 @@ func _initialize() -> void:
 		if not (file.begins_with("test_") and file.ends_with(".gd")) or file == "test_case.gd":
 			continue
 		var script: Script = load("res://tests/" + file)
-		if script == null:
+		if script == null or not script.can_instantiate():
 			failed += 1
-			push_error("FAIL %s: did not load" % file)
+			push_error("FAIL %s: did not load or compile" % file)
 			continue
 		var suite: Object = script.new()
 		for m: Dictionary in script.get_script_method_list():

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"inferno_drake"
+display_name = "Inferno Drake"
+kind = 0
+land = 1
+level = 3
+cost = 2
+attack = 7
+health = 6
+trigger = &"on_boop"
+ability_id = &"dmg_all_enemy_2"
+target = &"none"
+text = "Boop: deal 2 damage to all enemy creatures."
