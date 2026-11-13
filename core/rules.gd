@@ -74,6 +74,8 @@ static func validate(s: GameState, a: Action) -> String:
 	if a.player != s.active:
 		return "Not your turn"
 	match a.type:
+		Action.Type.PLAY_CARD:
+			return _validate_play(s, a)
 		Action.Type.BEGIN_ATTACKS:
 			if s.phase != GameState.Phase.MAIN:
 				return "Can't do that now"
@@ -82,6 +84,80 @@ static func validate(s: GameState, a: Action) -> String:
 		_:
 			return "Can't do that now"
 	return ""
+
+
+static func _validate_play(s: GameState, a: Action) -> String:
+	if s.phase != GameState.Phase.MAIN:
+		return "Can't do that now"
+	var ps: GameState.PlayerState = s.players[a.player]
+	if a.hand_index < 0 or a.hand_index >= ps.hand.size():
+		return "No such card"
+	var c: CardData = ps.hand[a.hand_index]
+	if c.cost > ps.magic:
+		return "Not enough magic"
+	if c.kind == CardData.Kind.CREATURE and matching_lands(s, a.player, c.land) < c.level:
+		return "Needs %d %s lands" % [c.level, CardData.LAND_NAMES[c.land]]
+	if c.kind != CardData.Kind.SPELL:
+		if a.lane < 0 or a.lane >= GameState.LANES:
+			return "Invalid target"
+		var lane: GameState.LaneState = ps.lanes[a.lane]
+		if c.kind == CardData.Kind.CREATURE and lane.creature != null:
+			return "Lane already has a creature"
+		if c.kind == CardData.Kind.BUILDING and lane.building != null:
+			return "Lane already has a building"
+	if c.kind == CardData.Kind.SPELL:
+		return _validate_targets(s, a.player, c, -1, a.targets)
+	return ""
+
+
+## Spells need targets when played; creature boops need them when booped.
+static func _validate_targets(s: GameState, p: int, c: CardData, source_lane: int, targets: Array[Dictionary]) -> String:
+	if c.target == &"none":
+		return ""
+	var valid: Array[Dictionary] = valid_targets(s, p, c, source_lane)
+	var needed: int = 2 if c.target == &"own_two_creatures" else 1
+	if valid.size() < needed:
+		return "No valid target"
+	if targets.size() != needed:
+		return "Invalid target"
+	for t: Dictionary in targets:
+		if not t in valid:
+			return "Invalid target"
+	if needed == 2 and targets[0] == targets[1]:
+		return "Invalid target"
+	return ""
+
+
+static func matching_lands(s: GameState, p: int, land: int) -> int:
+	var n: int = 0
+	for lane: GameState.LaneState in s.players[p].lanes:
+		if lane.land == land:
+			n += 1
+	return n
+
+
+static func valid_targets(s: GameState, p: int, c: CardData, source_lane: int = -1) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	match c.target:
+		&"any_creature":
+			for q: int in 2:
+				for i: int in GameState.LANES:
+					if s.players[q].lanes[i].creature:
+						out.append({"player": q, "lane": i})
+		&"own_creature", &"own_two_creatures":
+			for i: int in GameState.LANES:
+				if s.players[p].lanes[i].creature:
+					out.append({"player": p, "lane": i})
+		&"own_empty_lane":
+			for i: int in GameState.LANES:
+				if i != source_lane and s.players[p].lanes[i].creature == null:
+					out.append({"player": p, "lane": i})
+		&"discard_creature":
+			var d: Array[CardData] = s.players[p].discard
+			for i: int in d.size():
+				if d[i].kind == CardData.Kind.CREATURE:
+					out.append({"discard": i})
+	return out
 
 
 # --- Apply -------------------------------------------------------------------
@@ -93,12 +169,41 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 		return []
 	var ev: Array[GameEvent] = []
 	match a.type:
+		Action.Type.PLAY_CARD:
+			_play(s, a, ev)
 		Action.Type.BEGIN_ATTACKS:
 			s.phase = GameState.Phase.ATTACK
 			ev.append(GameEvent.make(&"phase_changed", {"phase": int(s.phase)}))
 		Action.Type.END_TURN:
 			_end_turn(s, ev)
 	return ev
+
+
+static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
+	var p: int = a.player
+	var ps: GameState.PlayerState = s.players[p]
+	var c: CardData = ps.hand[a.hand_index]
+	ps.hand.remove_at(a.hand_index)
+	if c.cost > 0:
+		ps.magic -= c.cost
+		ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic}))
+	match c.kind:
+		CardData.Kind.CREATURE:
+			var cr := GameState.CreatureState.new()
+			cr.card = c
+			cr.played_turn = s.turn
+			ps.lanes[a.lane].creature = cr
+			ev.append(GameEvent.make(&"creature_played", {"player": p, "lane": a.lane, "card": c.id}))
+			if c.trigger == &"on_play":
+				Abilities.run(s, p, a.lane, c, a.targets, ev)
+		CardData.Kind.BUILDING:
+			ps.lanes[a.lane].building = c
+			ev.append(GameEvent.make(&"building_played", {"player": p, "lane": a.lane, "card": c.id}))
+		CardData.Kind.SPELL:
+			ev.append(GameEvent.make(&"spell_cast", {"player": p, "card": c.id}))
+			Abilities.run(s, p, -1, c, a.targets, ev)
+			ps.discard.append(c)
+	resolve_deaths(s, ev)
 
 
 static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
