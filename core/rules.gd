@@ -208,6 +208,58 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 	return ev
 
 
+## Every legal action for the active player. Used by the AI and tests.
+static func legal_actions(s: GameState) -> Array[Action]:
+	var out: Array[Action] = []
+	var p: int = s.active
+	match s.phase:
+		GameState.Phase.MAIN:
+			var hand: Array[CardData] = s.players[p].hand
+			for i: int in hand.size():
+				var c: CardData = hand[i]
+				var lanes: Array[int] = [-1]
+				if c.kind != CardData.Kind.SPELL:
+					lanes = [0, 1, 2, 3]
+				for lane: int in lanes:
+					for t: Array[Dictionary] in _target_options(s, p, c, -1):
+						var a: Action = Action.play(p, i, lane, t)
+						if validate(s, a) == "":
+							out.append(a)
+			for lane: int in GameState.LANES:
+				var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+				if cr == null or cr.card.trigger != &"on_boop":
+					continue
+				for t: Array[Dictionary] in _target_options(s, p, cr.card, lane):
+					var a: Action = Action.boop(p, lane, t)
+					if validate(s, a) == "":
+						out.append(a)
+			out.append(Action.begin_attacks(p))
+		GameState.Phase.ATTACK:
+			for lane: int in attackers(s):
+				out.append(Action.attack(p, lane, Action.Hit.NORMAL, false))
+			out.append(Action.end_turn(p))
+	return out
+
+
+static func _target_options(s: GameState, p: int, c: CardData, source_lane: int) -> Array[Array]:
+	var out: Array[Array] = []
+	if c.target == &"none":
+		var empty: Array[Dictionary] = []
+		out.append(empty)
+		return out
+	var valid: Array[Dictionary] = valid_targets(s, p, c, source_lane)
+	if c.target == &"own_two_creatures":
+		for i: int in valid.size():
+			for j: int in range(i + 1, valid.size()):
+				var pair: Array[Dictionary] = [valid[i], valid[j]]
+				out.append(pair)
+	else:
+		for t: Dictionary in valid:
+			var one: Array[Dictionary] = [t]
+			out.append(one)
+	return out
+
+
 static func attackers(s: GameState) -> Array[int]:
 	var out: Array[int] = []
 	if s.turn == 1 or s.phase == GameState.Phase.OVER:
