@@ -101,7 +101,7 @@ func _build_ui() -> void:
 	toast = Toast.new()
 	root.add_child(toast)
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	toast.offset_top = 80
+	toast.offset_top = 64
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	timing_bar = TimingBar.new()
 	root.add_child(timing_bar)
@@ -119,6 +119,7 @@ func _build_ui() -> void:
 	add_child(player)
 	input.action_requested.connect(_on_action_requested)
 	hud.end_turn_pressed.connect(_on_end_turn_pressed)
+	hud.menu_requested.connect(func() -> void: get_tree().change_scene_to_file("res://menus/main_menu.tscn"))
 
 
 ## Refresh HUD, hand and input availability from the state.
@@ -251,7 +252,7 @@ func place_creature(p: int, l: int, c: CardData) -> CreatureView:
 	var v := CreatureView.create(c)
 	add_child(v)
 	v.position = board.anchor(p, l)
-	v.rotation.y = PI * 0.82 if p == HUMAN else 0.0
+	v.rotation.y = PI * 0.62 if p == HUMAN else PI * -0.12
 	creature_views[p][l] = v
 	return v
 
@@ -261,6 +262,7 @@ func place_building(p: int, l: int, c: CardData) -> BuildingView:
 	add_child(v)
 	var off: Vector3 = BuildingView.OFFSET if p == HUMAN else -BuildingView.OFFSET
 	v.position = board.anchor(p, l) - Vector3(0, CreatureView.BASE_Y, 0) + off
+	v.rotation.y = 0.0 if p == HUMAN else PI
 	building_views[p][l] = v
 	return v
 

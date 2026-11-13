@@ -36,26 +36,26 @@ func setup(c: CardData, i: int) -> void:
 	add_child(_face)
 	var art := Panel.new()
 	art.position = Vector2(9, 10)
-	art.size = Vector2(SIZE.x - 18, 74)
+	art.size = Vector2(SIZE.x - 18, 62)
 	var asb := StyleBoxFlat.new()
 	asb.bg_color = Palette.LAND_CARD[c.land]
 	asb.set_corner_radius_all(8)
 	art.add_theme_stylebox_override("panel", asb)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_face.add_child(art)
-	var icon := UiStyle.label(ICONS.get(c.id, "?"), 40)
+	var icon := UiStyle.label(ICONS.get(c.id, "?"), 34)
 	icon.size = art.size
 	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	art.add_child(icon)
-	var name_l := UiStyle.bold(UiStyle.label(c.display_name, 13))
-	name_l.position = Vector2(4, 88)
+	var name_l := UiStyle.bold(UiStyle.label(c.display_name, 12 if c.display_name.length() > 13 else 13))
+	name_l.position = Vector2(4, 74)
 	name_l.size = Vector2(SIZE.x - 8, 20)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.clip_text = true
 	_face.add_child(name_l)
 	var kind := UiStyle.label(KIND_NAMES[c.kind].to_upper() + ("  L%d" % c.level if c.is_creature() else ""), 10, Color("#667777"))
-	kind.position = Vector2(4, 107)
+	kind.position = Vector2(4, 93)
 	kind.size = Vector2(SIZE.x - 8, 14)
 	kind.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_face.add_child(kind)
@@ -68,11 +68,13 @@ func setup(c: CardData, i: int) -> void:
 		_face.add_child(hp)
 	else:
 		var tx := UiStyle.label(c.text, 9, Palette.INK)
-		tx.position = Vector2(8, 122)
-		tx.size = Vector2(SIZE.x - 16, 40)
 		tx.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		tx.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tx.clip_text = false
+		tx.custom_minimum_size = Vector2(SIZE.x - 16, 0)
 		_face.add_child(tx)
+		tx.position = Vector2(8, 108)
+		tx.size = Vector2(SIZE.x - 16, 54)
 	var cost := Panel.new()
 	cost.position = Vector2(-6, -6)
 	cost.size = Vector2(30, 30)

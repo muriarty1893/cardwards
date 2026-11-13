@@ -2,8 +2,8 @@ class_name CameraRig
 extends Node3D
 ## Fixed match camera with a small decaying shake.
 
-const HOME := Vector3(0, 8.2, 10.5)
-const LOOK := Vector3(0, 0, -0.6)
+const HOME := Vector3(0, 9.6, 10.6)
+const LOOK := Vector3(0, 0, 0.9)
 
 var camera: Camera3D
 var _shake: float = 0.0

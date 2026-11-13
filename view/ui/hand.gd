@@ -5,10 +5,12 @@ extends Control
 signal card_drag_started(index: int)
 signal card_dropped(index: int, screen_pos: Vector2)
 
-const STEP_X := 95.0
-const STEP_DEG := 4.8
-const RAISE := 50.0
-const BOTTOM_HIDE := 40.0
+## The hand is a straight row inside the HUD tray, between its left and right columns.
+const MAX_STEP := 128.0
+const RAISE := 34.0
+const REGION_LEFT := 240.0
+const REGION_RIGHT := 290.0
+const BOTTOM_PAD := 8.0
 
 var _cards: Array[CardWidget] = []
 var _hover: int = -1
@@ -41,9 +43,14 @@ func show_hand(cards: Array[CardData], playable: Array[bool]) -> void:
 
 func _home(i: int) -> Vector2:
 	var n: int = _cards.size()
-	var x: float = size.x / 2.0 + (i - (n - 1) / 2.0) * STEP_X - CardWidget.SIZE.x / 2.0
-	var y: float = size.y - CardWidget.SIZE.y + BOTTOM_HIDE
-	return Vector2(x, y)
+	var left: float = REGION_LEFT
+	var right: float = size.x - REGION_RIGHT
+	var step: float = MAX_STEP
+	if n > 1:
+		step = minf(MAX_STEP, (right - left - CardWidget.SIZE.x) / float(n - 1))
+	var total: float = step * (n - 1) + CardWidget.SIZE.x
+	var x: float = (left + right) / 2.0 - total / 2.0 + i * step
+	return Vector2(x, size.y - CardWidget.SIZE.y - BOTTOM_PAD)
 
 
 func _layout(animated: bool = true) -> void:
@@ -53,7 +60,7 @@ func _layout(animated: bool = true) -> void:
 			continue
 		var w: CardWidget = _cards[i]
 		var pos: Vector2 = _home(i) - (Vector2(0, RAISE) if i == _hover else Vector2.ZERO)
-		var rot: float = 0.0 if i == _hover else deg_to_rad((i - (n - 1) / 2.0) * STEP_DEG)
+		var rot: float = 0.0
 		w.z_index = 10 if i == _hover else i
 		w.show_tip(i == _hover and _drag < 0)
 		if animated:

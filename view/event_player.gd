@@ -40,7 +40,7 @@ func _play_one(e: GameEvent) -> void:
 			var b: BuildingView = m.place_building(d["player"], d["lane"], CardDB.card(d["card"]))
 			b.scale = Vector3.ZERO
 			var tw := b.create_tween()
-			tw.tween_property(b, "scale", Vector3.ONE * 0.75, 0.35 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(b, "scale", Vector3.ONE, 0.35 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			await tw.finished
 		&"spell_cast":
 			var c: CardData = CardDB.card(d["card"])
@@ -77,11 +77,13 @@ func _play_one(e: GameEvent) -> void:
 			DamageNumber.spawn(m, pos, txt, col)
 			m.rig.kick(0.3 if hit == Action.Hit.CRIT else 0.15)
 			if v:
+				if amt > 0:
+					v.play_hit()
 				await _shake(v)
 			m.refresh_pieces()
 		&"hero_damaged", &"fatigue":
 			var human: bool = d["player"] == MatchController.HUMAN
-			var pos := Vector3(0, 1.5, 3.6) if human else Vector3(0, 1.5, -4.6)
+			var pos := Vector3(0, 1.5, 3.0) if human else Vector3(0, 1.5, -3.0)
 			DamageNumber.spawn(m, pos, "-%d" % d["amount"], Palette.HP, 96)
 			m.hud.shake_hero(human)
 			m.rig.kick(0.25)
@@ -94,7 +96,7 @@ func _play_one(e: GameEvent) -> void:
 				await _wait(0.3)
 		&"hero_healed":
 			var human: bool = d["player"] == MatchController.HUMAN
-			DamageNumber.spawn(m, Vector3(0, 1.5, 3.6) if human else Vector3(0, 1.5, -4.6), "+%d" % d["amount"], Color("#6aff7a"), 80)
+			DamageNumber.spawn(m, Vector3(0, 1.5, 3.0) if human else Vector3(0, 1.5, -3.0), "+%d" % d["amount"], Color("#6aff7a"), 80)
 			await _wait(0.3)
 		&"creature_destroyed":
 			var v: CreatureView = m.creature_views[d["player"]][d["lane"]]
@@ -104,6 +106,9 @@ func _play_one(e: GameEvent) -> void:
 				if v.card and CreatureView.LOOKS.has(v.card.id):
 					col = Color(CreatureView.LOOKS[v.card.id][0] as String)
 				Poof.spawn(m, v.global_position + Vector3(0, 0.3, 0), col, 30)
+				var death: float = v.play_death()
+				if death > 0.0:
+					await _wait(minf(death, 0.9) * 0.8)
 				var tw := v.create_tween()
 				tw.tween_property(v, "scale", Vector3.ZERO, 0.25 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 				await tw.finished
@@ -152,6 +157,7 @@ func _attack(d: Dictionary) -> void:
 	var target: Vector3 = m.board.anchor(foe, lane) if d["target"] == "creature" else m.board.hero_point(foe, lane)
 	target = home.lerp(target, 0.78)
 	v.busy = true
+	v.play_attack()
 	var out := v.create_tween()
 	out.tween_method(func(k: float) -> void:
 		v.position = home.lerp(target, k * k) + Vector3(0, sin(k * PI) * 0.9, 0), 0.0, 1.0, 0.35 / speed)

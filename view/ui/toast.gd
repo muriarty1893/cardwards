@@ -1,23 +1,30 @@
 class_name Toast
-extends Label
-## Short message near the top centre (rejected actions, turn banners).
+extends PanelContainer
+## Dark see-through message banner near the top centre (turn messages, rejected actions, tips).
 
+var _label: Label
 var _tw: Tween
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_theme_font_size_override("font_size", 26)
-	add_theme_color_override("font_color", Color.WHITE)
-	add_theme_color_override("font_outline_color", Palette.INK)
-	add_theme_constant_override("outline_size", 10)
-	UiStyle.bold(self)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.06, 0.16, 0.78)
+	sb.set_corner_radius_all(12)
+	sb.content_margin_left = 26
+	sb.content_margin_right = 26
+	sb.content_margin_top = 12
+	sb.content_margin_bottom = 12
+	add_theme_stylebox_override("panel", sb)
+	_label = UiStyle.bold(UiStyle.label("", 26, Color.WHITE))
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(_label)
 	modulate.a = 0.0
 
 
 func show_message(text_: String, seconds: float = 1.5) -> void:
-	text = text_
+	_label.text = text_
+	reset_size()
 	if _tw:
 		_tw.kill()
 	modulate.a = 1.0
