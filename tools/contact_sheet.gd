@@ -28,6 +28,7 @@ func _ready() -> void:
 	for i: int in names.size():
 		var inst := (load("res://assets/monsters/%s/%s" % [group, names[i]]) as PackedScene).instantiate() as Node3D
 		add_child(inst)
+		Toon.apply(inst)
 		var x: float = (i % cols - (cols - 1) / 2.0) * 3.2
 		var z: float = (i / cols) * 4.0 - 4.0
 		inst.position = Vector3(x, 0, z)
@@ -49,3 +50,4 @@ func _ready() -> void:
 	cam.fov = 40
 	cam.look_at_from_position(Vector3(0, 13, 17), Vector3(0, 0.5, 0))
 	cam.make_current()
+	Outline.attach(cam)

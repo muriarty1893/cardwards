@@ -1,0 +1,62 @@
+shader_type spatial;
+render_mode cull_back;
+// Cartoon material for every model: banded light, soft rim, optional land tint,
+// per-instance hit flash and dissolve, optional wind sway for plants.
+
+#include "res://view/look/toon_light.gdshaderinc"
+
+uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, hint_default_white;
+uniform vec4 albedo_color : source_color = vec4(1.0);
+uniform bool use_vertex_color = false;
+// rgb = tint colour, a = how strongly the tint replaces the original colour.
+uniform vec4 tint = vec4(1.0, 1.0, 1.0, 0.0);
+uniform float sway = 0.0;
+uniform float rim_strength = 0.25;
+instance uniform float flash = 0.0;
+instance uniform float dissolve = 0.0;
+
+varying vec3 world_pos;
+
+float hash13(vec3 p) {
+	p = fract(p * 0.1031);
+	p += dot(p, p.zyx + 31.32);
+	return fract((p.x + p.y) * p.z);
+}
+
+float value_noise(vec3 p) {
+	vec3 i = floor(p);
+	vec3 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	float a = mix(hash13(i), hash13(i + vec3(1, 0, 0)), f.x);
+	float b = mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), f.x);
+	float c = mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), f.x);
+	float d = mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), f.x);
+	return mix(mix(a, b, f.y), mix(c, d, f.y), f.z);
+}
+
+void vertex() {
+	if (sway > 0.0) {
+		vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		float s = sin(TIME * 1.7 + w.x * 0.8) * sway * max(VERTEX.y, 0.0);
+		VERTEX.x += s;
+		VERTEX.z += s * 0.5;
+	}
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+
+void fragment() {
+	if (dissolve > 0.0 && value_noise(world_pos * 6.0) < dissolve) {
+		discard;
+	}
+	vec3 base = texture(albedo_tex, UV).rgb * albedo_color.rgb;
+	if (use_vertex_color) {
+		base *= COLOR.rgb;
+	}
+	float luma = dot(base, vec3(0.299, 0.587, 0.114));
+	base = mix(base, vec3(luma) * tint.rgb * 1.35, tint.a);
+	base = mix(base, vec3(1.0), flash);
+	ALBEDO = base;
+	ROUGHNESS = 1.0;
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0) * rim_strength;
+	EMISSION = base * rim + vec3(flash * 0.6);
+}
