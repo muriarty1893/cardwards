@@ -1,5 +1,5 @@
 extends Node3D
-## Title screen over a slowly orbiting board: pick a deck and difficulty, then play.
+## Title screen over the board on its meadow, slowly orbiting: pick a deck and difficulty, then play.
 
 const FLAVOUR: Dictionary = {
 	&"grove_guard": "Outlast them with healing.",
@@ -29,12 +29,13 @@ func _ready() -> void:
 	_cam.fov = 45.0
 	add_child(_cam)
 	_cam.make_current()
+	Outline.attach(_cam)
 	_build_ui()
 
 
 func _process(delta: float) -> void:
 	_t += delta * 0.12
-	_cam.look_at_from_position(Vector3(sin(_t) * 12.0, 7.5, cos(_t) * 12.0 - 0.6), Vector3(0, 0, -0.6))
+	_cam.look_at_from_position(Vector3(sin(_t) * 14.0, 6.0, cos(_t) * 14.0 - 0.6), Vector3(0, 1.5, -0.6))
 
 
 func _build_ui() -> void:

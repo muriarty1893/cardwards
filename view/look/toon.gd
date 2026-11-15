@@ -4,20 +4,26 @@ extends RefCounted
 ## arguments; per-piece hit flash and dissolve are instance uniforms, so sharing is safe.
 
 const SHADER_PATH := "res://view/look/toon.gdshader"
+const CUTOUT_PATH := "res://view/look/toon_cutout.gdshader"
 const NO_TINT := Color(1, 1, 1, 0)
 
 static var _shader: Shader
+static var _cutout_shader: Shader
 static var _cache: Dictionary = {}
 
 
-static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: float = 0.0, vertex_color: bool = false) -> ShaderMaterial:
-	var key: String = "%d|%s|%s|%.3f|%s" % [tex.get_instance_id() if tex else 0, color.to_html(), tint.to_html(), sway, vertex_color]
+## `cutout` > 0 selects the alpha-tested variant with that threshold.
+static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: float = 0.0, vertex_color: bool = false, cutout: float = 0.0) -> ShaderMaterial:
+	var key: String = "%d|%s|%s|%.3f|%s|%.2f" % [tex.get_instance_id() if tex else 0, color.to_html(), tint.to_html(), sway, vertex_color, cutout]
 	if _cache.has(key):
 		return _cache[key]
 	if _shader == null:
 		_shader = load(SHADER_PATH) as Shader
+		_cutout_shader = load(CUTOUT_PATH) as Shader
 	var m := ShaderMaterial.new()
-	m.shader = _shader
+	m.shader = _cutout_shader if cutout > 0.0 else _shader
+	if cutout > 0.0:
+		m.set_shader_parameter("alpha_cut", cutout)
 	if tex:
 		m.set_shader_parameter("albedo_tex", tex)
 	m.set_shader_parameter("albedo_color", color)
@@ -39,18 +45,28 @@ static func apply(root: Node, tint: Color = NO_TINT, sway: float = 0.0) -> void:
 			continue
 		for i: int in mi.mesh.get_surface_count():
 			var src: Material = mi.get_active_material(i)
-			if src is ShaderMaterial and (src as ShaderMaterial).shader and (src as ShaderMaterial).shader.resource_path == SHADER_PATH:
+			if is_toon(src):
 				continue
 			var tex: Texture2D = null
 			var col := Color.WHITE
 			var vcol: bool = false
+			var cut: float = 0.0
 			var base := src as BaseMaterial3D
 			if base:
 				tex = base.albedo_texture
 				col = base.albedo_color
 				vcol = base.vertex_color_use_as_albedo
-			mi.set_surface_override_material(i, material(tex, col, tint, sway, vcol))
+				if base.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR:
+					cut = base.alpha_scissor_threshold
+				elif base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and tex:
+					cut = 0.5
+			mi.set_surface_override_material(i, material(tex, col, tint, sway, vcol, cut))
 		mi.material_override = null
+
+
+static func is_toon(m: Material) -> bool:
+	var sm := m as ShaderMaterial
+	return sm != null and sm.shader != null and sm.shader.resource_path in [SHADER_PATH, CUTOUT_PATH]
 
 
 static func set_flash(root: Node, v: float) -> void:

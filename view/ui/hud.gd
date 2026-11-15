@@ -7,7 +7,7 @@ signal end_turn_pressed
 signal menu_requested
 signal pause_changed(open: bool)
 
-const TRAY_H := 184.0
+const TRAY_H := 214.0
 const TRAY_MARGIN := 60.0
 const CORNER := Vector2(214, 128)
 
