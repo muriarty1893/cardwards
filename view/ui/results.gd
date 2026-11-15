@@ -49,6 +49,11 @@ func show_result(won: bool, turns: int) -> void:
 	back.pressed.connect(func() -> void: menu.emit())
 	hb.add_child(back)
 	visible = true
+	if won:
+		Confetti.burst(self)
+	else:
+		var vp: Vector2 = get_viewport_rect().size
+		Confetti.rain_cloud(self, Vector2(vp.x / 2.0, vp.y / 2.0 - 190.0))
 	panel.scale = Vector2.ONE * 0.6
 	panel.pivot_offset = panel.size / 2.0
 	var tw := create_tween()

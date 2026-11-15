@@ -72,6 +72,8 @@ func _begin(opening: Array[GameEvent]) -> void:
 
 func _demo_attack() -> void:
 	state.turn = 3
+	state.active = HUMAN
+	state.phase = GameState.Phase.MAIN
 	_demo_put(0, 1, &"flarebeak")
 	_demo_put(1, 1, &"glacier_tortoise")
 	sync_all()

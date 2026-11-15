@@ -90,6 +90,23 @@ const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff
 const ART_SKY: Array[Color] = [Color("#bfe9a8"), Color("#ffc59a"), Color("#ffd3ec"), Color("#d6efff")]
 
 
+## What a card's ability looks like when it fires (FxDirector.KINDS). Spells have their own.
+const EFFECTS: Dictionary = {
+	&"sporeling": &"heal", &"puffcap": &"heal", &"glimmer_morel": &"heal", &"rootstalker": &"heal", &"elder_shroomhulk": &"heal",
+	&"ashmite": &"damage", &"magmaw": &"damage", &"blazehorn": &"damage", &"inferno_drake": &"damage",
+	&"gumdrop": &"draw", &"jellywobble": &"draw", &"bonbon_behemoth": &"draw",
+	&"taffy_snail": &"magic", &"lollibat": &"move", &"sugar_sprite": &"return_building",
+	&"snowmite": &"freeze", &"frostfang": &"freeze", &"rimewing": &"freeze", &"blizzard_titan": &"freeze",
+	&"smokestack": &"smoke_puff", &"spore_hut": &"spore_puff", &"candy_mill": &"gem_pop",
+	&"rain_of_spores": &"rain_of_spores", &"regrowth": &"regrowth", &"fireball": &"fireball", &"ember_rain": &"ember_rain",
+	&"sugar_rush": &"sugar_rush", &"swap_trick": &"swap_trick", &"cold_snap": &"cold_snap", &"avalanche": &"avalanche",
+}
+
+
+static func effect(id: StringName) -> StringName:
+	return EFFECTS.get(id, &"none")
+
+
 static func ids() -> Array[StringName]:
 	var out: Array[StringName] = []
 	for k: StringName in ENTRIES:

@@ -100,6 +100,21 @@ func corner_rects() -> Array[Rect2]:
 	return [_you.get_global_rect(), _rival.get_global_rect(), _you_bar.get_global_rect(), _rival_bar.get_global_rect()]
 
 
+func deck_screen_pos() -> Vector2:
+	return _deck_label.get_global_rect().get_center()
+
+
+func discard_screen_pos() -> Vector2:
+	return _discard_label.get_global_rect().get_center()
+
+
+## Centre of the magic orb that a gained gem flies to.
+func orb_screen_pos(human_side: bool) -> Vector2:
+	if human_side:
+		return _orb_label.get_global_rect().get_center()
+	return (_refs["Rival"]["orb"] as Control).get_global_rect().get_center()
+
+
 func hero_screen_pos(human_side: bool) -> Vector2:
 	return (_you if human_side else _rival).get_global_rect().get_center()
 

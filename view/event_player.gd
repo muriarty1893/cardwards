@@ -1,12 +1,24 @@
 class_name EventPlayer
 extends Node
-## Plays GameEvents back as animations, one after another. Reads views from the MatchController.
+## Plays GameEvents back one after another. Tracks what caused the current effects
+## (ability_triggered / attack) and hands effect events to FxDirector; plays the piece
+## sequences itself (play, attack, death, move, building rise, turn banner).
 
 signal finished
+
+## Effect events FxDirector draws (spec 6.3).
+const EFFECT_EVENTS: Array[StringName] = [
+	&"creature_damaged", &"creature_healed", &"hero_damaged", &"hero_healed", &"frozen",
+	&"card_drawn", &"card_returned", &"creature_moved", &"building_returned", &"magic_changed",
+]
+const HIT_STOP := 0.07
+const HIT_STOP_SCALE := 0.05
 
 var m: MatchController
 var speed: float = 1.0
 var _skip_move: Dictionary = {}
+## {} | {"kind": &"ability", "player", "lane", "card"} | {"kind": &"attack", "player", "lane", "hit"}
+var _source: Dictionary = {}
 
 
 func _wait(seconds: float) -> void:
@@ -14,8 +26,10 @@ func _wait(seconds: float) -> void:
 
 
 func play(events: Array[GameEvent]) -> void:
+	_source = {}
 	for e: GameEvent in events:
 		await _play_one(e)
+	_source = {}
 	m.refresh_pieces()
 	m.refresh_ui()
 	m.verify_views()
@@ -24,31 +38,30 @@ func play(events: Array[GameEvent]) -> void:
 
 func _play_one(e: GameEvent) -> void:
 	var d: Dictionary = e.data
+	if e.type in EFFECT_EVENTS:
+		var kind: StringName = FxDirector.choose(_source, e)
+		await FxDirector.play(kind, _source, e, m)
+		# A gem pop / magic gain draws once; later magic updates in the batch are plain.
+		if e.type == &"magic_changed" and kind in [&"gem_pop", &"magic"]:
+			_source = {}
+		return
 	match e.type:
+		&"ability_triggered":
+			_source = {"kind": &"ability", "player": d["player"], "lane": d["lane"], "card": d["card"]}
+		&"attack":
+			_source = {"kind": &"attack", "player": d["player"], "lane": d["lane"], "hit": d["hit"]}
+			await _attack(d)
 		&"creature_played":
-			var v: CreatureView = m.place_creature(d["player"], d["lane"], CardDB.card(d["card"]))
-			var target: Vector3 = v.position
-			v.position = target + Vector3(0, 3, 0)
-			v.busy = true
-			var tw := v.create_tween()
-			tw.tween_property(v, "position", target, 0.45 / speed).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-			await tw.finished
-			v.busy = false
-			m.refresh_pieces()
-			Burst.spawn(m, &"dust_ring", target - Vector3(0, 0.4, 0))
+			await _play_creature(d)
 		&"building_played":
-			var b: BuildingView = m.place_building(d["player"], d["lane"], CardDB.card(d["card"]))
-			b.scale = Vector3.ZERO
-			var tw := b.create_tween()
-			tw.tween_property(b, "scale", Vector3.ONE, 0.35 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-			await tw.finished
+			await _play_building(d)
 		&"spell_cast":
 			var c: CardData = CardDB.card(d["card"])
-			m.toast.show_message("%s casts %s" % ["You" if d["player"] == MatchController.HUMAN else "Rival", c.display_name], 1.0)
-			Burst.spawn(m, &"stars", Vector3(0, 0.8, -0.6), Palette.LAND_CARD[c.land], 1.4)
-			await _wait(0.5)
+			m.toast.show_message("%s cast %s" % ["You" if d["player"] == MatchController.HUMAN else "Rival", c.display_name], 1.0)
+			Burst.spawn(m, &"stars", FxDirector._hero_pos(m, d["player"]), Palette.LAND_CARD[c.land], 1.4)
+			await _wait(0.3)
 		&"booped":
-			var v: CreatureView = m.creature_views[d["player"]][d["lane"]]
+			var v: CreatureView = _view(d["player"], d["lane"])
 			if v:
 				v.busy = true
 				var base: Vector3 = v.body.scale
@@ -58,97 +71,101 @@ func _play_one(e: GameEvent) -> void:
 				Burst.spawn(m, &"stars", v.global_position + Vector3(0, 0.6, 0))
 				await tw.finished
 				v.busy = false
-		&"attack":
-			await _attack(d)
-		&"creature_damaged":
-			var v: CreatureView = m.creature_views[d["player"]][d["lane"]]
-			var hit: int = d["hit"]
-			var amt: int = d["amount"]
-			var txt: String = "-%d" % amt
-			var col: Color = Color.WHITE
-			if hit == Action.Hit.CRIT:
-				txt = "CRIT! -%d" % amt
-				col = Palette.GOLD
-			elif hit == Action.Hit.GLANCE:
-				col = Color("#c8c8c8")
-			if d.get("blocked", false):
-				txt += "  BLOCK"
-			var pos: Vector3 = m.board.anchor(d["player"], d["lane"]) + Vector3(0, 1.2, 0)
-			DamageNumber.spawn(m, pos, txt, col)
-			m.rig.kick(0.3 if hit == Action.Hit.CRIT else 0.15)
+		&"creature_destroyed":
+			await _death(d)
+		&"unfrozen":
+			var v: CreatureView = _view(d["player"], d["lane"])
 			if v:
-				if amt > 0:
-					v.play_hit()
-				await _shake(v)
-			m.refresh_pieces()
-		&"hero_damaged", &"fatigue":
+				v.set_frozen(false)
+			await _wait(0.2)
+		&"fatigue":
 			var human: bool = d["player"] == MatchController.HUMAN
-			var pos := Vector3(0, 1.5, 3.0) if human else Vector3(0, 1.5, -3.0)
-			DamageNumber.spawn(m, pos, "-%d" % d["amount"], Palette.HP, 96)
+			DamageNumber.spawn(m, FxDirector._hero_pos(m, d["player"]), "-%d" % d["amount"], Palette.HP, 96)
 			m.hud.shake_hero(human)
-			m.rig.kick(0.25)
 			m.hud.refresh(m.state, MatchController.HUMAN)
 			await _wait(0.4)
-		&"creature_healed":
-			if int(d["amount"]) > 0:
-				DamageNumber.spawn(m, m.board.anchor(d["player"], d["lane"]) + Vector3(0, 1.2, 0), "+%d" % d["amount"], Color("#6aff7a"))
-				m.refresh_pieces()
-				await _wait(0.3)
-		&"hero_healed":
-			var human: bool = d["player"] == MatchController.HUMAN
-			DamageNumber.spawn(m, Vector3(0, 1.5, 3.0) if human else Vector3(0, 1.5, -3.0), "+%d" % d["amount"], Color("#6aff7a"), 80)
-			await _wait(0.3)
-		&"creature_destroyed":
-			var v: CreatureView = m.creature_views[d["player"]][d["lane"]]
-			if v:
-				m.creature_views[d["player"]][d["lane"]] = null
-				var col: Color = Palette.LAND_CARD[v.card.land] if v.card else Color.WHITE
-				Burst.spawn(m, &"smoke", v.global_position + Vector3(0, 0.3, 0))
-				Burst.spawn(m, &"sparks", v.global_position + Vector3(0, 0.3, 0), col)
-				var death: float = v.play_death()
-				if death > 0.0:
-					await _wait(minf(death, 0.9) * 0.8)
-				var tw := v.create_tween()
-				tw.tween_property(v, "scale", Vector3.ZERO, 0.25 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-				await tw.finished
-				v.queue_free()
-				await _wait(0.15)
-		&"frozen", &"unfrozen":
-			var v: CreatureView = m.creature_views[d["player"]][d["lane"]]
-			if v:
-				v.set_frozen(e.type == &"frozen")
-				if e.type == &"frozen":
-					Burst.spawn(m, &"snow", v.global_position + Vector3(0, 0.4, 0))
-			await _wait(0.25)
-		&"creature_moved":
-			await _move(d)
-		&"building_returned":
-			var b: BuildingView = m.building_views[d["player"]][d["lane"]]
-			if b:
-				m.building_views[d["player"]][d["lane"]] = null
-				var tw := b.create_tween()
-				tw.tween_property(b, "scale", Vector3.ZERO, 0.3 / speed)
-				await tw.finished
-				b.queue_free()
-		&"card_drawn", &"card_returned", &"card_burned":
+		&"card_burned":
 			m.refresh_ui()
-			if e.type == &"card_burned":
-				m.toast.show_message("Hand full: %s burned" % CardDB.card(d["card"]).display_name, 1.0)
+			m.toast.show_message("Hand full: %s burned" % CardDB.card(d["card"]).display_name, 1.0)
 			await _wait(0.2)
 		&"turn_started":
+			_source = {}
 			m.hud.refresh(m.state, MatchController.HUMAN)
-			m.toast.show_message("Your turn!" if d["player"] == MatchController.HUMAN else "Rival's turn", 1.0)
-			await _wait(0.5)
+			var mine: bool = d["player"] == MatchController.HUMAN
+			Banner.show_turn(m.hud, "YOUR TURN" if mine else "RIVAL'S TURN", Color("#ffcf3a") if mine else Color("#b06cff"))
+			await _wait(0.6)
 		&"game_over":
 			m.refresh_ui()
 		_:
 			m.hud.refresh(m.state, MatchController.HUMAN)
 
 
+func _view(p: int, l: int) -> CreatureView:
+	var v: Variant = m.creature_views[p][l]
+	return v as CreatureView if is_instance_valid(v) else null
+
+
+# --- Sequences -----------------------------------------------------------------
+
+func _play_creature(d: Dictionary) -> void:
+	var c: CardData = CardDB.card(d["card"])
+	var p: int = d["player"]
+	var lane_screen: Vector2 = m.rig.camera.unproject_position(m.board.anchor(p, d["lane"]))
+	var human: bool = p == MatchController.HUMAN
+	var from: Vector2 = m.hand.last_drop_pos if human and m.hand.last_drop_pos != Vector2.ZERO else m.hud.hero_screen_pos(human)
+	FlyingCard.fly(m.hud, c, from, lane_screen, human, 0.22 / speed)
+	await _wait(0.22)
+	var v: CreatureView = m.place_creature(p, d["lane"], c)
+	var target: Vector3 = v.position
+	v.position = target + Vector3(0, 3, 0)
+	v.busy = true
+	var tw := v.create_tween()
+	tw.tween_property(v, "position", target, 0.4 / speed).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	v.busy = false
+	m.refresh_pieces()
+	var feet: Vector3 = target - Vector3(0, 0.4, 0)
+	Burst.spawn(m, &"dust_ring", feet)
+	Burst.spawn(m, [&"leaves", &"embers", &"sprinkles", &"snow"][c.land], feet + Vector3(0, 0.3, 0), Color.WHITE, 1.2)
+	m.rig.kick(0.08)
+
+
+func _play_building(d: Dictionary) -> void:
+	var b: BuildingView = m.place_building(d["player"], d["lane"], CardDB.card(d["card"]))
+	var home: Vector3 = b.position
+	b.position = home - Vector3(0, 1.2, 0)
+	var tw := b.create_tween()
+	tw.tween_property(b, "position", home, 0.35 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Burst.spawn(m, &"dust_ring", home + Vector3(0, 0.15, 0))
+	m.rig.kick(0.1)
+	await tw.finished
+
+
+func _death(d: Dictionary) -> void:
+	var v: CreatureView = _view(d["player"], d["lane"])
+	if v == null:
+		return
+	m.creature_views[d["player"]][d["lane"]] = null
+	v.busy = true
+	var death: float = v.play_death()
+	if death > 0.0:
+		await _wait(minf(death, 0.9) * 0.8)
+	if not is_instance_valid(v):
+		return
+	var at: Vector3 = v.global_position + Vector3(0, 0.3, 0)
+	Burst.spawn(m, &"smoke", at, Color.WHITE, 1.2)
+	if v.card:
+		Burst.spawn(m, [&"leaves", &"embers", &"sprinkles", &"snow"][v.card.land], at, Color.WHITE, 1.2)
+	await v.dissolve(0.35 / speed)
+	if is_instance_valid(v):
+		v.queue_free()
+	await _wait(0.1)
+
+
 func _attack(d: Dictionary) -> void:
 	var p: int = d["player"]
 	var lane: int = d["lane"]
-	var v: CreatureView = m.creature_views[p][lane]
+	var v: CreatureView = _view(p, lane)
 	if v == null:
 		return
 	var foe: int = 1 - p
@@ -156,11 +173,21 @@ func _attack(d: Dictionary) -> void:
 	var target: Vector3 = m.board.anchor(foe, lane) if d["target"] == "creature" else m.board.hero_point(foe, lane)
 	target = home.lerp(target, 0.78)
 	v.busy = true
+	# Wind-up squash, then the leap (the impact plays with the damage event that follows).
+	var base: Vector3 = v.body.scale
+	var wind := v.create_tween()
+	wind.tween_property(v.body, "scale", base * Vector3(1.15, 0.8, 1.15), 0.12 / speed)
+	wind.tween_property(v.body, "scale", base, 0.08 / speed)
+	await wind.finished
 	v.play_attack()
+	var trail := Burst.spawn(v, &"dust_ring", v.global_position, Color(1, 1, 1, 0.6), 0.6)
+	trail.one_shot = false
 	var out := v.create_tween()
 	out.tween_method(func(k: float) -> void:
-		v.position = home.lerp(target, k * k) + Vector3(0, sin(k * PI) * 0.9, 0), 0.0, 1.0, 0.35 / speed)
+		v.position = home.lerp(target, k * k) + Vector3(0, sin(k * PI) * 0.9, 0), 0.0, 1.0, 0.3 / speed)
 	await out.finished
+	if is_instance_valid(trail):
+		trail.queue_free()
 	var back := v.create_tween()
 	back.tween_interval(0.15 / speed)
 	back.tween_method(func(k: float) -> void:
@@ -168,7 +195,14 @@ func _attack(d: Dictionary) -> void:
 	back.tween_callback(func() -> void: v.busy = false)
 
 
-func _shake(v: Node3D) -> void:
+## Brief freeze-frame on impact. Always restores the time scale.
+func hit_stop() -> void:
+	Engine.time_scale = HIT_STOP_SCALE
+	await get_tree().create_timer(HIT_STOP / speed, true, false, true).timeout
+	Engine.time_scale = 1.0
+
+
+func shake(v: Node3D) -> void:
 	var base: Vector3 = v.position
 	var tw := v.create_tween()
 	for i: int in 5:
@@ -177,7 +211,8 @@ func _shake(v: Node3D) -> void:
 	await tw.finished
 
 
-func _move(d: Dictionary) -> void:
+## Moves a creature view to its new lane (a hop, or a spin for Swap Trick).
+func move_piece(d: Dictionary, spin: bool) -> void:
 	var p: int = d["player"]
 	var from: int = d["from"]
 	var to: int = d["to"]
@@ -185,15 +220,38 @@ func _move(d: Dictionary) -> void:
 	if _skip_move.has(key):
 		_skip_move.erase(key)
 		return
-	var a: CreatureView = m.creature_views[p][from]
-	var b: CreatureView = m.creature_views[p][to]
+	var a: Variant = m.creature_views[p][from]
+	var b: Variant = m.creature_views[p][to]
 	m.creature_views[p][to] = a
 	m.creature_views[p][from] = b
-	if b:
+	if is_instance_valid(b):
 		_skip_move["%d:%d:%d" % [p, from, to]] = true  # Swap Trick emits the reverse move too
+	var dur: float = 0.4 / speed
 	var tw := create_tween().set_parallel(true)
-	if a:
-		tw.tween_property(a, "position", m.board.anchor(p, to), 0.35 / speed).set_trans(Tween.TRANS_BACK)
-	if b:
-		tw.tween_property(b, "position", m.board.anchor(p, from), 0.35 / speed).set_trans(Tween.TRANS_BACK)
+	for pair: Array in [[a, to], [b, from]]:
+		if not is_instance_valid(pair[0]):
+			continue
+		var node: Node3D = pair[0]
+		var start: Vector3 = node.position
+		var end: Vector3 = m.board.anchor(p, pair[1])
+		tw.tween_method(func(k: float) -> void:
+			node.position = start.lerp(end, k) + Vector3(0, sin(k * PI) * 0.8, 0), 0.0, 1.0, dur)
+		if spin:
+			tw.tween_property(node, "rotation:y", node.rotation.y + TAU, dur)
 	await tw.finished
+	m.refresh_pieces()
+
+
+## The building pops up and shrinks away toward its owner's side.
+func return_building(d: Dictionary) -> void:
+	var b: Variant = m.building_views[d["player"]][d["lane"]]
+	if not is_instance_valid(b):
+		return
+	m.building_views[d["player"]][d["lane"]] = null
+	var node: Node3D = b
+	Burst.spawn(m, &"sprinkles", node.global_position + Vector3(0, 0.6, 0))
+	var tw := node.create_tween()
+	tw.tween_property(node, "position", node.position + Vector3(0, 1.2, 0), 0.18 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(node, "scale", Vector3.ZERO, 0.22 / speed)
+	await tw.finished
+	node.queue_free()

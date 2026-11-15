@@ -19,6 +19,14 @@ func _ready() -> void:
 	Outline.attach(camera)
 
 
+## Quick zoom-in and back (crits).
+func punch_zoom(amount: float = 4.0, duration: float = 0.25) -> void:
+	var base: float = 30.0
+	var tw := create_tween()
+	tw.tween_property(camera, "fov", base - amount, duration * 0.35).set_ease(Tween.EASE_OUT)
+	tw.tween_property(camera, "fov", base, duration * 0.65).set_trans(Tween.TRANS_SINE)
+
+
 func kick(strength: float) -> void:
 	_shake = maxf(_shake, strength)
 
