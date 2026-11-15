@@ -40,6 +40,14 @@ static func bold(l: Label) -> Label:
 	return l
 
 
+## Hover tick and click sound on a button.
+static func sound_button(b: BaseButton) -> void:
+	b.mouse_entered.connect(func() -> void:
+		if not b.disabled:
+			Audio.sfx(&"ui_hover", 0.05))
+	b.pressed.connect(func() -> void: Audio.sfx(&"ui_click", 0.05))
+
+
 ## Applies the cartoon title font (Lilita One) to a label or button.
 static func title(c: Control) -> Control:
 	if _title_font == null:

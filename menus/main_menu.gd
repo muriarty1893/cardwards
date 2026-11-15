@@ -32,6 +32,7 @@ func _ready() -> void:
 	_cam.make_current()
 	Outline.attach(_cam)
 	_build_ui()
+	Audio.music(GameAudio.MENU_MUSIC)
 
 
 func _process(delta: float) -> void:
@@ -88,6 +89,7 @@ func _build_ui() -> void:
 		for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 			btn.add_theme_color_override(c, Palette.INK)
 		btn.pressed.connect(_select_deck.bind(d.id))
+		UiStyle.sound_button(btn)
 		decks.add_child(btn)
 		_deck_buttons[d.id] = btn
 	var diff := HBoxContainer.new()

@@ -8,6 +8,7 @@ static func big(text: String, color: Color, font_size: int = 22) -> Button:
 	b.text = text
 	b.add_theme_font_size_override("font_size", font_size)
 	UiStyle.title(b)
+	UiStyle.sound_button(b)
 	b.focus_mode = Control.FOCUS_ALL
 	for st: String in ["normal", "hover", "pressed", "focus", "disabled"]:
 		var sb := UiStyle.panel(color if st != "hover" else color.lightened(0.2), 14)

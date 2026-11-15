@@ -103,6 +103,17 @@ const EFFECTS: Dictionary = {
 }
 
 
+## Extra sound when a spell is cast (Audio.SETS names).
+const SOUNDS: Dictionary = {
+	&"fireball": &"fire_whoosh", &"ember_rain": &"fire_whoosh", &"rain_of_spores": &"heal", &"regrowth": &"card_draw",
+	&"sugar_rush": &"candy_pop", &"swap_trick": &"candy_pop", &"cold_snap": &"freeze", &"avalanche": &"explosion",
+}
+
+
+static func sound(id: StringName) -> StringName:
+	return SOUNDS.get(id, &"")
+
+
 static func effect(id: StringName) -> StringName:
 	return EFFECTS.get(id, &"none")
 

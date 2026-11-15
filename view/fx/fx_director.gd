@@ -59,6 +59,7 @@ static func play(kind: StringName, source: Dictionary, e: GameEvent, m: MatchCon
 			if not is_instance_valid(m):
 				return
 			Burst.spawn(m, &"smoke", _creature_pos(m, d), Color.WHITE, 1.3)
+			Audio.sfx(&"explosion")
 		&"ember_rain":
 			if not source.get("delivered", false):
 				source["delivered"] = true
@@ -86,6 +87,7 @@ static func play(kind: StringName, source: Dictionary, e: GameEvent, m: MatchCon
 			if not source.get("delivered", false):
 				source["delivered"] = true
 				Burst.spawn(m, &"sprinkles", _hero_pos(m, source["player"]), Color.WHITE, 1.8)
+				Audio.sfx(&"candy_pop")
 			await _fly_card(m, d, m.hud.deck_screen_pos(), m.hand.cards_rect().get_center(), false)
 			if not is_instance_valid(m):
 				return
@@ -111,6 +113,7 @@ static func play(kind: StringName, source: Dictionary, e: GameEvent, m: MatchCon
 				if not is_instance_valid(m):
 					return
 				m.rig.kick(0.3)
+				Audio.sfx(&"explosion")
 		&"damage", &"smoke_puff":
 			var element: StringName = &"boulder" if kind == &"smoke_puff" else _element(m, source)
 			var to: Vector3 = _creature_pos(m, d) if e.type == &"creature_damaged" else _hero_pos(m, d["player"])
@@ -167,6 +170,12 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				await m.player.hit_stop()
 				if not is_instance_valid(m):
 					return
+			if attack and hit == Action.Hit.CRIT:
+				Audio.sfx(&"hit_crit")
+			elif amt >= 4:
+				Audio.sfx(&"hit_heavy")
+			else:
+				Audio.sfx(&"hit_light")
 			var col: Color = Color.WHITE
 			if attack and hit == Action.Hit.GLANCE:
 				col = Color("#c8c8c8")
@@ -199,6 +208,7 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				if not is_instance_valid(m):
 					return
 			Burst.spawn(m, &"sparks", pos, Color.WHITE, 1.3)
+			Audio.sfx(&"hero_hit")
 			DamageNumber.spawn(m, pos, "-%d" % d["amount"], Palette.HP, 96)
 			if human:
 				ScreenFlash.edge(m.hud, Color("#ff3a3a"), 0.4 / sp)
@@ -212,6 +222,7 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 			if int(d["amount"]) > 0:
 				var pos: Vector3 = m.board.anchor(d["player"], d["lane"]) + Vector3(0, 0.6, 0)
 				Burst.spawn(m, &"heal", pos, Color.WHITE, 1.2)
+				Audio.sfx(&"heal")
 				DamageNumber.spawn(m, _number_pos(m, d["player"], d["lane"]), "+%d" % d["amount"], HEAL)
 				m.refresh_pieces()
 				await _wait(m, 0.3 / sp)
@@ -220,6 +231,7 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 		&"hero_healed":
 			var pos: Vector3 = _hero_pos(m, d["player"])
 			Burst.spawn(m, &"heal", pos, Color.WHITE, 1.4)
+			Audio.sfx(&"heal")
 			DamageNumber.spawn(m, pos, "+%d" % d["amount"], HEAL, 80)
 			m.hud.refresh(m.state, MatchController.HUMAN)
 			await _wait(m, 0.3 / sp)
@@ -229,11 +241,13 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 			var v: CreatureView = _view(m, d)
 			if v:
 				Burst.spawn(m, &"snow", v.global_position + Vector3(0, 0.4, 0), Color.WHITE, 1.3)
+				Audio.sfx(&"freeze")
 				v.set_frozen(true)
 			await _wait(m, 0.25 / sp)
 			if not is_instance_valid(m):
 				return
 		&"card_drawn", &"card_returned":
+			Audio.sfx(&"card_draw")
 			m.refresh_ui()
 			await _wait(m, 0.12 / sp)
 			if not is_instance_valid(m):
@@ -256,7 +270,12 @@ static func _wait(m: MatchController, seconds: float) -> void:
 	await m.get_tree().create_timer(maxf(seconds, 0.0)).timeout
 
 
+## Launch sound per projectile element.
+const SHOT_SOUND: Dictionary = {&"fire": &"fire_whoosh", &"ice": &"freeze", &"candy": &"candy_pop", &"spore": &"candy_pop", &"boulder": &"attack_whoosh"}
+
+
 static func _shot(m: MatchController, element: StringName, from: Vector3, to: Vector3, duration: float) -> void:
+	Audio.sfx(SHOT_SOUND.get(element, &"attack_whoosh"))
 	Projectile.launch(m, element, from, to, duration)
 	await _wait(m, duration + 0.01)
 
@@ -328,6 +347,7 @@ static func _fly_gem(m: MatchController, source: Dictionary) -> void:
 	gem.rotation = PI / 4.0
 	gem.pivot_offset = gem.size / 2.0
 	m.hud.add_child(gem)
+	Audio.sfx(&"magic_gain")
 	gem.position = from - gem.size / 2.0
 	var tw := gem.create_tween()
 	tw.tween_property(gem, "position", to - gem.size / 2.0, 0.35 / m.player.speed).set_trans(Tween.TRANS_SINE)

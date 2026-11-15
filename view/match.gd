@@ -48,6 +48,7 @@ func _ready() -> void:
 		lands.append(row)
 	board.build(lands)
 	_build_ui()
+	Audio.music(GameAudio.MATCH_MUSIC)
 	sync_all()
 	refresh_ui()
 	if "--demo-results" in OS.get_cmdline_user_args():

@@ -49,6 +49,7 @@ func show_result(won: bool, turns: int) -> void:
 	back.pressed.connect(func() -> void: menu.emit())
 	hb.add_child(back)
 	visible = true
+	Audio.sfx(&"victory" if won else &"defeat", 0.0)
 	if won:
 		Confetti.burst(self)
 	else:

@@ -302,6 +302,7 @@ func _build_tray() -> void:
 	end_turn_button.offset_top = 62
 	end_turn_button.offset_bottom = 170
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
+	UiStyle.sound_button(end_turn_button)
 	_tray.add_child(end_turn_button)
 
 
@@ -323,6 +324,7 @@ func _build_pause() -> void:
 	pause_button.offset_top = -70
 	pause_button.offset_bottom = -14
 	add_child(pause_button)
+	UiStyle.sound_button(pause_button)
 	pause_overlay = Control.new()
 	pause_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	pause_overlay.mouse_filter = Control.MOUSE_FILTER_STOP

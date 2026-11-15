@@ -50,6 +50,7 @@ func _play_one(e: GameEvent) -> void:
 			_source = {"kind": &"ability", "player": d["player"], "lane": d["lane"], "card": d["card"]}
 		&"attack":
 			_source = {"kind": &"attack", "player": d["player"], "lane": d["lane"], "hit": d["hit"]}
+			Audio.sfx(&"attack_whoosh")
 			await _attack(d)
 		&"creature_played":
 			await _play_creature(d)
@@ -57,6 +58,9 @@ func _play_one(e: GameEvent) -> void:
 			await _play_building(d)
 		&"spell_cast":
 			var c: CardData = CardDB.card(d["card"])
+			Audio.sfx(&"card_play")
+			if VisualDB.sound(c.id) != &"":
+				Audio.sfx(VisualDB.sound(c.id))
 			m.toast.show_message("%s cast %s" % ["You" if d["player"] == MatchController.HUMAN else "Rival", c.display_name], 1.0)
 			Burst.spawn(m, &"stars", FxDirector._hero_pos(m, d["player"]), Palette.LAND_CARD[c.land], 1.4)
 			await _wait(0.3)
@@ -72,26 +76,31 @@ func _play_one(e: GameEvent) -> void:
 				await tw.finished
 				v.busy = false
 		&"creature_destroyed":
+			Audio.sfx(&"death")
 			await _death(d)
 		&"unfrozen":
 			var v: CreatureView = _view(d["player"], d["lane"])
 			if v:
 				v.set_frozen(false)
+				Audio.sfx(&"ice_shatter")
 			await _wait(0.2)
 		&"fatigue":
 			var human: bool = d["player"] == MatchController.HUMAN
 			DamageNumber.spawn(m, FxDirector._hero_pos(m, d["player"]), "-%d" % d["amount"], Palette.HP, 96)
+			Audio.sfx(&"hero_hit")
 			m.hud.shake_hero(human)
 			m.hud.refresh(m.state, MatchController.HUMAN)
 			await _wait(0.4)
 		&"card_burned":
 			m.refresh_ui()
+			Audio.sfx(&"card_deal")
 			m.toast.show_message("Hand full: %s burned" % CardDB.card(d["card"]).display_name, 1.0)
 			await _wait(0.2)
 		&"turn_started":
 			_source = {}
 			m.hud.refresh(m.state, MatchController.HUMAN)
 			var mine: bool = d["player"] == MatchController.HUMAN
+			Audio.sfx(&"turn_start", 0.0)
 			Banner.show_turn(m.hud, "YOUR TURN" if mine else "RIVAL'S TURN", Color("#ffcf3a") if mine else Color("#b06cff"))
 			await _wait(0.6)
 		&"game_over":
@@ -112,6 +121,7 @@ func _play_creature(d: Dictionary) -> void:
 	var p: int = d["player"]
 	var lane_screen: Vector2 = m.rig.camera.unproject_position(m.board.anchor(p, d["lane"]))
 	var human: bool = p == MatchController.HUMAN
+	Audio.sfx(&"card_play")
 	var from: Vector2 = m.hand.last_drop_pos if human and m.hand.last_drop_pos != Vector2.ZERO else m.hud.hero_screen_pos(human)
 	FlyingCard.fly(m.hud, c, from, lane_screen, human, 0.22 / speed)
 	await _wait(0.22)
@@ -124,6 +134,7 @@ func _play_creature(d: Dictionary) -> void:
 	await tw.finished
 	v.busy = false
 	m.refresh_pieces()
+	Audio.sfx(&"creature_land")
 	var feet: Vector3 = target - Vector3(0, 0.4, 0)
 	Burst.spawn(m, &"dust_ring", feet)
 	Burst.spawn(m, [&"leaves", &"embers", &"sprinkles", &"snow"][c.land], feet + Vector3(0, 0.3, 0), Color.WHITE, 1.2)
@@ -132,6 +143,8 @@ func _play_creature(d: Dictionary) -> void:
 
 func _play_building(d: Dictionary) -> void:
 	var b: BuildingView = m.place_building(d["player"], d["lane"], CardDB.card(d["card"]))
+	Audio.sfx(&"card_play")
+	Audio.sfx(&"building_rise")
 	var home: Vector3 = b.position
 	b.position = home - Vector3(0, 1.2, 0)
 	var tw := b.create_tween()
@@ -249,6 +262,7 @@ func return_building(d: Dictionary) -> void:
 		return
 	m.building_views[d["player"]][d["lane"]] = null
 	var node: Node3D = b
+	Audio.sfx(&"candy_pop")
 	Burst.spawn(m, &"sprinkles", node.global_position + Vector3(0, 0.6, 0))
 	var tw := node.create_tween()
 	tw.tween_property(node, "position", node.position + Vector3(0, 1.2, 0), 0.18 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

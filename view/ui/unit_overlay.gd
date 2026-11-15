@@ -57,6 +57,7 @@ func setup(m: MatchController) -> void:
 		b.mouse_filter = Control.MOUSE_FILTER_STOP
 		_style_boop(b)
 		b.pressed.connect(func() -> void: _m.input.request_boop(l))
+		UiStyle.sound_button(b)
 		add_child(b)
 		_boops.append(b)
 

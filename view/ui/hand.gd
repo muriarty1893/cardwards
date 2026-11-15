@@ -117,6 +117,8 @@ func cards_rect() -> Rect2:
 func _on_enter(i: int) -> void:
 	if _drag >= 0 or not enabled:
 		return
+	if _hover != i:
+		Audio.sfx(&"card_flip", 0.1)
 	_hover = i
 	_layout()
 
