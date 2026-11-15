@@ -270,13 +270,11 @@ func place_building(p: int, l: int, c: CardData) -> BuildingView:
 	return v
 
 
-## Update stat badges and freeze visuals from the state.
+## Update freeze visuals from the state.
 func refresh_pieces() -> void:
 	for p: int in 2:
 		for l: int in 4:
 			var v: CreatureView = creature_views[p][l]
 			var cr: GameState.CreatureState = state.players[p].lanes[l].creature
 			if v and cr:
-				var max_hp: int = Rules.effective_max_hp(state, p, l)
-				v.set_stats(Rules.effective_attack(state, p, l), max_hp - cr.damage, max_hp)
 				v.set_frozen(cr.is_frozen())

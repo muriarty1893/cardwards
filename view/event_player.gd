@@ -102,9 +102,7 @@ func _play_one(e: GameEvent) -> void:
 			var v: CreatureView = m.creature_views[d["player"]][d["lane"]]
 			if v:
 				m.creature_views[d["player"]][d["lane"]] = null
-				var col: Color = Color.WHITE
-				if v.card and CreatureView.LOOKS.has(v.card.id):
-					col = Color(CreatureView.LOOKS[v.card.id][0] as String)
+				var col: Color = Palette.LAND_CARD[v.card.land] if v.card else Color.WHITE
 				Poof.spawn(m, v.global_position + Vector3(0, 0.3, 0), col, 30)
 				var death: float = v.play_death()
 				if death > 0.0:
