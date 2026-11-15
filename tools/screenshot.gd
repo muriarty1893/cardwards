@@ -8,6 +8,8 @@ const SIZE := Vector2i(1280, 720)
 var _path: String = ""
 ## --fps-log=<seconds>: after a 2 s warm-up, sample frame times, print a summary and quit.
 var _fps_secs: float = 0.0
+## --hover-card=<i>: hover card i in the match hand before the shot.
+var _hover_card: int = -1
 var _fps_t: float = 0.0
 var _fps_frames: int = 0
 var _fps_worst: float = 0.0
@@ -26,6 +28,8 @@ func _ready() -> void:
 			_frames = int(arg.substr(14))
 		elif arg.begins_with("--fps-log="):
 			_fps_secs = float(arg.substr(10))
+		elif arg.begins_with("--hover-card="):
+			_hover_card = int(arg.substr(13))
 	set_process(_path != "" or _fps_secs > 0.0)
 
 
@@ -45,6 +49,14 @@ func _process(delta: float) -> void:
 		scene.reparent(_vp, false)
 		return
 	_frames -= 1
+	if _hover_card >= 0 and _frames == 10:
+		var hand: Node = _vp.find_child("Hand", true, false)
+		if hand == null:
+			for n: Node in _vp.find_children("*", "Control", true, false):
+				if n is Hand:
+					hand = n
+		if hand:
+			(hand as Hand).hover(_hover_card)
 	if _frames > 0:
 		return
 	_vp.get_texture().get_image().save_png(_path)

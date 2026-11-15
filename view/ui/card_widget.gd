@@ -1,24 +1,16 @@
 class_name CardWidget
 extends Control
-## A 120x168 card face for the hand.
+## A 140x196 card face: land-coloured frame with an ink border, baked picture, name ribbon,
+## type line, rules text, cost gem and (creatures) sword and heart badges.
 
-const SIZE := Vector2(120, 168)
-const ICONS: Dictionary = {
-	&"sporeling": "🍄", &"mossback": "🐢", &"puffcap": "🌼", &"glimmer_morel": "✨", &"rootstalker": "🌳",
-	&"elder_shroomhulk": "👑", &"spore_hut": "🛖", &"glowcap_lantern": "🏮", &"rain_of_spores": "🌧", &"regrowth": "🌱",
-	&"cinderpup": "🐶", &"ashmite": "🪲", &"flarebeak": "🐦", &"magmaw": "👹", &"blazehorn": "🐗",
-	&"inferno_drake": "🐉", &"kiln_tower": "🏭", &"smokestack": "🗼", &"fireball": "☄", &"ember_rain": "🔥",
-	&"gumdrop": "🍬", &"taffy_snail": "🐌", &"lollibat": "🦇", &"sugar_sprite": "🧚", &"jellywobble": "🪼",
-	&"bonbon_behemoth": "🍩", &"sugar_shack": "🏠", &"candy_mill": "🎡", &"sugar_rush": "🍭", &"swap_trick": "🔀",
-	&"snowmite": "⛄", &"iceling": "🧊", &"frostfang": "🐺", &"glacier_tortoise": "🐢", &"rimewing": "🦋",
-	&"blizzard_titan": "🗿", &"ice_wall": "🧱", &"frost_spire": "🏔", &"cold_snap": "❄", &"avalanche": "🌨",
-}
-const KIND_NAMES: Array[String] = ["creature", "building", "spell"]
+const SIZE := Vector2(140, 196)
+const ART := Rect2(8, 8, 124, 93)
+const KIND_NAMES: Array[String] = ["CREATURE", "BUILDING", "SPELL"]
 
 var card: CardData
 var index: int = -1
-var _face: Panel
-var _tip: PanelContainer
+var _art: TextureRect
+var _text: Label
 
 
 func setup(c: CardData, i: int) -> void:
@@ -26,86 +18,98 @@ func setup(c: CardData, i: int) -> void:
 	index = i
 	custom_minimum_size = SIZE
 	size = SIZE
-	pivot_offset = Vector2(SIZE.x / 2.0, SIZE.y)
+	pivot_offset = Vector2.ZERO
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_face = Panel.new()
-	_face.size = SIZE
-	_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := UiStyle.panel(Palette.PAPER, 12)
-	_face.add_theme_stylebox_override("panel", sb)
-	add_child(_face)
-	var art := Panel.new()
-	art.position = Vector2(9, 10)
-	art.size = Vector2(SIZE.x - 18, 62)
-	var asb := StyleBoxFlat.new()
-	asb.bg_color = Palette.LAND_CARD[c.land]
-	asb.set_corner_radius_all(8)
-	art.add_theme_stylebox_override("panel", asb)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_face.add_child(art)
-	var icon := UiStyle.label(ICONS.get(c.id, "?"), 34)
-	icon.size = art.size
-	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	art.add_child(icon)
-	var name_l := UiStyle.bold(UiStyle.label(c.display_name, 12 if c.display_name.length() > 13 else 13))
-	name_l.position = Vector2(4, 74)
-	name_l.size = Vector2(SIZE.x - 8, 20)
+	var land: Color = Palette.LAND_CARD[c.land]
+	var frame := _panel(Rect2(Vector2.ZERO, SIZE), land, 4, 12)
+	add_child(frame)
+	# Picture window.
+	var art_back := _panel(ART.grow(2), Palette.INK, 0, 8)
+	frame.add_child(art_back)
+	_art = TextureRect.new()
+	_art.position = ART.position
+	_art.size = ART.size
+	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if ResourceLoader.exists(VisualDB.art_path(c.id)):
+		_art.texture = load(VisualDB.art_path(c.id)) as Texture2D
+	frame.add_child(_art)
+	# Name ribbon across the bottom of the picture.
+	var ribbon := _panel(Rect2(4, 92, SIZE.x - 8, 26), land.darkened(0.25), 3, 6)
+	frame.add_child(ribbon)
+	var name_l := UiStyle.title(UiStyle.label(c.display_name, 15 if c.display_name.length() <= 13 else 14, Color.WHITE)) as Label
+	name_l.size = ribbon.size
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_l.clip_text = true
-	_face.add_child(name_l)
-	var kind := UiStyle.label(KIND_NAMES[c.kind].to_upper() + ("  L%d" % c.level if c.is_creature() else ""), 10, Color("#667777"))
-	kind.position = Vector2(4, 93)
+	name_l.add_theme_color_override("font_outline_color", Palette.INK)
+	name_l.add_theme_constant_override("outline_size", 6)
+	ribbon.add_child(name_l)
+	var kind := UiStyle.bold(UiStyle.label(KIND_NAMES[c.kind] + ("  ·  L%d" % c.level if c.is_creature() else ""), 10, Palette.INK))
+	kind.position = Vector2(4, 119)
 	kind.size = Vector2(SIZE.x - 8, 14)
 	kind.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_face.add_child(kind)
+	frame.add_child(kind)
+	# Rules text on a paper panel (kept above the stat badges on creatures).
+	var text_rect := Rect2(8, 134, SIZE.x - 16, 34 if c.is_creature() else 44)
+	var paper := _panel(text_rect, Palette.PAPER, 2, 6)
+	frame.add_child(paper)
+	_text = UiStyle.label(c.text, 10 if c.text.length() <= 34 else 9, Palette.INK)
+	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_text.position = Vector2(3, 0)
+	_text.size = text_rect.size - Vector2(6, 0)
+	_text.add_theme_constant_override("line_spacing", -2)
+	paper.add_child(_text)
+	paper.visible = c.text != ""
+	add_child(_gem(Vector2(-8, -8), 36, Palette.MAGIC, str(c.cost), 18))
 	if c.is_creature():
-		var atk := UiStyle.bold(UiStyle.label("⚔%d" % c.attack, 17))
-		atk.position = Vector2(10, 136)
-		_face.add_child(atk)
-		var hp := UiStyle.bold(UiStyle.label("♥%d" % c.health, 17, Palette.HP))
-		hp.position = Vector2(SIZE.x - 46, 136)
-		_face.add_child(hp)
-	else:
-		var tx := UiStyle.label(c.text, 9, Palette.INK)
-		tx.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		tx.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tx.clip_text = false
-		tx.custom_minimum_size = Vector2(SIZE.x - 16, 0)
-		_face.add_child(tx)
-		tx.position = Vector2(8, 108)
-		tx.size = Vector2(SIZE.x - 16, 54)
-	var cost := Panel.new()
-	cost.position = Vector2(-6, -6)
-	cost.size = Vector2(30, 30)
-	var csb := StyleBoxFlat.new()
-	csb.bg_color = Palette.MAGIC
-	csb.border_color = Palette.INK
-	csb.set_border_width_all(3)
-	csb.set_corner_radius_all(15)
-	cost.add_theme_stylebox_override("panel", csb)
-	cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var cl := UiStyle.bold(UiStyle.label(str(c.cost), 16, Color.WHITE))
-	cl.size = cost.size
-	cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	cost.add_child(cl)
-	add_child(cost)
-	_tip = PanelContainer.new()
-	_tip.add_theme_stylebox_override("panel", UiStyle.panel(Color(1, 1, 1, 0.97), 10))
-	var tl := UiStyle.label("%s\n%s" % [c.display_name, c.text if c.text != "" else "No ability."], 14)
-	tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tl.custom_minimum_size = Vector2(200, 0)
-	_tip.add_child(tl)
-	_tip.position = Vector2(-40, -110)
-	_tip.visible = false
-	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_tip)
+		add_child(_gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, "⚔"))
+		add_child(_gem(Vector2(SIZE.x - 30, 166), 34, Palette.HP, str(c.health), 17, "♥"))
+
+
+func art_texture() -> Texture2D:
+	return _art.texture
+
+
+func text_label() -> Label:
+	return _text
 
 
 func set_playable(on: bool) -> void:
-	modulate = Color.WHITE if on else Color(0.72, 0.72, 0.72, 1.0)
+	modulate = Color.WHITE if on else Color(0.68, 0.68, 0.68, 1.0)
 
 
-func show_tip(on: bool) -> void:
-	_tip.visible = on and card.text != ""
+func _panel(r: Rect2, bg: Color, border: int, radius: int) -> Panel:
+	var p := Panel.new()
+	p.position = r.position
+	p.size = r.size
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = Palette.INK
+	sb.set_border_width_all(border)
+	sb.set_corner_radius_all(radius)
+	p.add_theme_stylebox_override("panel", sb)
+	return p
+
+
+## Round badge with a number (and a faint symbol behind it).
+func _gem(pos: Vector2, d: float, col: Color, value: String, font: int, symbol: String = "") -> Panel:
+	var g := _panel(Rect2(pos, Vector2(d, d)), col, 3, int(d / 2.0))
+	if symbol != "":
+		var s := UiStyle.label(symbol, int(d * 0.62), Color(1, 1, 1, 0.35))
+		s.size = g.size
+		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		s.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		g.add_child(s)
+	var l := UiStyle.title(UiStyle.label(value, font, Color.WHITE)) as Label
+	l.size = g.size
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_color_override("font_outline_color", Palette.INK)
+	l.add_theme_constant_override("outline_size", 6)
+	g.add_child(l)
+	return g

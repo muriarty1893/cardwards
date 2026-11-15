@@ -30,11 +30,29 @@ func _check(size: Vector2) -> void:
 	assert_true(cards.size.x > 0, "hand has cards")
 	assert_true(not hud.end_turn_button.get_global_rect().intersects(cards), "END TURN clear of hand at %s" % size)
 	assert_true(cards.position.x >= 0 and cards.end.x <= size.x, "hand fits horizontally at %s" % size)
+	for i: int in [0, 6]:
+		hand.hover(i)
+		await tree.process_frame
+		var hr: Rect2 = hand.hovered_rect()
+		assert_true(screen.encloses(hr), "hovered card %d on screen at %s (%s)" % [i, size, hr])
+		assert_true(not hud.end_turn_button.get_global_rect().intersects(hr), "hovered card %d clear of BATTLE! at %s" % [i, size])
 	holder.queue_free()
 	await tree.process_frame
 
 
 func test_hud_fits() -> bool:
 	await _check(Vector2(1280, 720))
+	await _check(Vector2(1366, 768))
 	await _check(Vector2(1920, 1080))
+	return true
+
+
+func test_card_faces() -> bool:
+	for c: CardData in CardDB.all_cards():
+		var w := CardWidget.new()
+		w.setup(c, 0)
+		assert_true(w.art_texture() != null, "art for %s" % c.id)
+		if c.text != "":
+			assert_eq(w.text_label().text, c.text, "rules text on %s" % c.id)
+		w.free()
 	return true
