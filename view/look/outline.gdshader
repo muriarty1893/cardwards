@@ -38,6 +38,8 @@ void fragment() {
 	}
 	float edge = step(depth_threshold * d0, ddiff);
 	edge = max(edge, 1.0 - step(normal_threshold, ndot));
+	// Distant grazing ground would read as one thick edge band at the horizon; fade far lines out.
+	edge *= 1.0 - smoothstep(110.0, 150.0, d0);
 	ALBEDO = ink.rgb;
 	ALPHA = edge * ink.a;
 }

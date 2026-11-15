@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dftkisll3qpdi"
-path="res://.godot/imported/Grass_Wispy_Tall.gltf-82f2bd788cc2485630127b59d2ecbfd1.scn"
+uid="uid://do88gkaltwfid"
+path="res://.godot/imported/ice-cream.glb-a2e47a32e1ccaea583f1d843bae2b349.scn"
 
 [deps]
 
-source_file="res://assets/nature/Grass_Wispy_Tall.gltf"
-dest_files=["res://.godot/imported/Grass_Wispy_Tall.gltf-82f2bd788cc2485630127b59d2ecbfd1.scn"]
+source_file="res://assets/candy/ice-cream.glb"
+dest_files=["res://.godot/imported/ice-cream.glb-a2e47a32e1ccaea583f1d843bae2b349.scn"]
 
 [params]
 

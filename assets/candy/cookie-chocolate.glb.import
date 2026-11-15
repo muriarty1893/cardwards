@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bw82ljmn4n83i"
-path="res://.godot/imported/Mushroom_Laetiporus.gltf-7dcb04868e7f89f924d4afa500c00e26.scn"
+uid="uid://cfk5rn58oa8e5"
+path="res://.godot/imported/cookie-chocolate.glb-368a8cf475b53911ff1ea5bb9e5e2b9e.scn"
 
 [deps]
 
-source_file="res://assets/nature/Mushroom_Laetiporus.gltf"
-dest_files=["res://.godot/imported/Mushroom_Laetiporus.gltf-7dcb04868e7f89f924d4afa500c00e26.scn"]
+source_file="res://assets/candy/cookie-chocolate.glb"
+dest_files=["res://.godot/imported/cookie-chocolate.glb-368a8cf475b53911ff1ea5bb9e5e2b9e.scn"]
 
 [params]
 

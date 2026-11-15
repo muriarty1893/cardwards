@@ -1,73 +1,134 @@
 shader_type spatial;
-// Procedural land strip: 0 mushroom meadow, 1 ember rock, 2 candy, 3 frost. Glowing border + highlight.
+render_mode cull_back;
+// Painted lane: 0 Mushroom Forest, 1 Ember Flats, 2 Candy Hills, 3 Frostpeak.
+// Wavy outlined edges (outside the wave shows the soil below), a thin side-coloured rim,
+// and animated highlight outlines (1 = valid drop, 2 = target). Lit with the cartoon bands.
+
+#include "res://view/look/toon_light.gdshaderinc"
+
 uniform int land = 0;
-uniform vec2 size = vec2(2.3, 4.5);
-uniform vec3 edge_color : source_color = vec3(1.0, 0.85, 0.3);
-uniform float highlight = 0.0; // 0 off, 1 valid drop, 2 target
+uniform vec2 size = vec2(2.44, 4.5);
+uniform vec3 edge_color : source_color = vec3(1.0, 0.88, 0.29);
+uniform float highlight = 0.0;
+uniform float wave_seed = 0.0;
+
+const vec3 INK = vec3(0.133, 0.2, 0.2);
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
+
 float vnoise(vec2 p) {
-	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
-vec2 voronoi(vec2 p) {
-	vec2 n = floor(p); vec2 f = fract(p); float d1 = 8.0; float d2 = 8.0;
+
+float fbm(vec2 p) {
+	return vnoise(p) * 0.6 + vnoise(p * 2.1) * 0.3 + vnoise(p * 4.3) * 0.1;
+}
+
+// Distance from the nearest cell border (d2 - d1); small values are cracks.
+float voronoi_edge(vec2 p) {
+	vec2 n = floor(p);
+	vec2 f = fract(p);
+	float d1 = 8.0;
+	float d2 = 8.0;
 	for (int j = -1; j <= 1; j++) {
 		for (int i = -1; i <= 1; i++) {
 			vec2 g = vec2(float(i), float(j));
 			float d = length(g + hash2(n + g) - f);
-			if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+			if (d < d1) {
+				d2 = d1;
+				d1 = d;
+			} else if (d < d2) {
+				d2 = d;
+			}
 		}
 	}
-	return vec2(d1, d2 - d1);
+	return d2 - d1;
+}
+
+vec3 paint_forest(vec2 p) {
+	vec3 col = vec3(0.475, 0.788, 0.353);                      // #79c95a
+	col = mix(col, vec3(0.353, 0.659, 0.290), smoothstep(0.55, 0.62, fbm(p * 1.4)));  // moss #5aa84a
+	float strokes = vnoise(vec2(p.x * 18.0, p.y * 3.0));
+	col *= 0.94 + 0.08 * strokes;
+	vec2 cell = floor(p * 6.0);
+	vec2 c = fract(p * 6.0) - 0.5;
+	float clover = step(0.86, hash(cell)) * (1.0 - smoothstep(0.16, 0.22, length(c)));
+	return mix(col, vec3(0.651, 0.878, 0.478), clover);       // clover #a6e07a
+}
+
+vec3 paint_ember(vec2 p, out vec3 emi) {
+	vec3 col = mix(vec3(0.290, 0.188, 0.188), vec3(0.380, 0.250, 0.230), fbm(p * 3.0));  // #4a3030
+	float e = voronoi_edge(p * 1.5);
+	float crack = 1.0 - smoothstep(0.02, 0.08, e);
+	float pulse = 0.6 + 0.4 * sin(TIME * 2.4 + p.y * 2.0);
+	col = mix(col, vec3(1.0, 0.478, 0.102), crack);           // #ff7a1a
+	emi = pow(vec3(1.0, 0.478, 0.102), vec3(2.2)) * crack * 2.0 * pulse;
+	return col;
+}
+
+vec3 paint_candy(vec2 p) {
+	vec3 col = vec3(1.0, 0.616, 0.800);                        // frosting #ff9dcc
+	float swirl = sin(p.x * 3.0 + sin(p.y * 2.2) * 1.8 + fbm(p * 1.5) * 3.0);
+	col = mix(col, vec3(0.960, 0.478, 0.706), smoothstep(0.55, 0.75, swirl) * 0.7);  // swirl #f57ab4
+	vec2 cell = floor(p * 5.0);
+	vec2 c = fract(p * 5.0) - 0.5;
+	float h = hash(cell);
+	float a = h * 6.283;
+	vec2 r = vec2(c.x * cos(a) - c.y * sin(a), c.x * sin(a) + c.y * cos(a));
+	float spr = step(0.55, h) * step(abs(r.x), 0.2) * step(abs(r.y), 0.055);
+	int k = int(floor(hash(cell + 7.0) * 5.0));
+	vec3 sc = k == 0 ? vec3(1.0, 0.353, 0.353) : k == 1 ? vec3(1.0, 0.847, 0.290) : k == 2 ? vec3(0.353, 0.820, 1.0) : k == 3 ? vec3(0.478, 1.0, 0.478) : vec3(1.0);
+	return mix(col, sc, spr);
+}
+
+vec3 paint_frost(vec2 p, out vec3 emi) {
+	float drift = fbm(p * 1.2);
+	vec3 col = mix(vec3(0.902, 0.949, 1.0), vec3(0.663, 0.804, 0.937), smoothstep(0.42, 0.62, drift));  // #e6f2ff / #a9cdef
+	col = mix(col, vec3(0.537, 0.702, 0.882), smoothstep(0.66, 0.74, drift) * 0.6);  // deeper drifts
+	vec2 cell = floor(p * 9.0);
+	vec2 c = fract(p * 9.0) - 0.5;
+	float twinkle = 0.5 + 0.5 * sin(TIME * 3.0 + hash(cell) * 40.0);
+	float sparkle = step(0.93, hash(cell)) * (1.0 - smoothstep(0.03, 0.09, length(c))) * twinkle;
+	emi = vec3(sparkle) * 0.6;
+	return mix(col, vec3(1.0), sparkle);
 }
 
 void fragment() {
-	vec2 p = UV * size;
-	vec3 col; vec3 emi = vec3(0.0); float rough = 0.85;
+	vec2 p = (UV - 0.5) * size;          // lane-local x (across), y = z (along)
+	float edge_x = size.x * 0.5 - 0.08 + 0.05 * sin(p.y * 2.6 + wave_seed) + 0.015 * sin(p.y * 7.0 + wave_seed * 2.0);
+	float edge_z = size.y * 0.5 - 0.06 + 0.03 * sin(p.x * 4.0 + wave_seed);
+	float m = min(edge_x - abs(p.x), edge_z - abs(p.y));
+	if (m < 0.0) {
+		discard;
+	}
+	vec3 emi = vec3(0.0);
+	vec3 col;
 	if (land == 0) {
-		float n = vnoise(p * 1.6) * 0.5 + vnoise(vec2(p.x * 26.0, p.y * 5.0)) * 0.5;
-		col = mix(vec3(0.24, 0.60, 0.22), vec3(0.45, 0.80, 0.30), n);
-		col *= 0.93 + 0.07 * step(0.5, fract(p.y * 0.9));
-		vec2 c = fract(p * 7.0) - 0.5;
-		float dots = step(0.93, hash(floor(p * 7.0))) * step(length(c), 0.26);
-		col = mix(col, vec3(0.99, 0.95, 0.72), dots);
+		col = paint_forest(p);
 	} else if (land == 1) {
-		vec2 v = voronoi(p * 1.6);
-		float crack = 1.0 - smoothstep(0.0, 0.09, v.y);
-		col = mix(vec3(0.25, 0.16, 0.17), vec3(0.42, 0.26, 0.22), vnoise(p * 4.0));
-		col = mix(col, vec3(1.0, 0.45, 0.1), crack);
-		emi = vec3(1.0, 0.25, 0.02) * crack * (0.7 + 0.3 * sin(TIME * 2.0 + p.y * 3.0));
+		col = paint_ember(p, emi);
 	} else if (land == 2) {
-		float s = fract((p.x + p.y) * 0.9);
-		float stripe = smoothstep(0.45, 0.5, s) - smoothstep(0.95, 1.0, s);
-		col = mix(vec3(1.0, 0.66, 0.84), vec3(1.0, 0.86, 0.93), stripe);
-		vec2 cell = floor(p * 5.0); vec2 c = fract(p * 5.0) - 0.5;
-		float h = hash(cell); float a = h * 6.283;
-		vec2 r = vec2(c.x * cos(a) - c.y * sin(a), c.x * sin(a) + c.y * cos(a));
-		float spr = step(0.6, h) * step(abs(r.x), 0.22) * step(abs(r.y), 0.06);
-		col = mix(col, 0.5 + 0.5 * cos(6.283 * (h * 7.0 + vec3(0.0, 0.33, 0.67))), spr);
-		rough = 0.5;
+		col = paint_candy(p);
 	} else {
-		vec2 v = voronoi(p * 1.3);
-		float edge = 1.0 - smoothstep(0.0, 0.06, v.y);
-		col = mix(vec3(0.58, 0.80, 0.96), vec3(0.84, 0.94, 1.0), vnoise(p * 3.0));
-		col = mix(col, vec3(1.0), edge * 0.9);
-		rough = 0.25;
+		col = paint_frost(p, emi);
 	}
-	col = pow(col, vec3(2.2)); // authored in sRGB
-	vec2 d = min(p, size - p);
-	float m = min(d.x, d.y);
-	float border = 1.0 - smoothstep(0.05, 0.09, m);
-	col = mix(col, edge_color, border);
-	emi += edge_color * border * 0.35;
+	// Bevel, side rim, ink edge (from inside out).
+	col = mix(col, col * 1.18, 1.0 - smoothstep(0.075, 0.1, m));
+	col = mix(col, edge_color, (1.0 - smoothstep(0.05, 0.07, m)) * 0.6);
 	if (highlight > 0.5) {
-		vec3 hc = highlight > 1.5 ? vec3(1.0, 0.8, 0.2) : vec3(1.0);
-		float pulse = 0.5 + 0.5 * sin(TIME * 6.0);
-		float inner = 1.0 - smoothstep(0.05, 0.45, m);
-		col = mix(col, hc, (0.15 + inner * 0.6) * (0.5 + 0.5 * pulse));
-		emi += hc * inner * pulse * 0.8;
+		bool target = highlight > 1.5;
+		vec3 hc = target ? vec3(1.0, 0.353, 0.353) : vec3(1.0, 0.882, 0.290);
+		float band = 1.0 - smoothstep(0.1, 0.24, m);
+		float anim = target ? 0.55 + 0.45 * sin(TIME * 6.283 * 3.0) : 0.55 + 0.45 * step(0.5, fract((p.y + p.x) * 1.5 - TIME * 1.2));
+		col = mix(col, hc, band * anim);
+		emi += pow(hc, vec3(2.2)) * band * anim * 0.9;
 	}
-	ALBEDO = col; EMISSION = emi; ROUGHNESS = rough;
+	col = mix(col, INK, 1.0 - smoothstep(0.035, 0.045, m));
+	ALBEDO = pow(col, vec3(2.2));
+	EMISSION = emi;   // already linear
+	ROUGHNESS = 1.0;
 }

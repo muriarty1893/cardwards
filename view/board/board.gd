@@ -20,6 +20,7 @@ const SCENERY: Array[Array] = [
 ]
 
 var env: Environment
+var ambient: Ambient
 var _islands: Array[Array] = [[], []]
 var _clouds: Array[Node3D] = []
 var _scenery: Array[Vector3] = []
@@ -36,8 +37,10 @@ func build(lands: Array[Array]) -> void:
 			var isl := Island.new()
 			isl.position = Vector3(LANE_X[l], 0, STRIP_Z[p])
 			add_child(isl)
-			isl.setup(lands[p][l], p)
+			isl.setup(lands[p][l], p, l)
 			_islands[p].append(isl)
+	ambient = Ambient.build(lands, Settings.quality)
+	add_child(ambient)
 
 
 func scenery_positions() -> Array[Vector3]:
@@ -95,7 +98,7 @@ func _build_environment() -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color.WHITE
-	env.ambient_light_energy = 0.55
+	env.ambient_light_energy = 0.38
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.ssao_enabled = true
 	env.ssao_intensity = 1.0
@@ -107,7 +110,7 @@ func _build_environment() -> void:
 	add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.light_color = Color("#fff4e0")
-	sun.light_energy = 1.25
+	sun.light_energy = 0.9
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 40.0
 	add_child(sun)
