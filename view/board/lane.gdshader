@@ -11,42 +11,24 @@ uniform vec2 size = vec2(2.44, 4.5);
 uniform vec3 edge_color : source_color = vec3(1.0, 0.88, 0.29);
 uniform float highlight = 0.0;
 uniform float wave_seed = 0.0;
+uniform sampler2D fbm_tex : repeat_enable, filter_linear_mipmap;
+uniform sampler2D cell_tex : repeat_enable, filter_linear_mipmap;
 
 const vec3 INK = vec3(0.133, 0.2, 0.2);
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
 
-float vnoise(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	f = f * f * (3.0 - 2.0 * f);
-	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+float vnoise(vec2 q) {
+	return texture(fbm_tex, q * 0.2 + vec2(0.53, 0.19)).r;
 }
 
-float fbm(vec2 p) {
-	return vnoise(p) * 0.6 + vnoise(p * 2.1) * 0.3 + vnoise(p * 4.3) * 0.1;
+float fbm(vec2 q) {
+	return texture(fbm_tex, q * 0.2).r;
 }
 
-// Distance from the nearest cell border (d2 - d1); small values are cracks.
-float voronoi_edge(vec2 p) {
-	vec2 n = floor(p);
-	vec2 f = fract(p);
-	float d1 = 8.0;
-	float d2 = 8.0;
-	for (int j = -1; j <= 1; j++) {
-		for (int i = -1; i <= 1; i++) {
-			vec2 g = vec2(float(i), float(j));
-			float d = length(g + hash2(n + g) - f);
-			if (d < d1) {
-				d2 = d1;
-				d1 = d;
-			} else if (d < d2) {
-				d2 = d;
-			}
-		}
-	}
-	return d2 - d1;
+// Distance from the nearest cell border; small values are cracks.
+float voronoi_edge(vec2 q) {
+	return texture(cell_tex, q * 0.2).r;
 }
 
 vec3 paint_forest(vec2 p) {
@@ -63,7 +45,7 @@ vec3 paint_forest(vec2 p) {
 vec3 paint_ember(vec2 p, out vec3 emi) {
 	vec3 col = mix(vec3(0.290, 0.188, 0.188), vec3(0.380, 0.250, 0.230), fbm(p * 3.0));  // #4a3030
 	float e = voronoi_edge(p * 1.5);
-	float crack = 1.0 - smoothstep(0.02, 0.08, e);
+	float crack = 1.0 - smoothstep(0.04, 0.12, e);
 	float pulse = 0.6 + 0.4 * sin(TIME * 2.4 + p.y * 2.0);
 	col = mix(col, vec3(1.0, 0.478, 0.102), crack);           // #ff7a1a
 	emi = pow(vec3(1.0, 0.478, 0.102), vec3(2.2)) * crack * 2.0 * pulse;

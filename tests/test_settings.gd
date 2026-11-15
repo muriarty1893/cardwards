@@ -15,7 +15,7 @@ func test_defaults() -> bool:
 	s.load_settings()
 	assert_eq(s.music_volume, 0.8, "music default")
 	assert_eq(s.sfx_volume, 0.9, "sfx default")
-	assert_eq(s.quality, GameSettings.DEFAULT_QUALITY, "quality default")
+	assert_eq(s.quality, GameSettings.default_quality(), "quality default")
 	s.free()
 	return true
 
@@ -42,6 +42,6 @@ func test_corrupt_file_gives_defaults() -> bool:
 	f.close()
 	s.load_settings()
 	assert_eq(s.music_volume, 0.8, "music default after corrupt file")
-	assert_eq(s.quality, GameSettings.Quality.HIGH, "HIGH after junk quality")
+	assert_eq(s.quality, GameSettings.default_quality(), "default after unreadable file")
 	s.free()
 	return true

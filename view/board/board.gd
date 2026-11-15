@@ -41,6 +41,25 @@ func build(lands: Array[Array]) -> void:
 			_islands[p].append(isl)
 	ambient = Ambient.build(lands, Settings.quality)
 	add_child(ambient)
+	apply_quality(Settings.quality)
+	if not Settings.changed.is_connected(_on_settings_changed):
+		Settings.changed.connect(_on_settings_changed)
+
+
+## Low: no SSAO, no glow, 1024 shadow atlas, no MSAA, half the ambient particles.
+func apply_quality(q: int) -> void:
+	var low: bool = q == GameSettings.Quality.LOW
+	env.ssao_enabled = not low
+	env.glow_enabled = not low
+	RenderingServer.directional_shadow_atlas_set_size(1024 if low else 4096, true)
+	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_HARD if low else RenderingServer.SHADOW_QUALITY_SOFT_VERY_LOW)
+	if is_inside_tree():
+		get_viewport().msaa_3d = Viewport.MSAA_DISABLED if low else Viewport.MSAA_2X
+	ambient.set_quality(q)
+
+
+func _on_settings_changed() -> void:
+	apply_quality(Settings.quality)
 
 
 func scenery_positions() -> Array[Vector3]:
@@ -112,17 +131,30 @@ func _build_environment() -> void:
 	sun.light_color = Color("#fff4e0")
 	sun.light_energy = 0.9
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 40.0
+	sun.directional_shadow_max_distance = 30.0
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(sun)
 	sun.look_at_from_position(Vector3(5, 12, 7), Vector3.ZERO)
 
 
 func _build_ground() -> void:
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(600, 600)
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://view/look/ground.gdshader") as Shader
-	add_child(Palette.mesh(plane, mat, Vector3.ZERO, false))
+	mat.set_shader_parameter("fbm_tex", NoiseBank.fbm())
+	# Four tiles around the rim instead of one big plane, so the meadow is never shaded
+	# underneath the lanes (overdraw is costly on integrated GPUs).
+	var half := 300.0
+	var hole := Vector2(10.4, 9.9) / 2.0
+	var tiles: Array[Rect2] = [
+		Rect2(-half, -half, 2.0 * half, half - hole.y),
+		Rect2(-half, hole.y, 2.0 * half, half - hole.y),
+		Rect2(-half, -hole.y, half - hole.x, 2.0 * hole.y),
+		Rect2(hole.x, -hole.y, half - hole.x, 2.0 * hole.y),
+	]
+	for r: Rect2 in tiles:
+		var plane := PlaneMesh.new()
+		plane.size = r.size
+		add_child(Palette.mesh(plane, mat, Vector3(r.get_center().x, 0.0, r.get_center().y), false))
 	# Dark soil under the lane block, showing as borders between lanes.
 	add_child(Palette.mesh(_box(Vector3(9.8, 0.1, 9.3)), Toon.plain(Color("#5a4632")), Vector3(0, 0.05, 0), false))
 

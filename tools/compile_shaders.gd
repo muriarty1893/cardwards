@@ -6,7 +6,11 @@ extends SceneTree
 
 func _initialize() -> void:
 	var paths: PackedStringArray = _find("res://", "gdshader")
+	var forward_plus: bool = RenderingServer.get_current_rendering_method() == "forward_plus"
 	for path: String in paths:
+		if path.ends_with("/outline.gdshader") and not forward_plus:
+			print("skipping ", path, " (Forward+ only; Outline uses outline_depth.gdshader here)")
+			continue
 		print("compiling ", path)
 		var shader := load(path) as Shader
 		shader.get_shader_uniform_list()

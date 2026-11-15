@@ -24,6 +24,8 @@ func setup(land_type: int, player: int = 0, lane: int = 0) -> void:
 	_mat.set_shader_parameter("land", land)
 	_mat.set_shader_parameter("size", Vector2(WIDTH + 0.12, LENGTH))
 	_mat.set_shader_parameter("wave_seed", float(player * 4 + lane) * 1.7)
+	_mat.set_shader_parameter("fbm_tex", NoiseBank.fbm())
+	_mat.set_shader_parameter("cell_tex", NoiseBank.cells())
 	_mat.set_shader_parameter("edge_color", EDGE[player])
 	var mi := Palette.mesh(plane, _mat, Vector3(0, TOP_Y, 0), false)
 	add_child(mi)

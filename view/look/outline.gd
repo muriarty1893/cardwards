@@ -3,6 +3,8 @@ extends MeshInstance3D
 ## Full-screen ink outline pass. Attach one to the active camera.
 
 const SHADER_PATH := "res://view/look/outline.gdshader"
+## The Mobile renderer has no normal-roughness buffer: silhouettes from depth only.
+const DEPTH_ONLY_PATH := "res://view/look/outline_depth.gdshader"
 
 ## Normal-based edges (inner creases). Depth edges are always on.
 var use_normals: bool = true:
@@ -19,7 +21,8 @@ static func attach(cam: Camera3D) -> Outline:
 	quad.size = Vector2(2, 2)
 	o.mesh = quad
 	var m := ShaderMaterial.new()
-	m.shader = load(SHADER_PATH) as Shader
+	var forward_plus: bool = RenderingServer.get_current_rendering_method() == "forward_plus"
+	m.shader = load(SHADER_PATH if forward_plus else DEPTH_ONLY_PATH) as Shader
 	m.set_shader_parameter("ink", Palette.INK)
 	# Drawn before other transparent things, so particles and numbers sit on top of the lines.
 	m.render_priority = -128
