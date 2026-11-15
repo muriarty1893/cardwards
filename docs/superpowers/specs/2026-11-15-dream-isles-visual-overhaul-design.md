@@ -5,7 +5,7 @@ Status: design approved in chat, awaiting spec review
 
 ## 1. Why
 
-v1 plays correctly (553 headless checks), but the user judged the look and feel far below
+v1 plays correctly (561 headless checks), but the user judged the look and feel far below
 what they expected: emoji card art, stock models that don't match their cards, flat lane
 textures, tween-only animation, no spell effects, a generic environment and no sound.
 
@@ -80,11 +80,11 @@ Fallbacks if a source can't be downloaded or lacks a needed piece:
 ### 4.2 Camera and setting
 
 - The camera is pitched about 55° down and moved closer, so the 4x2 lane block fills the
-  space between the top HUD corners and the hand tray at 1280x720 and 1920x1080. It keeps
+  space between the top HUD corners and the hand tray at 1280x720, 1366x768 and 1920x1080. It keeps
   the existing shake, and gains a quick zoom for crits.
 - **Meadow:** a large painted ground plane (`view/look/ground.gdshader`: soft colour noise
   and brush-like variation, no tiling seams) running to the horizon, and a gradient cartoon
-  sky with slowly drifting cloud billboards.
+  sky with slowly drifting toon-shaded cloud puffs.
 - **Scenery:** nature-kit trees, bushes, rocks and flowers placed with a fixed seed in a ring
   around the board, kept out of the camera's view of the lanes. Grass sways (vertex wind in
   the toon shader).
@@ -149,7 +149,7 @@ which the user approves before the models are wired in (stage 2).
 | Blizzard Titan | 3 | Big/Yeti | none |
 
 - Standing heights by level: 1.0, 1.3 and 1.7 world units, so strength reads at a glance.
-- Creatures face the enemy lane, play their idle loop, and every 6–12 s (random) play a
+- Creatures keep their three-quarter turn toward the enemy (faces stay visible), play their idle loop, and every 6–12 s (random) play a
   fidget clip the model has (`Wave`, `Yes`, `Dance`).
 - Buildings keep their Quaternius models with the toon material and a land tint.
 
@@ -178,7 +178,8 @@ piece by projecting its world position every frame:
   only loads images.
   - Creatures and buildings: their own model in a three-quarter pose.
   - Spells: a game-icons.net icon chosen to match the spell's name, white with a dark
-    outline, over the spell's own effect glow.
+    outline, over a radial glow in its land's colour (the effects library comes later,
+    in stage 4).
 - **Frame:** coloured by land with a thick dark outline, the picture in the top half, the
   name on a ribbon, a cost gem top-left, sword and heart badges (creatures), and the ability
   text printed on the card. Fonts: Lilita One for names and numbers, the current UI font
@@ -286,7 +287,7 @@ stays a short dispatcher.
   worst frame time for a scripted demo turn. Measured at the end of every stage.
 - **Low quality:** SSAO off, glow off, shadow map 1024, MSAA off, ambient particles halved.
   The default is High if it holds 60 fps on the user's machine at stage 1, otherwise Low.
-- **Existing checks:** all 553 headless checks keep passing after every stage.
+- **Existing checks:** all 561 headless checks keep passing after every stage.
 - **New headless checks:**
   - `VisualDB` covers all 40 cards, and every model, picture, icon and sound file it names
     exists.
@@ -296,7 +297,7 @@ stays a short dispatcher.
   - `ability_triggered` is emitted once per `Abilities.run` call, and replays stay
     identical.
   - Settings save and load.
-  - The UI layout check passes at 1280x720 and 1920x1080 (no overlap between hero corners,
+  - The UI layout check passes at 1280x720, 1366x768 and 1920x1080 (no overlap between hero corners,
     board, overlay and tray).
 - **Visual checks:** Claude takes screenshots (`--shot`) after each stage, compares them
   with the reference, and shows the user the key ones.
