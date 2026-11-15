@@ -3,22 +3,8 @@ extends TestCase
 
 
 func _load_match() -> MatchController:
-	var tree := Engine.get_main_loop() as SceneTree
-	var session: Node = tree.root.get_node("Session")
-	session.set("player_deck", &"blaze_rush")
-	session.set("ai_deck", &"deep_freeze")
-	session.set("seed", 1)
-	var m := (load("res://view/match.tscn") as PackedScene).instantiate() as MatchController
-	tree.root.add_child(m)
-	await tree.process_frame
-	m.player.speed = 8.0
-	m.pace = 8.0
-	# Wait out the opening (and the AI's first turn if it won the coin flip).
-	var waited: int = 0
-	while (m.busy or m.state.active != MatchController.HUMAN) and waited < 3000:
-		await tree.process_frame
-		waited += 1
-	assert_true(not m.busy and m.state.active == MatchController.HUMAN, "human's turn reached")
+	var m: MatchController = await Fx.load_match()
+	assert_true(m != null, "human's turn reached")
 	return m
 
 

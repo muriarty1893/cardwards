@@ -133,18 +133,36 @@ func _unhandled_input(event: InputEvent) -> void:
 			_send()
 		return
 	if mode == Mode.IDLE and t["player"] == _human():
-		var cr: GameState.CreatureState = _state().players[_human()].lanes[t["lane"]].creature
-		if cr == null:
-			return
-		if cr.card.trigger != &"on_boop":
-			match_ctl.toast.show_message("%s has no boop ability" % cr.card.display_name)
-			return
-		var err: String = Rules.validate(_state(), Action.boop(_human(), t["lane"], []))
-		if err != "" and err != "Invalid target":
-			match_ctl.toast.show_message(err)
-			return
-		_card = cr.card
-		_begin_card_targets(-1, t["lane"], true)
+		request_boop(t["lane"])
+
+
+## True when the human's creature in `lane` can boop right now (targets may still be needed).
+func can_boop(lane: int) -> bool:
+	if not enabled or mode != Mode.IDLE:
+		return false
+	var cr: GameState.CreatureState = _state().players[_human()].lanes[lane].creature
+	if cr == null or cr.card.trigger != &"on_boop":
+		return false
+	var err: String = Rules.validate(_state(), Action.boop(_human(), lane, []))
+	return err == "" or err == "Invalid target"
+
+
+## Boop the human's creature in `lane` (from a creature click or its BOOP button).
+func request_boop(lane: int) -> void:
+	if not enabled:
+		return
+	var cr: GameState.CreatureState = _state().players[_human()].lanes[lane].creature
+	if cr == null:
+		return
+	if cr.card.trigger != &"on_boop":
+		match_ctl.toast.show_message("%s has no boop ability" % cr.card.display_name)
+		return
+	var err: String = Rules.validate(_state(), Action.boop(_human(), lane, []))
+	if err != "" and err != "Invalid target":
+		match_ctl.toast.show_message(err)
+		return
+	_card = cr.card
+	_begin_card_targets(-1, lane, true)
 
 
 func cancel() -> void:

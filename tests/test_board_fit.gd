@@ -44,3 +44,21 @@ func test_scenery_outside_board() -> bool:
 		assert_true(not Board.INNER_CLEAR.has_point(Vector2(v.x, v.z)), "prop %s outside board" % v)
 	(r[0] as Node).free()
 	return true
+
+
+func test_bars_fit_view() -> bool:
+	for size: Vector2i in SIZES:
+		var r: Array = await _rig(size)
+		var cam: Camera3D = (r[1] as CameraRig).camera
+		var board: Board = r[2]
+		var screen := Rect2(0, 0, size.x, size.y)
+		var corner_l := Rect2(Vector2(12, 10), Hud.CORNER)
+		var corner_r := Rect2(Vector2(size.x - 12 - Hud.CORNER.x, 10), Hud.CORNER)
+		for p: int in 2:
+			for l: int in 4:
+				var bar: Rect2 = UnitOverlay.bar_rect_at(cam, board.anchor(p, l) + Vector3(0, 1.85, 0), [corner_l, corner_r])
+				assert_true(screen.encloses(bar), "bar p%d l%d on screen at %s (%s)" % [p, l, size, bar])
+				assert_true(not bar.intersects(corner_l) and not bar.intersects(corner_r), "bar p%d l%d clear of corners at %s" % [p, l, size])
+				assert_true(bar.end.y <= size.y - Hud.TRAY_H, "bar p%d l%d above tray at %s" % [p, l, size])
+		(r[0] as Node).free()
+	return true

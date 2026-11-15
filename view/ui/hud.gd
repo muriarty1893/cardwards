@@ -85,6 +85,11 @@ func shake_hero(human_side: bool) -> void:
 	tw.tween_property(p, "position", base, 0.05)
 
 
+## Screen rects of the two hero corner panels (stat bars keep out of them).
+func corner_rects() -> Array[Rect2]:
+	return [_you.get_global_rect(), _rival.get_global_rect()]
+
+
 func hero_screen_pos(human_side: bool) -> Vector2:
 	return (_you if human_side else _rival).get_global_rect().get_center()
 

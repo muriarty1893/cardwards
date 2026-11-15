@@ -16,6 +16,7 @@ var input: InputController
 var player: EventPlayer
 var timing_bar: TimingBar
 var results: Results
+var overlay: UnitOverlay
 var ai: AIPlayer
 var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
 const AI_PAUSE := 0.6
@@ -86,7 +87,15 @@ func _demo_put(p: int, l: int, id: StringName) -> void:
 
 
 func _build_ui() -> void:
+	# Stat bars and BOOP buttons sit under the HUD layer.
+	var over_layer := CanvasLayer.new()
+	over_layer.layer = 1
+	add_child(over_layer)
+	overlay = UnitOverlay.new()
+	over_layer.add_child(overlay)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var layer := CanvasLayer.new()
+	layer.layer = 2
 	add_child(layer)
 	var root := Control.new()
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -120,6 +129,7 @@ func _build_ui() -> void:
 	player.m = self
 	add_child(player)
 	input.action_requested.connect(_on_action_requested)
+	overlay.setup(self)
 	hud.end_turn_pressed.connect(_on_end_turn_pressed)
 	hud.menu_requested.connect(func() -> void: get_tree().change_scene_to_file("res://menus/main_menu.tscn"))
 
@@ -145,6 +155,7 @@ func refresh_ui() -> void:
 	input.enabled = can_act
 	hand.enabled = can_act
 	hud.set_input_enabled(can_act or paused)
+	overlay.refresh(state)
 
 
 ## Validate, apply, and play the resulting events with input locked.
@@ -278,3 +289,4 @@ func refresh_pieces() -> void:
 			var cr: GameState.CreatureState = state.players[p].lanes[l].creature
 			if v and cr:
 				v.set_frozen(cr.is_frozen())
+	overlay.refresh(state)

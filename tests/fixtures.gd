@@ -50,3 +50,26 @@ static func types(events: Array[GameEvent]) -> Array[StringName]:
 static func fill_deck(s: GameState, p: int, id: StringName, n: int) -> void:
 	for i: int in n:
 		s.players[p].deck.append(CardDB.card(id))
+
+
+## Loads the real match scene (blaze_rush vs deep_freeze, seed 1) at high playback speed and
+## waits for the human's turn. Returns null if the human turn is never reached.
+static func load_match() -> MatchController:
+	var tree := Engine.get_main_loop() as SceneTree
+	var session: Node = tree.root.get_node("Session")
+	session.set("player_deck", &"blaze_rush")
+	session.set("ai_deck", &"deep_freeze")
+	session.set("seed", 1)
+	var m := (load("res://view/match.tscn") as PackedScene).instantiate() as MatchController
+	tree.root.add_child(m)
+	await tree.process_frame
+	m.player.speed = 8.0
+	m.pace = 8.0
+	# Wait out the opening (and the AI's first turn if it won the coin flip).
+	var waited: int = 0
+	while (m.busy or m.state.active != MatchController.HUMAN) and waited < 3000:
+		await tree.process_frame
+		waited += 1
+	if m.busy or m.state.active != MatchController.HUMAN:
+		return null
+	return m
