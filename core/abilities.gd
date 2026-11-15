@@ -5,6 +5,8 @@ extends RefCounted
 
 
 static func run(s: GameState, p: int, lane: int, card: CardData, targets: Array[Dictionary], ev: Array[GameEvent]) -> void:
+	# Informational only (no state change): tells the view what caused the events that follow.
+	ev.append(GameEvent.make(&"ability_triggered", {"player": p, "lane": lane, "card": card.id}))
 	var foe: int = s.opponent(p)
 	match card.ability_id:
 		&"heal_self_2":

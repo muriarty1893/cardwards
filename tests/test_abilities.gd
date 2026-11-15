@@ -365,3 +365,35 @@ func test_return_to_full_hand() -> bool:
 		ids.append(c.id)
 	assert_true(&"blazehorn" in ids, "blazehorn back in discard")
 	return true
+
+
+func _count(ev: Array[GameEvent], t: StringName) -> int:
+	return Fx.types(ev).count(t)
+
+func test_ability_triggered_on_boop() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put_creature(s, 0, 1, &"sporeling", 2)
+	var ev: Array[GameEvent] = Rules.apply(s, Action.boop(0, 1, []))
+	var i: int = Fx.types(ev).find(&"ability_triggered")
+	assert_true(i >= 0 and i < Fx.types(ev).find(&"creature_healed"), "before the heal")
+	assert_eq(ev[i].data, {"player": 0, "lane": 1, "card": &"sporeling"}, "data")
+	return true
+
+func test_ability_triggered_once_per_spell() -> bool:
+	var s: GameState = Fx.blank()
+	for l: int in 3:
+		Fx.put_creature(s, 1, l, &"mossback")
+	var i: int = Fx.give(s, 0, &"ember_rain")
+	var ev: Array[GameEvent] = Rules.apply(s, Action.play(0, i, -1, []))
+	assert_eq(_count(ev, &"ability_triggered"), 1, "once for 3 targets")
+	assert_eq(ev[Fx.types(ev).find(&"ability_triggered")].data["lane"], -1, "spell lane -1")
+	return true
+
+func test_ability_triggered_for_building() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put_building(s, 0, 2, &"smokestack")
+	Fx.fill_deck(s, 1, &"mossback", 3)
+	Rules.apply(s, Action.begin_attacks(0))
+	var ev: Array[GameEvent] = Rules.apply(s, Action.end_turn(0))
+	assert_true(&"ability_triggered" in Fx.types(ev), "smokestack trigger")
+	return true
