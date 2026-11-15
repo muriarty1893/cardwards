@@ -2,6 +2,11 @@ class_name UiStyle
 extends RefCounted
 ## Shared chunky cartoon UI styling.
 
+## Lilita One (OFL) for names, numbers and titles.
+const TITLE_FONT := "res://assets/fonts/LilitaOne-Regular.ttf"
+
+static var _title_font: FontFile
+
 
 static func panel(bg: Color = Color(1, 1, 1, 0.95), radius: int = 16) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -33,3 +38,11 @@ static func bold(l: Label) -> Label:
 	f.font_weight = 800
 	l.add_theme_font_override("font", f)
 	return l
+
+
+## Applies the cartoon title font (Lilita One) to a label or button.
+static func title(c: Control) -> Control:
+	if _title_font == null:
+		_title_font = load(TITLE_FONT) as FontFile
+	c.add_theme_font_override("font", _title_font)
+	return c
