@@ -21,6 +21,18 @@ unless noted.
   https://opengameart.org/content/particle-pack-80-sprites. Downscaled to 128 px and
   converted to white with brightness as alpha.
 
+## Sound and music, CC0 1.0
+
+- `audio/` (`audio/sfx/`), by **Kenney**: "Interface Sounds" (https://opengameart.org/content/interface-sounds),
+  "50 RPG sound effects" (https://opengameart.org/content/50-rpg-sound-effects),
+  "54 casino sound effects" (https://opengameart.org/content/54-casino-sound-effects-cards-dice-chips),
+  "85 short music jingles" (https://opengameart.org/content/85-short-music-jingles).
+- `audio/sfx/`, by **rubberduck**: "75 CC0 breaking / falling / hit sfx"
+  (https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx).
+- `audio/music/menu.mp3`: "Happy Clappy Loop" by **OwlishMedia** (https://opengameart.org/content/happy-clappy-loop).
+- `audio/music/match.mp3`: "Happy Adventure (Loop)" by **TinyWorlds** (https://opengameart.org/content/happy-adventure-loop).
+- Files were renamed to `<sound set>_<n>.ogg`; the mapping lives in `autoload/audio.gd`.
+
 ## Kay Lousberg, KayKit (https://www.kaylousberg.com), CC0 1.0
 
 - `heroes/`: "KayKit Character Pack: Adventurers" 1.0 (Mage, Barbarian),

@@ -24,6 +24,18 @@ func _ready() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--quality="):
 			quality = Quality.LOW if arg.substr(10) == "low" else Quality.HIGH
+	apply_audio()
+
+
+## Pushes the volumes to the Music and SFX buses (0 mutes the bus).
+func apply_audio() -> void:
+	for pair: Array in [[&"Music", music_volume], [&"SFX", sfx_volume]]:
+		var idx: int = AudioServer.get_bus_index(pair[0])
+		if idx < 0:
+			continue
+		var v: float = pair[1]
+		AudioServer.set_bus_mute(idx, v <= 0.0)
+		AudioServer.set_bus_volume_db(idx, linear_to_db(v) if v > 0.0 else -80.0)
 
 
 func reset() -> void:
@@ -71,6 +83,7 @@ func set_value(key: StringName, value: Variant) -> void:
 			push_warning("Settings: unknown key %s" % key)
 			return
 	save_settings()
+	apply_audio()
 	changed.emit()
 
 

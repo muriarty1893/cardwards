@@ -24,4 +24,9 @@ anti_aliasing/quality/msaa_3d=2
 
 Session="*res://autoload/session.gd"
 Settings="*res://autoload/settings.gd"
+Audio="*res://autoload/audio.gd"
 Screenshot="*res://tools/screenshot.gd"
+
+[audio]
+
+buses/default_bus_layout="res://default_bus_layout.tres"
