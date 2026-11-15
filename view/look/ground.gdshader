@@ -4,6 +4,7 @@ render_mode cull_back;
 // Noise comes from a shared seamless texture (NoiseBank) rather than per-pixel maths.
 
 #include "res://view/look/toon_light.gdshaderinc"
+#include "res://view/look/color_space.gdshaderinc"
 
 uniform vec4 base_col : source_color = vec4(0.435, 0.722, 0.310, 1.0);
 uniform vec4 dark_col : source_color = vec4(0.353, 0.620, 0.251, 1.0);
@@ -30,10 +31,11 @@ void fragment() {
 	vec2 p = world_pos.xz;
 	float n = fbm(p * noise_scale);
 	float streak = value_noise(vec2(p.x * 0.35, p.y * 1.6));
-	vec3 c = base_col.rgb;
-	c = mix(c, dark_col.rgb, smoothstep(0.56, 0.62, n));
-	c = mix(c, light_col.rgb, smoothstep(0.36, 0.30, n));
-	c = mix(c, light_col.rgb, smoothstep(0.72, 0.78, streak) * 0.2);
-	ALBEDO = c;
+	vec3 light = src_lin(light_col.rgb);
+	vec3 c = src_lin(base_col.rgb);
+	c = mix(c, src_lin(dark_col.rgb), smoothstep(0.56, 0.62, n));
+	c = mix(c, light, smoothstep(0.36, 0.30, n));
+	c = mix(c, light, smoothstep(0.72, 0.78, streak) * 0.2);
+	ALBEDO = out_col(c);
 	ROUGHNESS = 1.0;
 }

@@ -23,4 +23,6 @@ static func create(c: CardData) -> BuildingView:
 	else:
 		v.add_child(Palette.mesh(Palette.cylinder(0.3, 0.36, 0.7, 8), Toon.plain(Color("#efe3c8")), Vector3(0, 0.5, 0)))
 		v.add_child(Palette.mesh(Palette.cylinder(0.0, 0.42, 0.5, 8), Toon.plain(Palette.LAND_TOP[c.land].darkened(0.15)), Vector3(0, 1.1, 0)))
+	if not BlobShadow.sun_shadows():
+		v.add_child(BlobShadow.build(0.5, HEIGHT, Island.TOP_Y + 0.02))
 	return v

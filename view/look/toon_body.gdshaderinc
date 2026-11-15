@@ -1,7 +1,8 @@
-// Body of the cartoon model material; included by toon.gdshader and toon_cutout.gdshader.
-// Define CUTOUT before including for alpha-tested leaves and grass.
+// Body of the cartoon model material; included by toon(_fx)(_cutout).gdshader.
+// Define CUTOUT before including for alpha-tested leaves and grass, INSTANCE_FX for hit flash and dissolve.
 
 #include "res://view/look/toon_light.gdshaderinc"
+#include "res://view/look/color_space.gdshaderinc"
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, hint_default_white;
 uniform vec4 albedo_color : source_color = vec4(1.0);
@@ -13,8 +14,15 @@ uniform float rim_strength = 0.25;
 #ifdef CUTOUT
 uniform float alpha_cut = 0.5;
 #endif
+// Hit flash and dissolve are per-instance only in the fx variants (creatures): WebGL fits
+// roughly 256 instances with instance uniforms, far fewer than the scenery uses.
+#ifdef INSTANCE_FX
 instance uniform float flash = 0.0;
 instance uniform float dissolve = 0.0;
+#else
+const float flash = 0.0;
+const float dissolve = 0.0;
+#endif
 
 varying vec3 world_pos;
 
@@ -54,16 +62,16 @@ void fragment() {
 	ALPHA = tex.a * albedo_color.a;
 	ALPHA_SCISSOR_THRESHOLD = alpha_cut;
 #endif
-	vec3 base = tex.rgb * albedo_color.rgb;
+	vec3 base = src_lin(tex.rgb * albedo_color.rgb);
 	if (use_vertex_color) {
 		base *= COLOR.rgb;
 	}
 	float luma = dot(base, vec3(0.299, 0.587, 0.114));
 	// Recolour toward the tint while keeping the model's light/dark detail readable.
-	base = mix(base, clamp(tint.rgb * (0.6 + 0.8 * luma), 0.0, 1.0), tint.a);
+	base = mix(base, clamp(src_lin(tint.rgb) * (0.6 + 0.8 * luma), 0.0, 1.0), tint.a);
 	base = mix(base, vec3(1.0), flash);
-	ALBEDO = base;
+	ALBEDO = out_col(base);
 	ROUGHNESS = 1.0;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0) * rim_strength;
-	EMISSION = base * rim + vec3(flash * 0.6);
+	EMISSION = out_col(base * rim + vec3(flash * 0.6));
 }

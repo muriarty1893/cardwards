@@ -5,6 +5,7 @@ render_mode cull_back;
 // and animated highlight outlines (1 = valid drop, 2 = target). Lit with the cartoon bands.
 
 #include "res://view/look/toon_light.gdshaderinc"
+#include "res://view/look/color_space.gdshaderinc"
 
 uniform int land = 0;
 uniform vec2 size = vec2(2.44, 4.5);
@@ -100,7 +101,7 @@ void fragment() {
 	}
 	// Bevel, side rim, ink edge (from inside out).
 	col = mix(col, col * 1.18, 1.0 - smoothstep(0.075, 0.1, m));
-	col = mix(col, edge_color, (1.0 - smoothstep(0.05, 0.07, m)) * 0.6);
+	col = mix(col, src_lin(edge_color), (1.0 - smoothstep(0.05, 0.07, m)) * 0.6);
 	if (highlight > 0.5) {
 		bool target = highlight > 1.5;
 		vec3 hc = target ? vec3(1.0, 0.353, 0.353) : vec3(1.0, 0.882, 0.290);
@@ -110,7 +111,7 @@ void fragment() {
 		emi += pow(hc, vec3(2.2)) * band * anim * 0.9;
 	}
 	col = mix(col, INK, 1.0 - smoothstep(0.035, 0.045, m));
-	ALBEDO = pow(col, vec3(2.2));
-	EMISSION = emi;   // already linear
+	ALBEDO = out_col(pow(col, vec3(2.2)));
+	EMISSION = out_col(emi);   // emi is linear
 	ROUGHNESS = 1.0;
 }

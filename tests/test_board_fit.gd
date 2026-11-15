@@ -36,6 +36,34 @@ func test_board_fits_view() -> bool:
 		(r[0] as Node).free()
 	return true
 
+## WebGL fits only ~256 instances with instance uniforms, so scenery must use the plain toon shader.
+func test_board_uses_no_instance_fx() -> bool:
+	var r: Array = await _rig(Vector2i(1280, 720))
+	var fx: int = 0
+	for n: Node in (r[2] as Node).find_children("*", "GeometryInstance3D", true, false):
+		var mats: Array[Material] = [(n as GeometryInstance3D).material_override]
+		var mi := n as MeshInstance3D
+		if mi and mi.mesh:
+			for i: int in mi.mesh.get_surface_count():
+				mats.append(mi.get_active_material(i))
+		for m: Material in mats:
+			var sm := m as ShaderMaterial
+			if sm and sm.shader and sm.shader.resource_path in [Toon.FX_PATH, Toon.FX_CUTOUT_PATH]:
+				fx += 1
+				break
+	assert_true(fx == 0, "board meshes with per-instance fx: %d" % fx)
+	(r[0] as Node).free()
+	return true
+
+## The sun casts real shadows unless pieces use blob shadows instead (Compatibility / web).
+func test_sun_shadows_or_blobs() -> bool:
+	var r: Array = await _rig(Vector2i(1280, 720))
+	var suns: Array[Node] = (r[2] as Node).find_children("*", "DirectionalLight3D", true, false)
+	assert_eq(suns.size(), 1, "one sun")
+	assert_eq((suns[0] as DirectionalLight3D).shadow_enabled, BlobShadow.sun_shadows(), "sun shadows only where supported")
+	(r[0] as Node).free()
+	return true
+
 func test_scenery_outside_board() -> bool:
 	var r: Array = await _rig(Vector2i(1280, 720))
 	var board: Board = r[2]

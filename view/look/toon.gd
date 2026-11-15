@@ -2,26 +2,34 @@ class_name Toon
 extends RefCounted
 ## The cartoon material used on every model. Materials are cached and shared by their
 ## arguments; per-piece hit flash and dissolve are instance uniforms, so sharing is safe.
+## Only `fx` materials (creatures) carry those instance uniforms: WebGL fits roughly 256
+## such instances, far fewer than the scenery uses.
 
 const SHADER_PATH := "res://view/look/toon.gdshader"
 const CUTOUT_PATH := "res://view/look/toon_cutout.gdshader"
+const FX_PATH := "res://view/look/toon_fx.gdshader"
+const FX_CUTOUT_PATH := "res://view/look/toon_fx_cutout.gdshader"
 const NO_TINT := Color(1, 1, 1, 0)
 
-static var _shader: Shader
-static var _cutout_shader: Shader
+## Shader path -> loaded Shader.
+static var _shaders: Dictionary = {}
 static var _cache: Dictionary = {}
 
 
-## `cutout` > 0 selects the alpha-tested variant with that threshold.
-static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: float = 0.0, vertex_color: bool = false, cutout: float = 0.0) -> ShaderMaterial:
-	var key: String = "%d|%s|%s|%.3f|%s|%.2f" % [tex.get_instance_id() if tex else 0, color.to_html(), tint.to_html(), sway, vertex_color, cutout]
+## `cutout` > 0 selects the alpha-tested variant with that threshold; `fx` adds hit flash and dissolve.
+static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: float = 0.0, vertex_color: bool = false, cutout: float = 0.0, fx: bool = false) -> ShaderMaterial:
+	var key: String = "%d|%s|%s|%.3f|%s|%.2f|%s" % [tex.get_instance_id() if tex else 0, color.to_html(), tint.to_html(), sway, vertex_color, cutout, fx]
 	if _cache.has(key):
 		return _cache[key]
-	if _shader == null:
-		_shader = load(SHADER_PATH) as Shader
-		_cutout_shader = load(CUTOUT_PATH) as Shader
+	var path: String
+	if fx:
+		path = FX_CUTOUT_PATH if cutout > 0.0 else FX_PATH
+	else:
+		path = CUTOUT_PATH if cutout > 0.0 else SHADER_PATH
+	if not _shaders.has(path):
+		_shaders[path] = load(path) as Shader
 	var m := ShaderMaterial.new()
-	m.shader = _cutout_shader if cutout > 0.0 else _shader
+	m.shader = _shaders[path]
 	if cutout > 0.0:
 		m.set_shader_parameter("alpha_cut", cutout)
 	if tex:
@@ -34,12 +42,13 @@ static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: 
 	return m
 
 
-static func plain(color: Color, sway: float = 0.0) -> ShaderMaterial:
-	return material(null, color, NO_TINT, sway)
+static func plain(color: Color, sway: float = 0.0, fx: bool = false) -> ShaderMaterial:
+	return material(null, color, NO_TINT, sway, false, 0.0, fx)
 
 
 ## Swap every surface material under `root` for the toon material, keeping albedo texture and colour.
-static func apply(root: Node, tint: Color = NO_TINT, sway: float = 0.0) -> void:
+## Pass `fx` for pieces that use set_flash / set_dissolve.
+static func apply(root: Node, tint: Color = NO_TINT, sway: float = 0.0, fx: bool = false) -> void:
 	for mi: MeshInstance3D in _meshes(root):
 		if mi.mesh == null:
 			continue
@@ -60,13 +69,13 @@ static func apply(root: Node, tint: Color = NO_TINT, sway: float = 0.0) -> void:
 					cut = base.alpha_scissor_threshold
 				elif base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and tex:
 					cut = 0.5
-			mi.set_surface_override_material(i, material(tex, col, tint, sway, vcol, cut))
+			mi.set_surface_override_material(i, material(tex, col, tint, sway, vcol, cut, fx))
 		mi.material_override = null
 
 
 static func is_toon(m: Material) -> bool:
 	var sm := m as ShaderMaterial
-	return sm != null and sm.shader != null and sm.shader.resource_path in [SHADER_PATH, CUTOUT_PATH]
+	return sm != null and sm.shader != null and sm.shader.resource_path in [SHADER_PATH, CUTOUT_PATH, FX_PATH, FX_CUTOUT_PATH]
 
 
 static func set_flash(root: Node, v: float) -> void:

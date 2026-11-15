@@ -8,6 +8,8 @@ const STRIP_Z: Array[float] = [2.33, -2.33]
 ## Where creatures stand: near the centre line, facing off.
 const SIDE_Z: Array[float] = [1.45, -1.45]
 const CREATURE_Y := 0.58
+## Where the sun shines from, towards the board centre.
+const SUN_FROM := Vector3(5, 12, 7)
 ## Scenery never goes inside this x/z rectangle (the lane block plus a margin).
 const INNER_CLEAR := Rect2(-6.4, -6.0, 12.8, 12.0)
 const NATURE := "res://assets/nature/%s.gltf"
@@ -47,10 +49,12 @@ func build(lands: Array[Array]) -> void:
 
 
 ## Low: no SSAO, no glow, 1024 shadow atlas, no MSAA, half the ambient particles.
+## No glow on the Compatibility renderer (web) either: its glow works on 8-bit sRGB colour and
+## blooms every bright lane over the pieces, so they look hazy and see-through.
 func apply_quality(q: int) -> void:
 	var low: bool = q == GameSettings.Quality.LOW
 	env.ssao_enabled = not low
-	env.glow_enabled = not low
+	env.glow_enabled = not low and RenderingServer.get_current_rendering_method() != "gl_compatibility"
 	RenderingServer.directional_shadow_atlas_set_size(1024 if low else 4096, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_HARD if low else RenderingServer.SHADOW_QUALITY_SOFT_VERY_LOW)
 	if is_inside_tree():
@@ -130,11 +134,12 @@ func _build_environment() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.light_color = Color("#fff4e0")
 	sun.light_energy = 0.9
-	sun.shadow_enabled = true
+	# Off on the Compatibility renderer (web), where shadowed lights over-brighten; see BlobShadow.
+	sun.shadow_enabled = BlobShadow.sun_shadows()
 	sun.directional_shadow_max_distance = 30.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(sun)
-	sun.look_at_from_position(Vector3(5, 12, 7), Vector3.ZERO)
+	sun.look_at_from_position(SUN_FROM, Vector3.ZERO)
 
 
 func _build_ground() -> void:

@@ -15,8 +15,26 @@ func test_creature_heights_and_toon() -> bool:
 		assert_true(full_height or width_capped, "%s height %f width %f" % [c.id, h, w])
 		for mi: Node in v.body.find_children("*", "MeshInstance3D", true, false):
 			var m := (mi as MeshInstance3D).get_active_material(0) as ShaderMaterial
-			assert_true(m != null and m.shader.resource_path == Toon.SHADER_PATH, "%s toon" % c.id)
+			assert_true(m != null and m.shader.resource_path in [Toon.FX_PATH, Toon.FX_CUTOUT_PATH], "%s fx toon" % c.id)
 		v.free()
+	return true
+
+func test_blob_shadows_where_sun_casts_none() -> bool:
+	for forced: bool in [false, true]:
+		BlobShadow.force_blobs = forced
+		var want: bool = not BlobShadow.sun_shadows()
+		if forced:
+			assert_true(want, "forcing blobs turns sun shadows off")
+		var cv := CreatureView.create(CardDB.card(&"cinderpup"))
+		assert_eq(cv.find_child("BlobShadow", false, false) != null, want, "creature blob (forced %s)" % forced)
+		cv.free()
+		for c: CardData in CardDB.all_cards():
+			if c.kind == CardData.Kind.BUILDING:
+				var bv := BuildingView.create(c)
+				assert_eq(bv.find_child("BlobShadow", false, false) != null, want, "building blob (forced %s)" % forced)
+				bv.free()
+				break
+	BlobShadow.force_blobs = false
 	return true
 
 func test_missing_model_fallback() -> bool:

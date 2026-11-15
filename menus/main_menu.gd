@@ -118,9 +118,11 @@ func _build_ui() -> void:
 	var credits := MenuButtons.big("CREDITS", Color.WHITE, 20)
 	credits.pressed.connect(func() -> void: _open_panel(CreditsPanel.make()))
 	row.add_child(credits)
-	var quit := MenuButtons.big("QUIT", Color.WHITE, 20)
-	quit.pressed.connect(func() -> void: get_tree().quit())
-	row.add_child(quit)
+	# A browser tab cannot be closed from inside the page.
+	if not OS.has_feature("web"):
+		var quit := MenuButtons.big("QUIT", Color.WHITE, 20)
+		quit.pressed.connect(func() -> void: get_tree().quit())
+		row.add_child(quit)
 	_select_deck(Session.player_deck)
 	_select_difficulty(Session.difficulty)
 	play.grab_focus()

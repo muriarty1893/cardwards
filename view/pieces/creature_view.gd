@@ -18,6 +18,8 @@ var busy: bool = false
 var body: Node3D
 var height: float = 1.0
 var _shell: IceShell
+## Ground blob where the sun casts no shadows (web); null otherwise.
+var _blob: BlobShadow
 var _anim: AnimationPlayer
 var _idle: StringName = &""
 var _fidget_in: float = 0.0
@@ -35,13 +37,22 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 	else:
 		v._build_fallback(c)
 	v._fidget_in = randf_range(6.0, 12.0)
+	if not BlobShadow.sun_shadows():
+		v._add_blob()
 	return v
+
+
+func _add_blob() -> void:
+	var box: AABB = Palette.bounds(body)
+	var w: float = maxf(box.size.x, box.size.z) * body.scale.x
+	_blob = BlobShadow.build(clampf(w * 0.36, 0.3, 0.7), height, Island.TOP_Y - BASE_Y + 0.02)
+	add_child(_blob)
 
 
 func _build_model(scene: PackedScene, tint: Color) -> void:
 	body = scene.instantiate() as Node3D
 	add_child(body)
-	Toon.apply(body, tint)
+	Toon.apply(body, tint, 0.0, true)
 	var box: AABB = Palette.bounds(body)
 	var k: float = height / maxf(box.size.y, 0.01)
 	k = minf(k, MAX_WIDTH / maxf(maxf(box.size.x, box.size.z), 0.01))
@@ -67,7 +78,7 @@ func _build_fallback(c: CardData) -> void:
 	var cap := CapsuleMesh.new()
 	cap.height = height
 	cap.radius = height * 0.3
-	body.add_child(Palette.mesh(cap, Toon.plain(Palette.LAND_CARD[c.land]), Vector3(0, height / 2.0, 0)))
+	body.add_child(Palette.mesh(cap, Toon.plain(Palette.LAND_CARD[c.land], 0.0, true), Vector3(0, height / 2.0, 0)))
 	body.position = Vector3(0, Island.TOP_Y - BASE_Y, 0)
 
 
@@ -124,6 +135,8 @@ func flash(duration: float = 0.12) -> void:
 func dissolve(duration: float = 0.35) -> void:
 	var tw := create_tween()
 	tw.tween_method(func(x: float) -> void: Toon.set_dissolve(body, x), 0.0, 1.0, duration)
+	if _blob:
+		tw.parallel().tween_property(_blob, "transparency", 1.0, duration)
 	await tw.finished
 
 
