@@ -99,3 +99,41 @@ func test_main_menu_loads() -> bool:
 	menu.queue_free()
 	await tree.process_frame
 	return true
+
+
+func test_panels_have_thick_ink_border() -> bool:
+	var sb: StyleBoxFlat = UiStyle.panel()
+	assert_eq(sb.border_width_left, 5, "5 px ink border")
+	return true
+
+
+func test_bold_font_is_shared() -> bool:
+	var a: Label = UiStyle.bold(UiStyle.label("a"))
+	var b: Label = UiStyle.bold(UiStyle.label("b"))
+	assert_true(a.get_theme_font("font") == b.get_theme_font("font"), "one shared font, not one per label")
+	a.free()
+	b.free()
+	return true
+
+
+func test_hand_reuses_cards_when_unchanged() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	var hand := Hand.new()
+	tree.root.add_child(hand)
+	hand.size = Vector2(1280, 720)
+	var cards: Array[CardData] = [CardDB.card(&"mossback"), CardDB.card(&"fireball")]
+	var playable: Array[bool] = [true, true]
+	hand.show_hand(cards, playable)
+	var before: Array[Node] = hand.get_children()
+	hand.show_hand(cards.duplicate(), [true, false] as Array[bool])
+	var after: Array[Node] = hand.get_children()
+	assert_eq(after.size(), before.size(), "same number of cards")
+	assert_true(after[0] == before[0] and after[1] == before[1], "same card widgets reused")
+	assert_true((after[1] as CardWidget).modulate != Color.WHITE, "playable change applied in place")
+	var more: Array[CardData] = [CardDB.card(&"mossback"), CardDB.card(&"fireball"), CardDB.card(&"gumdrop")]
+	hand.show_hand(more, [true, true, true] as Array[bool])
+	await tree.process_frame
+	assert_eq(hand.get_children().filter(func(n: Node) -> bool: return not n.is_queued_for_deletion()).size(), 3, "rebuilt when the cards change")
+	hand.queue_free()
+	await tree.process_frame
+	return true

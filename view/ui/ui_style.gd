@@ -6,13 +6,14 @@ extends RefCounted
 const TITLE_FONT := "res://assets/fonts/LilitaOne-Regular.ttf"
 
 static var _title_font: FontFile
+static var _bold_font: SystemFont
 
 
 static func panel(bg: Color = Color(1, 1, 1, 0.95), radius: int = 16) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = Palette.INK
-	sb.set_border_width_all(4)
+	sb.set_border_width_all(5)
 	sb.set_corner_radius_all(radius)
 	sb.shadow_color = Color(Palette.INK, 0.45)
 	sb.shadow_offset = Vector2(0, 5)
@@ -33,10 +34,12 @@ static func label(text: String, size: int = 20, color: Color = Palette.INK) -> L
 
 
 static func bold(l: Label) -> Label:
-	var f := SystemFont.new()
-	f.font_names = PackedStringArray(["Nunito", "Fredoka", "Noto Sans", "sans-serif"])
-	f.font_weight = 800
-	l.add_theme_font_override("font", f)
+	# One shared SystemFont: building a new one per label cost ~8 ms each (hand rebuild hitches).
+	if _bold_font == null:
+		_bold_font = SystemFont.new()
+		_bold_font.font_names = PackedStringArray(["Nunito", "Fredoka", "Noto Sans", "sans-serif"])
+		_bold_font.font_weight = 800
+	l.add_theme_font_override("font", _bold_font)
 	return l
 
 

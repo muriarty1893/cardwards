@@ -9,15 +9,12 @@ const GREEN := Color("#3ad16a")
 const YELLOW := Color("#ffcf3a")
 const RED := Color("#e5384f")
 const BOOP_SIZE := Vector2(96, 34)
+## Where a lane's BOOP button sits, relative to the human creature's anchor (left of the building).
+const BOOP_OFFSET := Vector3(-0.45, 0, 0.95)
 const BOOP_READY := Color("#ffcf3a")
 const BOOP_OFF := Color("#8a86a8")
 const DRAIN := 0.3
 const HOVER_SCALE := 1.6
-## Building badge glyph by ability (icons replace these in Task 9).
-const BADGE: Dictionary = {
-	&"heal_lane_creature_1": "✚", &"lane_max_hp_3": "♥", &"lane_atk_2": "⚔", &"dmg_enemy_hero_1": "☁",
-	&"lane_atk_1_hp_1": "⚔", &"gain_magic_1": "◆", &"lane_damage_minus_1": "⛨", &"opposing_atk_minus_1": "▼",
-}
 
 var _m: MatchController
 var _entries: Array[Array] = []
@@ -26,6 +23,8 @@ var _badges: Array[Array] = []
 var _boops: Array[Button] = []
 var _hover: CardWidget
 var _hover_key: String = ""
+## The enlarged card lives on its own layer above the HUD so nothing covers it.
+var _hover_layer: CanvasLayer
 
 
 func _init() -> void:
@@ -38,6 +37,9 @@ func _init() -> void:
 
 func setup(m: MatchController) -> void:
 	_m = m
+	_hover_layer = CanvasLayer.new()
+	_hover_layer.layer = MatchController.HUD_LAYER + 1
+	add_child(_hover_layer)
 	for p: int in 2:
 		for l: int in 4:
 			var bar := _make_bar()
@@ -67,6 +69,36 @@ func entry(p: int, l: int) -> Dictionary:
 	if e.is_empty():
 		return {"visible": false, "atk": 0, "hp": 0, "max": 0, "bar_color": GREEN}
 	return e
+
+
+func hover_layer() -> CanvasLayer:
+	return _hover_layer
+
+
+## Screen rect for the enlarged hover card of a piece seen at `at`: beside the piece, kept in
+## the board area (above `floor_y`, the tray top) and moved out of the `avoid` rects (HUD).
+static func hover_rect(at: Vector2, vp: Vector2, avoid: Array[Rect2], floor_y: float) -> Rect2:
+	var sz: Vector2 = CardWidget.SIZE * HOVER_SCALE
+	var r := Rect2(Vector2(at.x + 60.0, at.y - sz.y / 2.0), sz)
+	if r.end.x > vp.x - 4.0:
+		r.position.x = at.x - 60.0 - sz.x
+	r.position.x = clampf(r.position.x, 4.0, maxf(4.0, vp.x - sz.x - 4.0))
+	r.position.y = clampf(r.position.y, 4.0, maxf(4.0, floor_y - sz.y - 4.0))
+	for _pass: int in 3:
+		var moved: bool = false
+		for a: Rect2 in avoid:
+			if not r.intersects(a):
+				continue
+			moved = true
+			if a.end.y + 4.0 + sz.y <= floor_y:
+				r.position.y = a.end.y + 4.0
+			elif a.get_center().x < vp.x / 2.0:
+				r.position.x = a.end.x + 4.0
+			else:
+				r.position.x = a.position.x - sz.x - 4.0
+		if not moved:
+			break
+	return r
 
 
 func boop_button(l: int) -> Button:
@@ -125,7 +157,9 @@ func refresh(s: GameState) -> void:
 			var badge: Control = _badges[p][l]
 			badge.visible = lane.building != null
 			if lane.building:
-				(badge.get_child(0) as Label).text = BADGE.get(lane.building.ability_id, "★")
+				var icon := badge.get_node("Icon") as TextureRect
+				var path: String = VisualDB.badge_icon(lane.building.id)
+				icon.texture = load(path) as Texture2D if path != "" else null
 	for l: int in 4:
 		var cr: GameState.CreatureState = s.players[MatchController.HUMAN].lanes[l].creature
 		var b: Button = _boops[l]
@@ -175,15 +209,20 @@ func _process(_delta: float) -> void:
 				badge.position = cam.unproject_position((bv as Node3D).global_position + Vector3(0, BuildingView.HEIGHT + 0.25, 0)) - badge.size / 2.0
 	for l: int in 4:
 		if _boops[l].visible:
-			_boops[l].position = cam.unproject_position(_m.board.anchor(MatchController.HUMAN, l) + Vector3(0, 0, 0.95)) - BOOP_SIZE / 2.0
+			_boops[l].position = cam.unproject_position(_m.board.anchor(MatchController.HUMAN, l) + BOOP_OFFSET) - BOOP_SIZE / 2.0
 	_update_hover()
 
 
 func _update_hover() -> void:
 	var hit: Dictionary = {}
+	var mouse: Vector2 = get_viewport().get_mouse_position()
 	var blocked: bool = _m.input.mode != InputController.Mode.IDLE or _m.hud.is_paused() or _m.results.visible
+	# No board hover over the HUD or while a hand card is enlarged (two big cards at once).
+	blocked = blocked or _m.hand.hovered_rect().size != Vector2.ZERO
+	for panel: Control in _m.hud.panels():
+		blocked = blocked or panel.get_global_rect().has_point(mouse)
 	if not blocked:
-		hit = piece_at(get_viewport().get_mouse_position())
+		hit = piece_at(mouse)
 	var key: String = "" if hit.is_empty() else "%d:%d:%s" % [hit["player"], hit["lane"], hit["kind"]]
 	if key == _hover_key:
 		return
@@ -202,18 +241,12 @@ func _update_hover() -> void:
 	_hover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hover.pivot_offset = Vector2.ZERO
 	_hover.scale = Vector2.ONE * HOVER_SCALE
-	add_child(_hover)
+	_hover_layer.add_child(_hover)
 	var view: Variant = _m.creature_views[hit["player"]][hit["lane"]] if hit["kind"] == &"creature" else _m.building_views[hit["player"]][hit["lane"]]
 	if not is_instance_valid(view):
 		return
 	var at: Vector2 = _m.rig.camera.unproject_position((view as Node3D).global_position + Vector3(0, 0.6, 0))
-	var size_px: Vector2 = CardWidget.SIZE * HOVER_SCALE
-	var pos := Vector2(at.x + 60.0, at.y - size_px.y / 2.0)
-	if pos.x + size_px.x > size.x:
-		pos.x = at.x - 60.0 - size_px.x
-	pos.x = clampf(pos.x, 0.0, maxf(0.0, size.x - size_px.x))
-	pos.y = clampf(pos.y, 0.0, maxf(0.0, size.y - size_px.y))
-	_hover.position = pos
+	_hover.position = hover_rect(at, size, _m.hud.corner_rects(), size.y - Hud.TRAY_H).position
 
 
 # --- Widgets -----------------------------------------------------------------
@@ -223,7 +256,7 @@ func _make_bar() -> Control:
 	root.size = BAR_SIZE
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.visible = false
-	var atk := UiStyle.bold(UiStyle.label("0", 30, Color.WHITE))
+	var atk := UiStyle.title(UiStyle.label("0", 32, Color.WHITE)) as Label
 	atk.name = "Atk"
 	atk.position = Vector2(0, 0)
 	atk.size = Vector2(36, 40)
@@ -251,7 +284,7 @@ func _make_bar() -> Control:
 	fill.color = GREEN
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	back.add_child(fill)
-	var txt := UiStyle.bold(UiStyle.label("0/0", 12, Color.WHITE))
+	var txt := UiStyle.title(UiStyle.label("0/0", 13, Color.WHITE)) as Label
 	txt.name = "Text"
 	txt.size = back.size
 	txt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -280,17 +313,24 @@ func _make_badge() -> Control:
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.visible = false
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("#fff8e8")
+	sb.bg_color = Palette.TRAY
 	sb.border_color = Palette.INK
 	sb.set_border_width_all(3)
 	sb.set_corner_radius_all(15)
 	badge.add_theme_stylebox_override("panel", sb)
-	var l := UiStyle.bold(UiStyle.label("★", 16))
-	l.size = badge.size
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	badge.add_child(l)
+	var icon := TextureRect.new()
+	icon.name = "Icon"
+	icon.position = Vector2(5, 5)
+	icon.size = Vector2(20, 20)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.add_child(icon)
 	return badge
+
+
+func badge(p: int, l: int) -> Control:
+	return _badges[p][l]
 
 
 func _style_boop(b: Button) -> void:

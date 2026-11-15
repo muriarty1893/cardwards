@@ -110,6 +110,23 @@ const SOUNDS: Dictionary = {
 }
 
 
+## Building badge icons on the board (game-icons.net, CC BY 3.0).
+const BADGES: Dictionary = {
+	&"spore_hut": "res://assets/icons/health-increase.svg",
+	&"glowcap_lantern": "res://assets/icons/heart-plus.svg",
+	&"kiln_tower": "res://assets/icons/crossed-swords.svg",
+	&"smokestack": "res://assets/icons/chimney.svg",
+	&"sugar_shack": "res://assets/icons/crossed-swords.svg",
+	&"candy_mill": "res://assets/icons/cut-diamond.svg",
+	&"ice_wall": "res://assets/icons/checked-shield.svg",
+	&"frost_spire": "res://assets/icons/sword-break.svg",
+}
+
+
+static func badge_icon(id: StringName) -> String:
+	return BADGES.get(id, "")
+
+
 static func sound(id: StringName) -> StringName:
 	return SOUNDS.get(id, &"")
 

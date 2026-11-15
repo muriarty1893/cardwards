@@ -67,3 +67,24 @@ func test_piece_at_finds_creature() -> bool:
 	assert_eq(hit.get("lane", -1), 2, "lane"); assert_eq(hit.get("player", -1), 1, "player")
 	m.queue_free()
 	return true
+
+
+func test_hover_card_above_hud() -> bool:
+	var m: MatchController = await Fx.load_match()
+	assert_true(m.overlay.hover_layer().layer > MatchController.HUD_LAYER, "hover card draws over the HUD")
+	m.queue_free()
+	return true
+
+
+func test_overlay_uses_title_font_and_icons() -> bool:
+	var m: MatchController = await Fx.load_match()
+	Fx.put_creature(m.state, 0, 1, &"magmaw")
+	Fx.put_building(m.state, 0, 1, &"kiln_tower")
+	m.sync_all()
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	var atk := m.overlay.find_child("Atk", true, false) as Label
+	assert_true(atk != null and atk.get_theme_font("font").resource_path == UiStyle.TITLE_FONT, "attack number in Lilita One")
+	var icon := m.overlay.badge(0, 1).find_child("Icon", true, false) as TextureRect
+	assert_true(icon != null and icon.texture != null and icon.texture.resource_path == VisualDB.badge_icon(&"kiln_tower"), "kiln badge shows its icon")
+	m.queue_free()
+	return true

@@ -5,6 +5,8 @@ extends Node3D
 ## Human is always player 0 (near the camera).
 const HUMAN := 0
 const AI := 1
+## Canvas layer of the HUD (stat bars sit below it, the board hover card above it).
+const HUD_LAYER := 2
 
 var state: GameState
 var board: Board
@@ -98,7 +100,7 @@ func _build_ui() -> void:
 	over_layer.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var layer := CanvasLayer.new()
-	layer.layer = 2
+	layer.layer = HUD_LAYER
 	add_child(layer)
 	var root := Control.new()
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE

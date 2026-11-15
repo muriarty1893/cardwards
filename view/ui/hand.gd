@@ -16,6 +16,7 @@ const REGION_RIGHT := 290.0
 const BOTTOM_PAD := 8.0
 
 var _cards: Array[CardWidget] = []
+var _shown: Array[CardData] = []
 var _hover: int = -1
 var _drag: int = -1
 var _drag_offset: Vector2
@@ -29,6 +30,12 @@ func _init() -> void:
 
 
 func show_hand(cards: Array[CardData], playable: Array[bool]) -> void:
+	# Same cards as shown: only update which are playable (rebuilding costs a hitch).
+	if cards == _shown and _cards.size() == cards.size():
+		for i: int in _cards.size():
+			_cards[i].set_playable(playable[i] if i < playable.size() else true)
+		return
+	_shown = cards.duplicate()
 	for w: CardWidget in _cards:
 		w.queue_free()
 	_cards.clear()

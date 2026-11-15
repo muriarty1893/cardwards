@@ -2,7 +2,7 @@ class_name BuildingView
 extends Node3D
 ## A building model beside the creature spot (Quaternius "Ultimate Fantasy RTS", CC0).
 
-const OFFSET := Vector3(0.72, 0, 1.5)
+const OFFSET := Vector3(0.8, 0, 1.05)
 const HEIGHT := 1.05
 const MAX_WIDTH := 0.95
 ## Kept for the pop-in tween in EventPlayer.

@@ -21,6 +21,8 @@ var _shell: IceShell
 var _anim: AnimationPlayer
 var _idle: StringName = &""
 var _fidget_in: float = 0.0
+## Set by play_death(): the model holds its death pose instead of returning to idle.
+var _dying: bool = false
 
 
 static func create(c: CardData, model_override: String = "") -> CreatureView:
@@ -70,7 +72,7 @@ func _build_fallback(c: CardData) -> void:
 
 
 func _play_idle() -> void:
-	if _anim and _idle != &"":
+	if _anim and _idle != &"" and not _dying:
 		_anim.play(_idle, 0.15)
 
 
@@ -94,12 +96,13 @@ func play_hit() -> void:
 
 ## Returns the death animation's length (0 if the model has none).
 func play_death() -> float:
+	_dying = true
 	return _play_first([&"Death"])
 
 
 ## Plays one of the model's fidget clips. False when busy or the model has none.
 func fidget() -> bool:
-	if busy or _anim == null:
+	if busy or _dying or _anim == null:
 		return false
 	var options: Array[StringName] = []
 	for n: StringName in FIDGET_ANIMS:

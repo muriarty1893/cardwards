@@ -70,3 +70,46 @@ func test_bars_fit_view() -> bool:
 				assert_true(not bars[i].intersects(bars[j]), "stat bars %d and %d apart at %s" % [i, j, size])
 		(r[0] as Node).free()
 	return true
+
+
+func test_buildings_and_boops_clear_tray() -> bool:
+	for size: Vector2i in SIZES:
+		var r: Array = await _rig(size)
+		var cam: Camera3D = (r[1] as CameraRig).camera
+		var board: Board = r[2]
+		var floor_y: float = size.y - Hud.TRAY_H
+		for l: int in 4:
+			var base: Vector3 = board.anchor(0, l) - Vector3(0, CreatureView.BASE_Y - Island.TOP_Y, 0) + BuildingView.OFFSET
+			var feet: Vector2 = cam.unproject_position(base)
+			assert_true(feet.y <= floor_y - 4.0, "building l%d above tray at %s (%f)" % [l, size, feet.y])
+			var top: Vector2 = cam.unproject_position(base + Vector3(0, BuildingView.HEIGHT, 0))
+			var building := Rect2(top.x - 40.0, top.y, 80.0, feet.y - top.y)
+			var bc: Vector2 = cam.unproject_position(board.anchor(0, l) + UnitOverlay.BOOP_OFFSET)
+			var boop := Rect2(bc - UnitOverlay.BOOP_SIZE / 2.0, UnitOverlay.BOOP_SIZE)
+			assert_true(boop.end.y <= floor_y, "boop l%d above tray at %s" % [l, size])
+			assert_true(not boop.intersects(building), "boop l%d clear of building at %s" % [l, size])
+		(r[0] as Node).free()
+	return true
+
+
+func test_hover_card_fits() -> bool:
+	for size: Vector2i in SIZES:
+		var r: Array = await _rig(size)
+		var cam: Camera3D = (r[1] as CameraRig).camera
+		var board: Board = r[2]
+		var vp := Vector2(size)
+		var floor_y: float = size.y - Hud.TRAY_H
+		var avoid: Array[Rect2] = [
+			Rect2(Vector2(12, 10), Hud.CORNER), Rect2(Vector2(size.x - 12 - Hud.CORNER.x, 10), Hud.CORNER),
+			Rect2(Vector2(12 + 112, 14), Hud.BAR), Rect2(Vector2(size.x - 12 - 112 - Hud.BAR.x, 14), Hud.BAR),
+		]
+		var board_area := Rect2(0, 0, size.x, floor_y)
+		for p: int in 2:
+			for l: int in 4:
+				var at: Vector2 = cam.unproject_position(board.anchor(p, l) + Vector3(0, 0.6, 0))
+				var card: Rect2 = UnitOverlay.hover_rect(at, vp, avoid, floor_y)
+				assert_true(board_area.encloses(card), "hover p%d l%d inside board area at %s (%s)" % [p, l, size, card])
+				for a: Rect2 in avoid:
+					assert_true(not card.intersects(a), "hover p%d l%d clear of HUD %s at %s" % [p, l, a, size])
+		(r[0] as Node).free()
+	return true

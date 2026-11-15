@@ -31,3 +31,17 @@ func test_fidget_respects_busy() -> bool:
 	assert_true(not v.fidget(), "no fidget while busy")
 	v.free()
 	return true
+
+
+func test_death_does_not_return_to_idle() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	var v := CreatureView.create(CardDB.card(&"gumdrop"))
+	tree.root.add_child(v)
+	await tree.process_frame
+	var ap := v.body.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	assert_true(v.play_death() > 0.0, "gumdrop has a death clip")
+	ap.animation_finished.emit(&"Death")
+	assert_eq(ap.current_animation, &"Death", "still on the death pose after it ends")
+	v.queue_free()
+	await tree.process_frame
+	return true

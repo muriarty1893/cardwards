@@ -53,7 +53,7 @@ static func is_clear(local: Vector3, player: int) -> bool:
 		return false
 	if p.distance_to(Vector2(BuildingView.OFFSET.x * s, cz + BuildingView.OFFSET.z * s)) < BUILDING_R:
 		return false
-	if player == 0 and p.distance_to(Vector2(0.0, cz + 0.95)) < BOOP_R:
+	if player == 0 and p.distance_to(Vector2(UnitOverlay.BOOP_OFFSET.x, cz + UnitOverlay.BOOP_OFFSET.z)) < BOOP_R:
 		return false
 	return true
 
