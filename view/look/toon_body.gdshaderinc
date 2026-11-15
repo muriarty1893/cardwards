@@ -59,7 +59,8 @@ void fragment() {
 		base *= COLOR.rgb;
 	}
 	float luma = dot(base, vec3(0.299, 0.587, 0.114));
-	base = mix(base, vec3(luma) * tint.rgb * 1.35, tint.a);
+	// Recolour toward the tint while keeping the model's light/dark detail readable.
+	base = mix(base, clamp(tint.rgb * (0.6 + 0.8 * luma), 0.0, 1.0), tint.a);
 	base = mix(base, vec3(1.0), flash);
 	ALBEDO = base;
 	ROUGHNESS = 1.0;
