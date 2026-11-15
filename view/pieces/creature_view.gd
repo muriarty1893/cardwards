@@ -17,7 +17,7 @@ var card: CardData
 var busy: bool = false
 var body: Node3D
 var height: float = 1.0
-var _ice: MeshInstance3D
+var _shell: IceShell
 var _anim: AnimationPlayer
 var _idle: StringName = &""
 var _fidget_in: float = 0.0
@@ -32,7 +32,6 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 		v._build_model(load(path) as PackedScene, VisualDB.tint(c.id))
 	else:
 		v._build_fallback(c)
-	v._add_ice()
 	v._fidget_in = randf_range(6.0, 12.0)
 	return v
 
@@ -125,22 +124,17 @@ func dissolve(duration: float = 0.35) -> void:
 	await tw.finished
 
 
-func _add_ice() -> void:
-	_ice = Palette.mesh(BoxMesh.new(), _ice_mat(), Vector3(0, Island.TOP_Y - BASE_Y + height * 0.5, 0), false)
-	_ice.scale = Vector3.ONE * height * 1.1
-	_ice.visible = false
-	add_child(_ice)
-
-
-func _ice_mat() -> StandardMaterial3D:
-	var m := Palette.mat(Color("#bfe8ff"), 0.05)
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.albedo_color.a = 0.45
-	return m
-
-
+## Ice shell on while frozen; it shatters when the freeze ends.
 func set_frozen(on: bool) -> void:
-	_ice.visible = on
+	if on and not is_instance_valid(_shell):
+		_shell = IceShell.attach(self)
+	elif not on and is_instance_valid(_shell):
+		_shell.shatter()
+		_shell = null
+
+
+func is_frozen_visual() -> bool:
+	return is_instance_valid(_shell)
 
 
 func _process(delta: float) -> void:

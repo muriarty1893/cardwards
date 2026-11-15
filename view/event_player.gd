@@ -35,7 +35,7 @@ func _play_one(e: GameEvent) -> void:
 			await tw.finished
 			v.busy = false
 			m.refresh_pieces()
-			Poof.spawn(m, target - Vector3(0, 0.4, 0), Color.WHITE, 12)
+			Burst.spawn(m, &"dust_ring", target - Vector3(0, 0.4, 0))
 		&"building_played":
 			var b: BuildingView = m.place_building(d["player"], d["lane"], CardDB.card(d["card"]))
 			b.scale = Vector3.ZERO
@@ -45,7 +45,7 @@ func _play_one(e: GameEvent) -> void:
 		&"spell_cast":
 			var c: CardData = CardDB.card(d["card"])
 			m.toast.show_message("%s casts %s" % ["You" if d["player"] == MatchController.HUMAN else "Rival", c.display_name], 1.0)
-			Poof.spawn(m, Vector3(0, 0.8, -0.6), Palette.LAND_CARD[c.land], 40)
+			Burst.spawn(m, &"stars", Vector3(0, 0.8, -0.6), Palette.LAND_CARD[c.land], 1.4)
 			await _wait(0.5)
 		&"booped":
 			var v: CreatureView = m.creature_views[d["player"]][d["lane"]]
@@ -55,7 +55,7 @@ func _play_one(e: GameEvent) -> void:
 				var tw := v.create_tween()
 				tw.tween_property(v.body, "scale", base * Vector3(1.3, 0.7, 1.3), 0.1 / speed)
 				tw.tween_property(v.body, "scale", base, 0.2 / speed).set_trans(Tween.TRANS_ELASTIC)
-				Poof.spawn(m, v.global_position + Vector3(0, 0.6, 0), Palette.GOLD, 16)
+				Burst.spawn(m, &"stars", v.global_position + Vector3(0, 0.6, 0))
 				await tw.finished
 				v.busy = false
 		&"attack":
@@ -103,7 +103,8 @@ func _play_one(e: GameEvent) -> void:
 			if v:
 				m.creature_views[d["player"]][d["lane"]] = null
 				var col: Color = Palette.LAND_CARD[v.card.land] if v.card else Color.WHITE
-				Poof.spawn(m, v.global_position + Vector3(0, 0.3, 0), col, 30)
+				Burst.spawn(m, &"smoke", v.global_position + Vector3(0, 0.3, 0))
+				Burst.spawn(m, &"sparks", v.global_position + Vector3(0, 0.3, 0), col)
 				var death: float = v.play_death()
 				if death > 0.0:
 					await _wait(minf(death, 0.9) * 0.8)
@@ -117,7 +118,7 @@ func _play_one(e: GameEvent) -> void:
 			if v:
 				v.set_frozen(e.type == &"frozen")
 				if e.type == &"frozen":
-					Poof.spawn(m, v.global_position + Vector3(0, 0.4, 0), Color("#bfe8ff"), 16)
+					Burst.spawn(m, &"snow", v.global_position + Vector3(0, 0.4, 0))
 			await _wait(0.25)
 		&"creature_moved":
 			await _move(d)
