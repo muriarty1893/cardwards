@@ -29,7 +29,9 @@ func show_result(won: bool, turns: int) -> void:
 	vb.add_theme_constant_override("separation", 14)
 	vb.alignment = BoxContainer.ALIGNMENT_CENTER
 	panel.add_child(vb)
-	var title := UiStyle.bold(UiStyle.label("VICTORY!" if won else "DEFEAT", 56, Palette.GOLD.darkened(0.2) if won else Palette.HP))
+	var title := UiStyle.title(UiStyle.label("VICTORY!" if won else "DEFEAT", 64, Palette.GOLD.darkened(0.2) if won else Palette.HP)) as Label
+	title.add_theme_color_override("font_outline_color", Palette.INK)
+	title.add_theme_constant_override("outline_size", 10)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.custom_minimum_size = Vector2(360, 0)
 	vb.add_child(title)

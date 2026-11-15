@@ -9,12 +9,16 @@ signal pause_changed(open: bool)
 
 const TRAY_H := 214.0
 const TRAY_MARGIN := 60.0
-const CORNER := Vector2(214, 128)
+const CORNER := Vector2(236, 120)
+## Hero health bar size (it sits on top of the corner and runs toward the centre).
+const BAR := Vector2(300, 30)
 
 var end_turn_button: Button
 var pause_button: Button
 var _you: Control
 var _rival: Control
+var _you_bar: Control
+var _rival_bar: Control
 var _tray: Panel
 var _refs: Dictionary = {}
 var _orb_label: Label
@@ -26,22 +30,26 @@ var pause_overlay: Control
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_you = _corner(true, "You", Color("#ffd84a"), Color("#8fd3ff"))
+	_you = _corner(true, "You", "res://assets/card_art/hero_you.png", Color("#8fd3ff"))
 	_you.position = Vector2(12, 10)
 	add_child(_you)
-	_rival = _corner(false, "Rival", Color("#b06cff"), Color("#ffb3dd"))
+	_rival = _corner(false, "Rival", "res://assets/card_art/hero_rival.png", Color("#ffb3dd"))
 	_rival.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_rival.offset_left = -CORNER.x - 12
 	_rival.offset_right = -12
 	_rival.offset_top = 10
 	_rival.offset_bottom = 10 + CORNER.y
 	add_child(_rival)
+	_you_bar = _hero_bar(true, "You")
+	add_child(_you_bar)
+	_rival_bar = _hero_bar(false, "Rival")
+	add_child(_rival_bar)
 	_build_tray()
 	_build_pause()
 
 
 func panels() -> Array[Control]:
-	return [_you, _rival, _tray, end_turn_button, pause_button]
+	return [_you, _rival, _you_bar, _rival_bar, _tray, end_turn_button, pause_button]
 
 
 func refresh(s: GameState, human: int) -> void:
@@ -55,6 +63,8 @@ func refresh(s: GameState, human: int) -> void:
 	var mine: bool = s.active == human and s.phase != GameState.Phase.OVER
 	_you.modulate = Color.WHITE if mine else Color(0.82, 0.82, 0.82)
 	_rival.modulate = Color.WHITE if not mine else Color(0.82, 0.82, 0.82)
+	_you_bar.modulate = _you.modulate
+	_rival_bar.modulate = _rival.modulate
 
 
 func is_paused() -> bool:
@@ -85,9 +95,9 @@ func shake_hero(human_side: bool) -> void:
 	tw.tween_property(p, "position", base, 0.05)
 
 
-## Screen rects of the two hero corner panels (stat bars keep out of them).
+## Screen rects of the hero corners and their health bars (stat bars keep out of them).
 func corner_rects() -> Array[Rect2]:
-	return [_you.get_global_rect(), _rival.get_global_rect()]
+	return [_you.get_global_rect(), _rival.get_global_rect(), _you_bar.get_global_rect(), _rival_bar.get_global_rect()]
 
 
 func hero_screen_pos(human_side: bool) -> Vector2:
@@ -106,7 +116,7 @@ func _frame(bg: Color, radius: int = 16, border: int = 4) -> StyleBoxFlat:
 
 
 func _plate(text: String, size_: Vector2, font: int = 16) -> Label:
-	var l := UiStyle.bold(UiStyle.label(text, font, Color.WHITE))
+	var l := UiStyle.title(UiStyle.label(text, font, Color.WHITE)) as Label
 	l.size = size_
 	l.custom_minimum_size = size_
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -116,7 +126,7 @@ func _plate(text: String, size_: Vector2, font: int = 16) -> Label:
 
 
 func _orb(diameter: float, font: int) -> Label:
-	var l := UiStyle.bold(UiStyle.label("0", font, Color.WHITE))
+	var l := UiStyle.title(UiStyle.label("0", font, Color.WHITE)) as Label
 	l.size = Vector2(diameter, diameter)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -129,7 +139,7 @@ func _orb(diameter: float, font: int) -> Label:
 	return l
 
 
-func _corner(left: bool, who: String, body: Color, bg: Color) -> Control:
+func _corner(left: bool, who: String, portrait: String, bg: Color) -> Control:
 	var c := Control.new()
 	c.name = who
 	c.size = CORNER
@@ -140,53 +150,80 @@ func _corner(left: bool, who: String, body: Color, bg: Color) -> Control:
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	back.add_theme_stylebox_override("panel", _frame(Palette.TRAY, 18))
 	c.add_child(back)
+	# Framed portrait in the outer corner.
+	var frame := Panel.new()
+	frame.size = Vector2(96, 96)
+	frame.position = Vector2(8, 12) if left else Vector2(CORNER.x - 104, 12)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fsb := StyleBoxFlat.new()
+	fsb.bg_color = bg
+	fsb.border_color = Palette.INK
+	fsb.set_border_width_all(4)
+	fsb.set_corner_radius_all(14)
+	frame.add_theme_stylebox_override("panel", fsb)
+	frame.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	c.add_child(frame)
+	var face := TextureRect.new()
+	face.texture = load(portrait) as Texture2D
+	face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	face.position = Vector2(4, 4)
+	face.size = Vector2(88, 88)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(face)
+	var orb := _orb(44, 22)
+	orb.position = Vector2(112, 46) if left else Vector2(CORNER.x - 156, 46)
+	c.add_child(orb)
+	var nm := UiStyle.title(UiStyle.label(who.to_upper(), 18, Color("#d9d4ff"))) as Label
+	nm.position = Vector2(160, 54) if left else Vector2(8, 54)
+	nm.size = Vector2(68, 26)
+	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	c.add_child(nm)
+	var plate := _plate("", Vector2(116, 24), 14)
+	plate.position = Vector2(112, 92) if left else Vector2(8, 92)
+	c.add_child(plate)
+	_refs[who] = {"orb": orb, "plate": plate}
+	return c
+
+
+## Wide hero health bar along the top edge, running from the corner toward the centre.
+func _hero_bar(left: bool, who: String) -> Control:
 	var bar := ProgressBar.new()
-	bar.position = Vector2(10, 9)
-	bar.size = Vector2(CORNER.x - 20, 26)
+	bar.name = "YouBar" if left else "RivalBar"
 	bar.max_value = GameState.MAX_HP
 	bar.show_percentage = false
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar.add_theme_stylebox_override("background", _frame(Palette.TRAY_DARK, 9, 3))
-	var fill := _frame(Palette.HP, 9, 3)
-	bar.add_theme_stylebox_override("fill", fill)
+	bar.custom_minimum_size = BAR
+	bar.size = BAR
+	bar.add_theme_stylebox_override("background", _frame(Palette.TRAY_DARK, 10, 3))
+	bar.add_theme_stylebox_override("fill", _frame(Palette.HP, 10, 3))
 	bar.fill_mode = ProgressBar.FILL_BEGIN_TO_END if left else ProgressBar.FILL_END_TO_BEGIN
-	c.add_child(bar)
-	var hp := UiStyle.bold(UiStyle.label("25", 17, Color.WHITE))
-	hp.position = bar.position
-	hp.size = bar.size
+	if left:
+		bar.position = Vector2(12 + 112, 14)
+	else:
+		bar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		bar.offset_left = -(12 + 112 + BAR.x)
+		bar.offset_right = -(12 + 112)
+		bar.offset_top = 14
+		bar.offset_bottom = 14 + BAR.y
+	var hp := UiStyle.title(UiStyle.label("♥ 25", 18, Color.WHITE)) as Label
+	hp.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hp.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hp.add_theme_color_override("font_outline_color", Palette.TRAY_DARK)
-	hp.add_theme_constant_override("outline_size", 6)
-	c.add_child(hp)
-	var face := BlobPortrait.new()
-	face.body_color = body
-	face.bg_color = bg
-	face.horns = not left
-	face.size = Vector2(80, 80)
-	face.position = Vector2(10, 41) if left else Vector2(CORNER.x - 90, 41)
-	c.add_child(face)
-	var orb := _orb(48, 22)
-	orb.position = Vector2(100, 40) if left else Vector2(CORNER.x - 148, 40)
-	c.add_child(orb)
-	var nm := UiStyle.bold(UiStyle.label(who.to_upper(), 14, Color("#c9c4ff")))
-	nm.position = Vector2(154, 52) if left else Vector2(10, 52)
-	nm.size = Vector2(50, 24)
-	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	c.add_child(nm)
-	var plate := _plate("", Vector2(104, 28), 14)
-	plate.position = Vector2(100, 93) if left else Vector2(10, 93)
-	c.add_child(plate)
-	_refs[who] = {"bar": bar, "hp": hp, "orb": orb, "plate": plate}
-	return c
+	hp.add_theme_constant_override("outline_size", 7)
+	bar.add_child(hp)
+	_refs[who + "Bar"] = {"bar": bar, "hp": hp}
+	return bar
 
 
 func _fill_corner(who: String, ps: GameState.PlayerState, plate_text: String) -> void:
 	var r: Dictionary = _refs[who]
-	(r["bar"] as ProgressBar).value = clampi(ps.hero_hp, 0, GameState.MAX_HP)
-	(r["hp"] as Label).text = "♥ %d" % ps.hero_hp
 	(r["orb"] as Label).text = str(ps.magic)
 	(r["plate"] as Label).text = plate_text
+	var b: Dictionary = _refs[who + "Bar"]
+	(b["bar"] as ProgressBar).value = clampi(ps.hero_hp, 0, GameState.MAX_HP)
+	(b["hp"] as Label).text = "♥ %d" % ps.hero_hp
 
 
 func _build_tray() -> void:
@@ -230,11 +267,8 @@ func _build_tray() -> void:
 	end_turn_button = Button.new()
 	end_turn_button.name = "Battle"
 	end_turn_button.text = "BATTLE!"
-	end_turn_button.add_theme_font_size_override("font_size", 30)
-	var f := SystemFont.new()
-	f.font_names = PackedStringArray(["Nunito", "Fredoka", "Noto Sans", "sans-serif"])
-	f.font_weight = 900
-	end_turn_button.add_theme_font_override("font", f)
+	end_turn_button.add_theme_font_size_override("font_size", 34)
+	UiStyle.title(end_turn_button)
 	for st: String in ["normal", "hover", "pressed", "disabled", "focus"]:
 		var b := _frame(Palette.GREEN if st != "disabled" else Color("#6c6a8a"), 16, 5)
 		if st == "hover":
@@ -292,10 +326,13 @@ func _build_pause() -> void:
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 14)
 	box.add_child(vb)
-	var title := UiStyle.bold(UiStyle.label("Paused", 40))
+	var title := UiStyle.title(UiStyle.label("Paused", 44)) as Label
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.custom_minimum_size = Vector2(280, 0)
+	title.custom_minimum_size = Vector2(320, 0)
 	vb.add_child(title)
+	var settings := SettingsPanel.make(false)
+	settings.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	vb.add_child(settings)
 	var resume := MenuButtons.big("RESUME", Palette.GOLD)
 	resume.pressed.connect(close_pause)
 	vb.add_child(resume)

@@ -12,6 +12,7 @@ var _cam: Camera3D
 var _t: float = 0.0
 var _deck_buttons: Dictionary = {}
 var _diff_buttons: Array[Button] = []
+var _ui_root: Control
 
 
 func _ready() -> void:
@@ -45,6 +46,7 @@ func _build_ui() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(root)
+	_ui_root = root
 	var vb := VBoxContainer.new()
 	vb.set_anchors_preset(Control.PRESET_CENTER)
 	vb.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -52,7 +54,7 @@ func _build_ui() -> void:
 	vb.alignment = BoxContainer.ALIGNMENT_CENTER
 	vb.add_theme_constant_override("separation", 18)
 	root.add_child(vb)
-	var title := UiStyle.bold(UiStyle.label("Dream Isles", 76, Color.WHITE))
+	var title := UiStyle.title(UiStyle.label("Dream Isles", 84, Color.WHITE)) as Label
 	title.add_theme_color_override("font_outline_color", Palette.INK)
 	title.add_theme_constant_override("outline_size", 18)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -63,11 +65,17 @@ func _build_ui() -> void:
 	vb.add_child(decks)
 	for d: DeckData in CardDB.all_decks():
 		var btn := Button.new()
+		btn.name = "Deck_%s" % d.id
 		btn.toggle_mode = true
-		btn.custom_minimum_size = Vector2(190, 120)
+		btn.custom_minimum_size = Vector2(200, 214)
 		btn.text = "%s\n%s + %s\n%s" % [d.display_name, CardData.LAND_NAMES[d.lands[0]], CardData.LAND_NAMES[d.lands[2]], FLAVOUR.get(d.id, "")]
 		btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		btn.add_theme_font_size_override("font_size", 15)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.icon = load(VisualDB.art_path(_champion(d))) as Texture2D
+		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		btn.expand_icon = false
+		btn.add_theme_constant_override("icon_max_width", 160)
 		var base: Color = Palette.LAND_CARD[d.lands[0]]
 		for st: String in ["normal", "hover", "pressed", "focus"]:
 			var sb := UiStyle.panel(base.lerp(Color.WHITE, 0.55) if st == "normal" else (base.lerp(Color.WHITE, 0.3) if st == "hover" else base), 16)
@@ -102,12 +110,41 @@ func _build_ui() -> void:
 	play.custom_minimum_size = Vector2(200, 0)
 	play.pressed.connect(_play)
 	row.add_child(play)
+	var settings := MenuButtons.big("SETTINGS", Color.WHITE, 20)
+	settings.pressed.connect(func() -> void: _open_panel(SettingsPanel.make()))
+	row.add_child(settings)
+	var credits := MenuButtons.big("CREDITS", Color.WHITE, 20)
+	credits.pressed.connect(func() -> void: _open_panel(CreditsPanel.make()))
+	row.add_child(credits)
 	var quit := MenuButtons.big("QUIT", Color.WHITE, 20)
 	quit.pressed.connect(func() -> void: get_tree().quit())
 	row.add_child(quit)
 	_select_deck(Session.player_deck)
 	_select_difficulty(Session.difficulty)
 	play.grab_focus()
+
+
+## The deck's showcase creature: its highest-level creature, first in card order.
+static func _champion(d: DeckData) -> StringName:
+	var best: CardData = null
+	for c: CardData in d.cards:
+		if c.is_creature() and (best == null or c.level > best.level):
+			best = c
+	return best.id if best else d.cards[0].id
+
+
+## Shows a Settings or Credits panel centred over a dimmed menu; its `closed` signal hides it.
+func _open_panel(panel: PanelContainer) -> void:
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.45)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_ui_root.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.add_child(center)
+	center.add_child(panel)
+	panel.connect("closed", dim.queue_free)
 
 
 func _select_deck(id: StringName) -> void:

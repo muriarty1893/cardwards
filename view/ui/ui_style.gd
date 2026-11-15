@@ -12,10 +12,10 @@ static func panel(bg: Color = Color(1, 1, 1, 0.95), radius: int = 16) -> StyleBo
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = Palette.INK
-	sb.set_border_width_all(3)
+	sb.set_border_width_all(4)
 	sb.set_corner_radius_all(radius)
-	sb.shadow_color = Color(Palette.INK, 0.35)
-	sb.shadow_offset = Vector2(0, 4)
+	sb.shadow_color = Color(Palette.INK, 0.45)
+	sb.shadow_offset = Vector2(0, 5)
 	sb.shadow_size = 1
 	sb.set_content_margin_all(8)
 	sb.content_margin_left = 14

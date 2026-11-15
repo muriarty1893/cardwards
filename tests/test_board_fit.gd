@@ -54,11 +54,19 @@ func test_bars_fit_view() -> bool:
 		var screen := Rect2(0, 0, size.x, size.y)
 		var corner_l := Rect2(Vector2(12, 10), Hud.CORNER)
 		var corner_r := Rect2(Vector2(size.x - 12 - Hud.CORNER.x, 10), Hud.CORNER)
+		var bar_l := Rect2(Vector2(12 + 112, 14), Hud.BAR)
+		var bar_r := Rect2(Vector2(size.x - 12 - 112 - Hud.BAR.x, 14), Hud.BAR)
+		var bars: Array[Rect2] = []
 		for p: int in 2:
 			for l: int in 4:
-				var bar: Rect2 = UnitOverlay.bar_rect_at(cam, board.anchor(p, l) + Vector3(0, 1.85, 0), [corner_l, corner_r])
+				var bar: Rect2 = UnitOverlay.bar_rect_at(cam, board.anchor(p, l) + Vector3(0, 1.85, 0), [corner_l, corner_r, bar_l, bar_r])
 				assert_true(screen.encloses(bar), "bar p%d l%d on screen at %s (%s)" % [p, l, size, bar])
-				assert_true(not bar.intersects(corner_l) and not bar.intersects(corner_r), "bar p%d l%d clear of corners at %s" % [p, l, size])
+				for keep_out: Rect2 in [corner_l, corner_r, bar_l, bar_r]:
+					assert_true(not bar.intersects(keep_out), "bar p%d l%d clear of HUD %s at %s" % [p, l, keep_out, size])
 				assert_true(bar.end.y <= size.y - Hud.TRAY_H, "bar p%d l%d above tray at %s" % [p, l, size])
+				bars.append(bar)
+		for i: int in bars.size():
+			for j: int in range(i + 1, bars.size()):
+				assert_true(not bars[i].intersects(bars[j]), "stat bars %d and %d apart at %s" % [i, j, size])
 		(r[0] as Node).free()
 	return true

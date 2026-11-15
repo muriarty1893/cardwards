@@ -46,7 +46,7 @@ func _init() -> void:
 	bg.size = PANEL
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
-	_title = UiStyle.bold(UiStyle.label("STRIKE!", 18))
+	_title = UiStyle.title(UiStyle.label("STRIKE!", 22)) as Label
 	_title.position = Vector2(0, 6)
 	_title.size = Vector2(PANEL.x, 24)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

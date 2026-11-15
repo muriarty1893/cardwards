@@ -82,20 +82,30 @@ static func bar_color(hp: int, max_hp: int) -> Color:
 
 
 ## Screen rect of a stat bar for a creature whose head is at `head` (world): centred 24 px
-## above the head, kept inside the screen and pushed sideways out of any `avoid` rect
-## (the hero corners), toward the middle of the screen.
+## above the head, kept inside the screen and moved out of any `avoid` rect (hero corners
+## and their health bars).
 static func bar_rect_at(cam: Camera3D, head: Vector3, avoid: Array[Rect2] = []) -> Rect2:
 	var c: Vector2 = cam.unproject_position(head) - Vector2(0, 24)
 	var r := Rect2(c - BAR_SIZE / 2.0, BAR_SIZE)
 	var vp: Vector2 = cam.get_viewport().get_visible_rect().size
 	r.position.x = clampf(r.position.x, 4.0, vp.x - BAR_SIZE.x - 4.0)
 	r.position.y = clampf(r.position.y, 4.0, vp.y - BAR_SIZE.y - 4.0)
-	for a: Rect2 in avoid:
-		if r.intersects(a):
-			if a.get_center().x < vp.x / 2.0:
+	# Wide strips (hero health bars): drop below them. Tall panels (hero corners): step
+	# sideways toward the middle. Re-check, since one push can land in another rect.
+	for _pass: int in 3:
+		var moved: bool = false
+		for a: Rect2 in avoid:
+			if not r.intersects(a):
+				continue
+			moved = true
+			if a.size.x > a.size.y * 2.0:
+				r.position.y = a.end.y + 4.0
+			elif a.get_center().x < vp.x / 2.0:
 				r.position.x = a.end.x + 4.0
 			else:
 				r.position.x = a.position.x - BAR_SIZE.x - 4.0
+		if not moved:
+			break
 	return r
 
 

@@ -16,7 +16,7 @@ func _init() -> void:
 	sb.content_margin_top = 12
 	sb.content_margin_bottom = 12
 	add_theme_stylebox_override("panel", sb)
-	_label = UiStyle.bold(UiStyle.label("", 26, Color.WHITE))
+	_label = UiStyle.title(UiStyle.label("", 28, Color.WHITE)) as Label
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_label)
 	modulate.a = 0.0
