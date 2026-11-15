@@ -73,6 +73,23 @@ const ENTRIES: Dictionary = {
 }
 
 
+## Spell card pictures: a game-icons.net icon (CC BY 3.0) over a glow in its land's colour.
+const SPELL_ICONS: Dictionary = {
+	&"rain_of_spores": "res://assets/icons/pollen-dust.svg",
+	&"regrowth": "res://assets/icons/sprout.svg",
+	&"fireball": "res://assets/icons/fireball.svg",
+	&"ember_rain": "res://assets/icons/burning-meteor.svg",
+	&"sugar_rush": "res://assets/icons/wrapped-sweet.svg",
+	&"swap_trick": "res://assets/icons/card-exchange.svg",
+	&"cold_snap": "res://assets/icons/snowflake-2.svg",
+	&"avalanche": "res://assets/icons/falling-rocks.svg",
+}
+## Glow behind spell icons, by land.
+const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff")]
+## Background sky behind card pictures, by land.
+const ART_SKY: Array[Color] = [Color("#bfe9a8"), Color("#ffc59a"), Color("#ffd3ec"), Color("#d6efff")]
+
+
 static func ids() -> Array[StringName]:
 	var out: Array[StringName] = []
 	for k: StringName in ENTRIES:
