@@ -208,7 +208,9 @@ func _attack(d: Dictionary) -> void:
 	back.tween_interval(0.15 / speed)
 	back.tween_method(func(k: float) -> void:
 		v.position = target.lerp(home, k) + Vector3(0, sin(k * PI) * 0.4, 0), 0.0, 1.0, 0.4 / speed)
-	back.tween_callback(func() -> void: v.busy = false)
+	back.tween_callback(func() -> void:
+		v.position = home
+		v.busy = false)
 
 
 ## Brief freeze-frame on impact. Always restores the time scale.
@@ -216,6 +218,17 @@ func hit_stop() -> void:
 	Engine.time_scale = HIT_STOP_SCALE
 	await get_tree().create_timer(HIT_STOP / speed, true, false, true).timeout
 	Engine.time_scale = 1.0
+
+
+## A quick squash of the body: the hit-back reaction (leaves the position alone).
+func recoil(v: CreatureView) -> void:
+	if v.body == null:
+		return
+	var base: Vector3 = v.body.scale
+	var tw := v.create_tween()
+	tw.tween_property(v.body, "scale", base * Vector3(1.25, 0.75, 1.25), 0.07 / speed)
+	tw.tween_property(v.body, "scale", base, 0.18 / speed).set_trans(Tween.TRANS_ELASTIC)
+	await tw.finished
 
 
 func shake(v: Node3D) -> void:

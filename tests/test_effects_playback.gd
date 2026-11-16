@@ -79,3 +79,88 @@ func test_every_boop_plays() -> bool:
 		_views_match(m, String(c.id))
 	m.queue_free()
 	return true
+
+
+# --- Rules 2.0 combat playback ---
+
+func _ready_attack(m: MatchController) -> void:
+	_fast(m)
+	m.timing_bar.auto_stop = true
+	m.timing_bar.force_needle = 0.5
+
+
+func _settle(m: MatchController) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	for i: int in 240:
+		await tree.process_frame
+		var moving: bool = m.busy
+		for p: int in 2:
+			for l: int in 4:
+				var v: CreatureView = m.creature_views[p][l]
+				moving = moving or (is_instance_valid(v) and v.busy)
+		if not moving:
+			return
+
+
+func test_attack_cross_lane_playback() -> bool:
+	var m: MatchController = await Fx.load_match()
+	_ready_attack(m)
+	_clear_board(m)
+	Fx.put_creature(m.state, 0, 0, &"flarebeak")
+	Fx.put(m.state, 1, 3, Fx.card(&"wall", CardData.Kind.CREATURE, 1, 2, 30))
+	m.sync_all()
+	m.refresh_ui()
+	await m.request_attack(0, 3)
+	await _settle(m)
+	var v: CreatureView = m.creature_views[0][0]
+	assert_true(v.position.distance_to(m.board.anchor(0, 0)) < 0.01, "attacker back home (%s)" % v.position)
+	assert_eq(m.state.players[0].lanes[0].creature.damage, 2, "took the hit-back")
+	_views_match(m, "cross-lane attack")
+	m.queue_free()
+	return true
+
+
+func test_hit_back_number_shown() -> bool:
+	var m: MatchController = await Fx.load_match()
+	_ready_attack(m)
+	_clear_board(m)
+	Fx.put_creature(m.state, 0, 1, &"flarebeak")
+	Fx.put(m.state, 1, 1, Fx.card(&"wall", CardData.Kind.CREATURE, 1, 2, 30))
+	m.sync_all()
+	m.refresh_ui()
+	await m.request_attack(1, 1)
+	var found: bool = false
+	for n: Node in m.find_children("*", "Label3D", true, false):
+		if n is DamageNumber and (n as Label3D).text.begins_with("-2"):
+			found = true
+	assert_true(found, "a -2 number for the hit-back")
+	m.queue_free()
+	return true
+
+
+func test_ai_attack_shows_arrow() -> bool:
+	var m: MatchController = await Fx.load_match()
+	_fast(m)
+	_clear_board(m)
+	var s: GameState = m.state
+	s.players[1].hand.clear()
+	Fx.put_creature(s, 1, 2, &"flarebeak")
+	s.active = MatchController.AI
+	m.sync_all()
+	m.busy = true
+	var tree := Engine.get_main_loop() as SceneTree
+	var seen: bool = false
+	var done: Array[bool] = [false]
+	var run := func() -> void:
+		await m._ai_turn()
+		done[0] = true
+	run.call()
+	for i: int in 3000:
+		if done[0]:
+			break
+		seen = seen or m.attack_arrow.visible
+		await tree.process_frame
+	assert_true(seen, "the arrow showed the AI's attack")
+	assert_true(not m.attack_arrow.visible, "and was cleared")
+	m.queue_free()
+	return true

@@ -166,6 +166,11 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 			var hit: int = d.get("hit", Action.Hit.NORMAL)
 			var amt: int = d["amount"]
 			var pos: Vector3 = _number_pos(m, d["player"], d["lane"])
+			# Hit-back lands on the attacker while it flies home: number where it is, a squash
+			# instead of a shake (a shake would fight the flight tween over its position).
+			var hit_back: bool = d.get("kind", &"") == &"hit_back"
+			if hit_back and v:
+				pos = v.global_position + (pos - m.board.anchor(d["player"], d["lane"]))
 			var attack: bool = kind == &"attack_hit"
 			if attack:
 				await m.player.hit_stop()
@@ -197,7 +202,10 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				if amt > 0:
 					v.play_hit()
 					v.flash()
-				await m.player.shake(v)
+				if hit_back:
+					await m.player.recoil(v)
+				else:
+					await m.player.shake(v)
 				if not is_instance_valid(m):
 					return
 			m.refresh_pieces()

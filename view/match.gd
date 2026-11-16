@@ -209,6 +209,17 @@ func _on_end_turn_pressed() -> void:
 	refresh_ui()
 
 
+## Shows who attacks whom for a moment (the rival's attacks).
+func show_attack_arrow(p: int, lane: int, target_lane: int) -> void:
+	var cam: Camera3D = rig.camera
+	var from: Vector2 = cam.unproject_position(board.anchor(p, lane))
+	var to: Vector2 = cam.unproject_position(board.anchor(1 - p, target_lane)) if target_lane >= 0 \
+		else hud.hero_rect(p == AI).get_center()
+	attack_arrow.aim(from, to, true)
+	await get_tree().create_timer(0.5 / pace).timeout
+	attack_arrow.clear()
+
+
 ## Human attack: the attacker bar sets the hit, the AI may block a creature target.
 func request_attack(lane: int, target_lane: int) -> void:
 	if busy or state.active != HUMAN:
@@ -238,6 +249,7 @@ func _ai_turn() -> void:
 		await get_tree().create_timer(AI_PAUSE / pace).timeout
 		var a: Action = ai.choose_action(state)
 		if a.type == Action.Type.ATTACK:
+			await show_attack_arrow(AI, a.lane, a.target_lane)
 			a.hit = ai.roll_hit()
 			await timing_bar.simulate_attack(a.hit)
 			if a.target_lane >= 0:
