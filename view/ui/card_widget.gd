@@ -55,7 +55,8 @@ func setup(c: CardData, i: int) -> void:
 	var text_rect := Rect2(8, 134, SIZE.x - 16, 34 if c.is_creature() else 44)
 	var paper := _panel(text_rect, Palette.PAPER, 2, 6)
 	frame.add_child(paper)
-	_text = UiStyle.label(c.text, 10 if c.text.length() <= 34 else 9, Palette.INK)
+	var rules: String = CardText.render(c)
+	_text = UiStyle.label(rules, 10 if rules.length() <= 34 else 9, Palette.INK)
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -63,7 +64,7 @@ func setup(c: CardData, i: int) -> void:
 	_text.size = text_rect.size - Vector2(6, 0)
 	_text.add_theme_constant_override("line_spacing", -2)
 	paper.add_child(_text)
-	paper.visible = c.text != ""
+	paper.visible = rules != ""
 	add_child(_gem(Vector2(-8, -8), 36, Palette.MAGIC, str(c.cost), 18))
 	if c.is_creature():
 		add_child(_gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, "⚔"))

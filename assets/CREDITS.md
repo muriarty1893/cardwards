@@ -44,7 +44,8 @@ Licence: https://creativecommons.org/licenses/by/3.0/ . Source: https://github.c
 Change: the black background square was removed so the icons are white on transparent.
 
 - `icons/`, by **Lorc** (https://lorcblog.blogspot.com): fireball, burning-meteor, pollen-dust,
-  sprout, wrapped-sweet, snowflake-2, crossed-swords, cut-diamond, checked-shield, sword-break.
+  sprout, wrapped-sweet, snowflake-2, crossed-swords, cut-diamond, checked-shield, sword-break,
+  star-swirl.
 - `icons/`, by **Delapouite** (https://delapouite.com): card-exchange, falling-rocks, chimney.
 - `icons/`, by **Sbed** (https://opengameart.org/content/95-game-icons): health-increase.
 - `icons/`, by **Zeromancer**: heart-plus.

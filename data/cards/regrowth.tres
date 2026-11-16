@@ -1,18 +1,18 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_yxrr1"]
+
+[sub_resource type="Resource" id="Resource_2bj1q"]
+script = ExtResource("1_yxrr1")
+when = &"on_play"
+op = &"return_from_discard"
+who = &"chosen_discard_creature"
 
 [resource]
 script = ExtResource("1_card")
 id = &"regrowth"
 display_name = "Regrowth"
 kind = 2
-land = 0
-level = 0
 cost = 2
-attack = 0
-health = 0
-trigger = &"on_play"
-ability_id = &"return_from_discard"
-target = &"discard_creature"
-text = "Return a creature from your discard pile to your hand."
+effects = Array[ExtResource("1_yxrr1")]([SubResource("Resource_2bj1q")])

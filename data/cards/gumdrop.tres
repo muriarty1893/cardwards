@@ -1,18 +1,21 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_gcsmx"]
+
+[sub_resource type="Resource" id="Resource_6acrf"]
+script = ExtResource("1_gcsmx")
+when = &"on_boop"
+op = &"draw"
+amount = 1
 
 [resource]
 script = ExtResource("1_card")
 id = &"gumdrop"
 display_name = "Gumdrop"
-kind = 0
 land = 2
 level = 1
-cost = 1
-attack = 2
+cost = 2
+attack = 1
 health = 3
-trigger = &"on_boop"
-ability_id = &"draw_1"
-target = &"none"
-text = "Boop: draw a card."
+effects = Array[ExtResource("1_gcsmx")]([SubResource("Resource_6acrf")])

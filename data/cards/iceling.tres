@@ -1,18 +1,15 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_3q2xb"]
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
 
 [resource]
 script = ExtResource("1_card")
 id = &"iceling"
 display_name = "Iceling"
-kind = 0
 land = 3
 level = 1
-cost = 1
+cost = 2
 attack = 2
-health = 5
-trigger = &""
-ability_id = &""
-target = &"none"
-text = ""
+health = 2
+keywords = Array[StringName]([&"bubble"])

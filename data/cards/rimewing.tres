@@ -1,18 +1,21 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_iveao"]
+
+[sub_resource type="Resource" id="Resource_7133j"]
+script = ExtResource("1_iveao")
+when = &"on_play"
+op = &"hush"
+who = &"opposing"
 
 [resource]
 script = ExtResource("1_card")
 id = &"rimewing"
 display_name = "Rimewing"
-kind = 0
 land = 3
 level = 2
-cost = 2
-attack = 4
-health = 5
-trigger = &"on_play"
-ability_id = &"freeze_opposing"
-target = &"none"
-text = "On play: freeze the opposing creature."
+cost = 4
+attack = 3
+health = 4
+effects = Array[ExtResource("1_iveao")]([SubResource("Resource_7133j")])

@@ -60,8 +60,8 @@ func test_card_faces() -> bool:
 		var w := CardWidget.new()
 		w.setup(c, 0)
 		assert_true(w.art_texture() != null, "art for %s" % c.id)
-		if c.text != "":
-			assert_eq(w.text_label().text, c.text, "rules text on %s" % c.id)
+		if CardText.render(c) != "":
+			assert_eq(w.text_label().text, CardText.render(c), "rules text on %s" % c.id)
 		w.free()
 	return true
 

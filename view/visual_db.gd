@@ -70,6 +70,8 @@ const ENTRIES: Dictionary = {
 	&"frost_spire": {"tint": &"b_frost"},
 	&"cold_snap": {},
 	&"avalanche": {},
+	# Neutral
+	&"star_shard": {},
 }
 
 
@@ -83,6 +85,7 @@ const SPELL_ICONS: Dictionary = {
 	&"swap_trick": "res://assets/icons/card-exchange.svg",
 	&"cold_snap": "res://assets/icons/snowflake-2.svg",
 	&"avalanche": "res://assets/icons/falling-rocks.svg",
+	&"star_shard": "res://assets/icons/star-swirl.svg",
 }
 ## Glow behind spell icons, by land.
 const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff"), Color("#ffe07a")]
@@ -100,6 +103,7 @@ const EFFECTS: Dictionary = {
 	&"smokestack": &"smoke_puff", &"spore_hut": &"spore_puff", &"candy_mill": &"gem_pop",
 	&"rain_of_spores": &"rain_of_spores", &"regrowth": &"regrowth", &"fireball": &"fireball", &"ember_rain": &"ember_rain",
 	&"sugar_rush": &"sugar_rush", &"swap_trick": &"swap_trick", &"cold_snap": &"cold_snap", &"avalanche": &"avalanche",
+	&"star_shard": &"magic",
 }
 
 
@@ -107,6 +111,7 @@ const EFFECTS: Dictionary = {
 const SOUNDS: Dictionary = {
 	&"fireball": &"fire_whoosh", &"ember_rain": &"fire_whoosh", &"rain_of_spores": &"heal", &"regrowth": &"card_draw",
 	&"sugar_rush": &"candy_pop", &"swap_trick": &"candy_pop", &"cold_snap": &"freeze", &"avalanche": &"explosion",
+	&"star_shard": &"candy_pop",
 }
 
 

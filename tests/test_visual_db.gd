@@ -3,7 +3,7 @@ extends TestCase
 
 
 func test_entries_cover_all_cards() -> bool:
-	assert_eq(VisualDB.ids().size(), 40, "40 entries")
+	assert_eq(VisualDB.ids().size(), 41, "41 entries")
 	for c: CardData in CardDB.all_cards():
 		assert_true(VisualDB.ENTRIES.has(c.id), "entry for %s" % c.id)
 		if c.kind != CardData.Kind.SPELL:

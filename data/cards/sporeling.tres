@@ -1,18 +1,22 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_4ryty"]
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[sub_resource type="Resource" id="Resource_cl5ay"]
+script = ExtResource("1_4ryty")
+when = &"on_boop"
+op = &"heal"
+amount = 2
+who = &"self"
 
 [resource]
 script = ExtResource("1_card")
 id = &"sporeling"
 display_name = "Sporeling"
-kind = 0
-land = 0
 level = 1
-cost = 1
-attack = 2
-health = 4
-trigger = &"on_boop"
-ability_id = &"heal_self_2"
-target = &"none"
-text = "Boop: heal this creature 2."
+cost = 2
+attack = 1
+health = 2
+keywords = Array[StringName]([&"venom"])
+effects = Array[ExtResource("1_4ryty")]([SubResource("Resource_cl5ay")])

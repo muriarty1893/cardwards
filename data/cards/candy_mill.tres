@@ -1,6 +1,13 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_lhnrd"]
+
+[sub_resource type="Resource" id="Resource_tnhu3"]
+script = ExtResource("1_lhnrd")
+when = &"start_of_turn"
+op = &"gain_magic"
+amount = 1
 
 [resource]
 script = ExtResource("1_card")
@@ -8,11 +15,5 @@ id = &"candy_mill"
 display_name = "Candy Mill"
 kind = 1
 land = 2
-level = 0
-cost = 1
-attack = 0
-health = 0
-trigger = &"start_of_turn"
-ability_id = &"gain_magic_1"
-target = &"none"
-text = "Start of your turn: gain 1 magic."
+cost = 3
+effects = Array[ExtResource("1_lhnrd")]([SubResource("Resource_tnhu3")])

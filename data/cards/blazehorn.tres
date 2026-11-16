@@ -1,18 +1,23 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_lue2o"]
+
+[sub_resource type="Resource" id="Resource_un67l"]
+script = ExtResource("1_lue2o")
+when = &"on_play"
+op = &"damage"
+amount = 2
+who = &"opposing"
 
 [resource]
 script = ExtResource("1_card")
 id = &"blazehorn"
 display_name = "Blazehorn"
-kind = 0
 land = 1
 level = 2
-cost = 2
-attack = 6
+cost = 5
+attack = 5
 health = 4
-trigger = &"on_play"
-ability_id = &"dmg_opposing_2"
-target = &"none"
-text = "On play: deal 2 damage to the opposing creature."
+keywords = Array[StringName]([&"dash"])
+effects = Array[ExtResource("1_lue2o")]([SubResource("Resource_un67l")])

@@ -1,6 +1,14 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_dcm3v"]
+
+[sub_resource type="Resource" id="Resource_djhjx"]
+script = ExtResource("1_dcm3v")
+when = &"end_of_turn"
+op = &"damage"
+amount = 1
+who = &"enemy_hero"
 
 [resource]
 script = ExtResource("1_card")
@@ -8,11 +16,5 @@ id = &"smokestack"
 display_name = "Smokestack"
 kind = 1
 land = 1
-level = 0
-cost = 1
-attack = 0
-health = 0
-trigger = &"end_of_turn"
-ability_id = &"dmg_enemy_hero_1"
-target = &"none"
-text = "End of your turn: deal 1 damage to the enemy hero."
+cost = 2
+effects = Array[ExtResource("1_dcm3v")]([SubResource("Resource_djhjx")])

@@ -1,18 +1,19 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_m2ib3"]
+
+[sub_resource type="Resource" id="Resource_a4b7b"]
+script = ExtResource("1_m2ib3")
+when = &"on_play"
+op = &"heal"
+amount = 4
+who = &"chosen_own_creature"
 
 [resource]
 script = ExtResource("1_card")
 id = &"rain_of_spores"
 display_name = "Rain of Spores"
 kind = 2
-land = 0
-level = 0
 cost = 1
-attack = 0
-health = 0
-trigger = &"on_play"
-ability_id = &"heal_target_4"
-target = &"own_creature"
-text = "Heal one of your creatures 4."
+effects = Array[ExtResource("1_m2ib3")]([SubResource("Resource_a4b7b")])

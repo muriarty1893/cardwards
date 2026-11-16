@@ -1,18 +1,21 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_x1h73"]
+
+[sub_resource type="Resource" id="Resource_6rimp"]
+script = ExtResource("1_x1h73")
+when = &"on_play"
+op = &"heal"
+amount = 2
 
 [resource]
 script = ExtResource("1_card")
 id = &"rootstalker"
 display_name = "Rootstalker"
-kind = 0
-land = 0
 level = 2
-cost = 2
-attack = 4
-health = 7
-trigger = &"on_play"
-ability_id = &"heal_hero_2"
-target = &"none"
-text = "On play: heal your hero 2."
+cost = 4
+attack = 3
+health = 5
+keywords = Array[StringName]([&"leech"])
+effects = Array[ExtResource("1_x1h73")]([SubResource("Resource_6rimp")])

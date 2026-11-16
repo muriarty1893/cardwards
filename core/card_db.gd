@@ -83,4 +83,5 @@ const _ORDER: Array[StringName] = [
 	&"cinderpup", &"ashmite", &"flarebeak", &"magmaw", &"blazehorn", &"inferno_drake", &"kiln_tower", &"smokestack", &"fireball", &"ember_rain",
 	&"gumdrop", &"taffy_snail", &"lollibat", &"sugar_sprite", &"jellywobble", &"bonbon_behemoth", &"sugar_shack", &"candy_mill", &"sugar_rush", &"swap_trick",
 	&"snowmite", &"iceling", &"frostfang", &"glacier_tortoise", &"rimewing", &"blizzard_titan", &"ice_wall", &"frost_spire", &"cold_snap", &"avalanche",
+	&"star_shard",
 ]

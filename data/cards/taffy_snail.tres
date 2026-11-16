@@ -1,18 +1,21 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_hbvya"]
+
+[sub_resource type="Resource" id="Resource_aril3"]
+script = ExtResource("1_hbvya")
+when = &"on_play"
+op = &"gain_magic"
+amount = 1
 
 [resource]
 script = ExtResource("1_card")
 id = &"taffy_snail"
 display_name = "Taffy Snail"
-kind = 0
 land = 2
 level = 1
-cost = 1
+cost = 2
 attack = 1
-health = 5
-trigger = &"on_play"
-ability_id = &"gain_magic_1"
-target = &"none"
-text = "On play: gain 1 magic."
+health = 4
+effects = Array[ExtResource("1_hbvya")]([SubResource("Resource_aril3")])

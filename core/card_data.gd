@@ -16,12 +16,6 @@ const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hill
 @export var cost: int = 0
 @export var attack: int = 0
 @export var health: int = 0
-## "", on_play, on_boop, on_destroyed, on_deal_damage, start_of_turn, end_of_turn, passive
-@export var trigger: StringName = &""
-@export var ability_id: StringName = &""
-## none, any_creature, own_creature, own_empty_lane, own_two_creatures, discard_creature
-@export var target: StringName = &"none"
-@export_multiline var text: String = ""
 ## Printed keywords (Keywords.ORDER ids).
 @export var keywords: Array[StringName] = []
 @export var spell_power: int = 0

@@ -121,9 +121,7 @@ static func _validate_play(s: GameState, a: Action) -> String:
 			return "Lane already has a creature"
 		if c.kind == CardData.Kind.BUILDING and lane.building != null:
 			return "Lane already has a building"
-	if c.kind == CardData.Kind.SPELL:
-		return _validate_targets(s, a.player, c, -1, a.targets)
-	return ""
+	return _validate_targets(s, a.player, c, &"on_play", a.lane if c.kind != CardData.Kind.SPELL else -1, a.targets)
 
 
 static func _validate_boop(s: GameState, a: Action) -> String:
@@ -132,21 +130,22 @@ static func _validate_boop(s: GameState, a: Action) -> String:
 	if a.lane < 0 or a.lane >= GameState.LANES or s.players[a.player].lanes[a.lane].creature == null:
 		return "No such creature"
 	var cr: GameState.CreatureState = s.players[a.player].lanes[a.lane].creature
-	if cr.card.trigger != &"on_boop":
+	if not cr.card.has_effect(&"on_boop") or cr.hushed:
 		return "No boop ability"
 	if cr.is_frozen():
 		return "Creature is frozen"
 	if cr.acted:
 		return "Creature already acted"
-	return _validate_targets(s, a.player, cr.card, a.lane, a.targets)
+	return _validate_targets(s, a.player, cr.card, &"on_boop", a.lane, a.targets)
 
 
-## Spells need targets when played; creature boops need them when booped.
-static func _validate_targets(s: GameState, p: int, c: CardData, source_lane: int, targets: Array[Dictionary]) -> String:
-	if c.target == &"none":
+## Chosen targets for the card's `when` effects (on_play when played, on_boop when booped).
+static func _validate_targets(s: GameState, p: int, c: CardData, when: StringName, source_lane: int, targets: Array[Dictionary]) -> String:
+	var who: StringName = Targeting.chosen_who(c, when)
+	if who == &"":
 		return ""
-	var valid: Array[Dictionary] = valid_targets(s, p, c, source_lane)
-	var needed: int = 2 if c.target == &"own_two_creatures" else 1
+	var valid: Array[Dictionary] = Targeting.valid(s, p, who, source_lane)
+	var needed: int = Targeting.needed(who)
 	if valid.size() < needed:
 		return "No valid target"
 	if targets.size() != needed:
@@ -167,30 +166,6 @@ static func matching_lands(s: GameState, p: int, land: int) -> int:
 	return n
 
 
-static func valid_targets(s: GameState, p: int, c: CardData, source_lane: int = -1) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	match c.target:
-		&"any_creature":
-			for q: int in 2:
-				for i: int in GameState.LANES:
-					if s.players[q].lanes[i].creature:
-						out.append({"player": q, "lane": i})
-		&"own_creature", &"own_two_creatures":
-			for i: int in GameState.LANES:
-				if s.players[p].lanes[i].creature:
-					out.append({"player": p, "lane": i})
-		&"own_empty_lane":
-			for i: int in GameState.LANES:
-				if i != source_lane and s.players[p].lanes[i].creature == null:
-					out.append({"player": p, "lane": i})
-		&"discard_creature":
-			var d: Array[CardData] = s.players[p].discard
-			for i: int in d.size():
-				if d[i].kind == CardData.Kind.CREATURE:
-					out.append({"discard": i})
-	return out
-
-
 # --- Apply -------------------------------------------------------------------
 
 static func apply(s: GameState, a: Action) -> Array[GameEvent]:
@@ -206,7 +181,8 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 			var cr: GameState.CreatureState = s.players[a.player].lanes[a.lane].creature
 			cr.acted = true
 			ev.append(GameEvent.make(&"booped", {"player": a.player, "lane": a.lane}))
-			Abilities.run(s, a.player, a.lane, cr.card, a.targets, ev)
+			reveal(s, a.player, a.lane, ev)
+			Effects.run(s, a.player, a.lane, cr.card, &"on_boop", a.targets, ev)
 			resolve_deaths(s, ev)
 		Action.Type.BEGIN_ATTACKS:
 			s.phase = GameState.Phase.ATTACK
@@ -250,15 +226,15 @@ static func legal_actions(s: GameState) -> Array[Action]:
 				if c.kind != CardData.Kind.SPELL:
 					lanes = [0, 1, 2, 3]
 				for lane: int in lanes:
-					for t: Array[Dictionary] in _target_options(s, p, c, -1):
+					for t: Array[Dictionary] in _target_options(s, p, c, &"on_play", lane):
 						var a: Action = Action.play(p, i, lane, t)
 						if validate(s, a) == "":
 							out.append(a)
 			for lane: int in GameState.LANES:
 				var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
-				if cr == null or cr.card.trigger != &"on_boop":
+				if cr == null or not cr.card.has_effect(&"on_boop"):
 					continue
-				for t: Array[Dictionary] in _target_options(s, p, cr.card, lane):
+				for t: Array[Dictionary] in _target_options(s, p, cr.card, &"on_boop", lane):
 					var a: Action = Action.boop(p, lane, t)
 					if validate(s, a) == "":
 						out.append(a)
@@ -270,14 +246,15 @@ static func legal_actions(s: GameState) -> Array[Action]:
 	return out
 
 
-static func _target_options(s: GameState, p: int, c: CardData, source_lane: int) -> Array[Array]:
+static func _target_options(s: GameState, p: int, c: CardData, when: StringName, source_lane: int) -> Array[Array]:
 	var out: Array[Array] = []
-	if c.target == &"none":
+	var who: StringName = Targeting.chosen_who(c, when)
+	if who == &"":
 		var empty: Array[Dictionary] = []
 		out.append(empty)
 		return out
-	var valid: Array[Dictionary] = valid_targets(s, p, c, source_lane)
-	if c.target == &"own_two_creatures":
+	var valid: Array[Dictionary] = Targeting.valid(s, p, who, source_lane)
+	if who == &"chosen_two_own_creatures":
 		for i: int in valid.size():
 			for j: int in range(i + 1, valid.size()):
 				var pair: Array[Dictionary] = [valid[i], valid[j]]
@@ -312,13 +289,11 @@ static func _attack(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	var atk: int = effective_attack(s, p, a.lane)
 	if has_defender(s, a.lane):
 		ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "hit": int(a.hit), "target": "creature"}))
-		var d: int = Combat.attack_damage(atk, a.hit, a.blocked, has_ice_wall(s, foe, a.lane))
-		deal_creature_damage(s, foe, a.lane, d, ev, a.hit, a.blocked)
-		if d > 0 and cr.card.trigger == &"on_deal_damage":
-			Abilities.run(s, p, a.lane, cr.card, [], ev)
+		var d: int = Combat.attack_damage(atk, a.hit, a.blocked, damage_reduction(s, foe, a.lane) > 0)
+		damage_creature(s, foe, a.lane, d, {"player": p, "lane": a.lane, "kind": &"attack"}, ev, a.hit, a.blocked)
 	else:
 		ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "hit": int(a.hit), "target": "hero"}))
-		damage_hero(s, foe, Combat.hero_damage(atk, a.hit), ev)
+		damage_hero(s, foe, Combat.hero_damage(atk, a.hit), ev, {"player": p, "lane": a.lane, "kind": &"attack"})
 	resolve_deaths(s, ev)
 
 
@@ -332,20 +307,20 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 		ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic}))
 	match c.kind:
 		CardData.Kind.CREATURE:
-			var cr := GameState.CreatureState.new()
-			cr.card = c
-			cr.played_turn = s.turn
-			ps.lanes[a.lane].creature = cr
+			enter_creature(s, p, a.lane, c, ev)
 			ev.append(GameEvent.make(&"creature_played", {"player": p, "lane": a.lane, "card": c.id}))
-			if c.trigger == &"on_play":
-				Abilities.run(s, p, a.lane, c, a.targets, ev)
+			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.BUILDING:
 			ps.lanes[a.lane].building = c
 			ev.append(GameEvent.make(&"building_played", {"player": p, "lane": a.lane, "card": c.id}))
+			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.SPELL:
 			ev.append(GameEvent.make(&"spell_cast", {"player": p, "card": c.id}))
-			Abilities.run(s, p, -1, c, a.targets, ev)
+			Effects.run(s, p, -1, c, &"on_play", a.targets, ev)
 			ps.discard.append(c)
+	ps.cards_played += 1
+	if ps.cards_played == 1:
+		ev.append(GameEvent.make(&"combo_active", {"player": p}))
 	resolve_deaths(s, ev)
 
 
@@ -373,13 +348,8 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 static func _run_lane_triggers(s: GameState, p: int, trigger: StringName, ev: Array[GameEvent]) -> void:
 	for l: int in GameState.LANES:
 		var b: CardData = s.players[p].lanes[l].building
-		if b and b.trigger == trigger:
-			Abilities.run(s, p, l, b, [], ev)
-
-
-static func _building_ability(s: GameState, p: int, lane: int) -> StringName:
-	var b: CardData = s.players[p].lanes[lane].building
-	return b.ability_id if b else &""
+		if b:
+			Effects.run(s, p, l, b, trigger, [], ev)
 
 
 static func effective_attack(s: GameState, p: int, lane: int) -> int:
@@ -387,13 +357,6 @@ static func effective_attack(s: GameState, p: int, lane: int) -> int:
 	if cr == null:
 		return 0
 	var atk: int = cr.card.attack + cr.atk_bonus + _aura(s, p, lane, &"lane_atk") - _aura(s, s.opponent(p), lane, &"opposing_atk")
-	match _building_ability(s, p, lane):
-		&"lane_atk_2":
-			atk += 2
-		&"lane_atk_1_hp_1":
-			atk += 1
-	if _building_ability(s, s.opponent(p), lane) == &"opposing_atk_minus_1":
-		atk -= 1
 	return maxi(atk, 0)
 
 
@@ -401,13 +364,7 @@ static func effective_max_hp(s: GameState, p: int, lane: int) -> int:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
 		return 0
-	var hp: int = cr.card.health + cr.hp_bonus + _aura(s, p, lane, &"lane_hp")
-	match _building_ability(s, p, lane):
-		&"lane_max_hp_3":
-			hp += 3
-		&"lane_atk_1_hp_1":
-			hp += 1
-	return hp
+	return cr.card.health + cr.hp_bonus + _aura(s, p, lane, &"lane_hp")
 
 
 ## Sum of a building aura's amounts in player p's lane.
@@ -571,18 +528,6 @@ static func offer_dream_up(s: GameState, p: int, filter_kind: int, filter_land: 
 	ev.append(GameEvent.make(&"dream_up_offered", {"player": p, "cards": ids}))
 
 
-static func has_ice_wall(s: GameState, p: int, lane: int) -> bool:
-	return _building_ability(s, p, lane) == &"lane_damage_minus_1"
-
-
-static func deal_creature_damage(s: GameState, p: int, lane: int, amount: int, ev: Array[GameEvent], hit: Action.Hit = Action.Hit.NORMAL, blocked: bool = false) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
-	if cr == null:
-		return
-	cr.damage += amount
-	ev.append(GameEvent.make(&"creature_damaged", {"player": p, "lane": lane, "amount": amount, "hit": int(hit), "blocked": blocked}))
-
-
 static func heal_creature(s: GameState, p: int, lane: int, amount: int, ev: Array[GameEvent]) -> void:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
@@ -646,11 +591,8 @@ static func resolve_deaths(s: GameState, ev: Array[GameEvent]) -> void:
 					s.players[p].lanes[l].creature = null
 					s.players[p].discard.append(cr.card)
 					ev.append(GameEvent.make(&"creature_destroyed", {"player": p, "lane": l, "card": cr.card.id}))
-					if not cr.card.effects.is_empty():
-						if not cr.hushed:
-							Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)
-					elif cr.card.trigger == &"on_destroyed":
-						Abilities.run(s, p, l, cr.card, [], ev)
+					if not cr.hushed:
+						Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)
 					if second_wind and not _hero_down(s) and s.players[p].lanes[l].creature == null:
 						s.players[p].discard.erase(cr.card)
 						var back: GameState.CreatureState = enter_creature(s, p, l, cr.card, ev)

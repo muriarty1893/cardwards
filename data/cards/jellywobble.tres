@@ -1,18 +1,21 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_kgb6i"]
+
+[sub_resource type="Resource" id="Resource_xk6id"]
+script = ExtResource("1_kgb6i")
+when = &"on_destroyed"
+op = &"draw"
+amount = 2
 
 [resource]
 script = ExtResource("1_card")
 id = &"jellywobble"
 display_name = "Jellywobble"
-kind = 0
 land = 2
 level = 2
-cost = 2
-attack = 4
-health = 6
-trigger = &"on_destroyed"
-ability_id = &"draw_2"
-target = &"none"
-text = "When destroyed: draw 2 cards."
+cost = 4
+attack = 3
+health = 5
+effects = Array[ExtResource("1_kgb6i")]([SubResource("Resource_xk6id")])

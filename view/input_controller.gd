@@ -58,27 +58,31 @@ func on_dropped(i: int, screen_pos: Vector2) -> void:
 	if hit.is_empty() or int(hit["player"]) != _human():
 		match_ctl.hand.cancel_drag()
 		return
+	if Targeting.chosen_who(_card, &"on_play") != &"":
+		_begin_card_targets(i, int(hit["lane"]), false)
+		return
 	_request(Action.play(_human(), i, int(hit["lane"])))
 
 
-## Spells (and Lollibat's boop) may need targets before the action is sent.
+## Cards (and boops) with chosen targets collect them before the action is sent.
 func _begin_card_targets(hand_index: int, lane: int, boop: bool) -> void:
 	_hand_index = hand_index
 	_lane = lane
 	_is_boop = boop
 	_targets = []
-	if _card.target == &"none":
+	var who: StringName = Targeting.chosen_who(_card, &"on_boop" if boop else &"on_play")
+	if who == &"":
 		_send()
 		return
-	if _card.target == &"discard_creature":
-		# Regrowth: return the most recently discarded creature (no discard browser in v1).
-		var options: Array[Dictionary] = Rules.valid_targets(_state(), _human(), _card)
+	if who == &"chosen_discard_creature":
+		# Regrowth: return the most recently discarded creature (no discard browser yet).
+		var options: Array[Dictionary] = Targeting.valid(_state(), _human(), who)
 		if not options.is_empty():
 			_targets = [options[options.size() - 1]]
 		_send()
 		return
-	var valid: Array[Dictionary] = Rules.valid_targets(_state(), _human(), _card, lane)
-	_needed = 2 if _card.target == &"own_two_creatures" else 1
+	var valid: Array[Dictionary] = Targeting.valid(_state(), _human(), who, lane)
+	_needed = Targeting.needed(who)
 	if valid.size() < _needed:
 		_send()  # let validate produce "No valid target"
 		return
@@ -141,7 +145,7 @@ func can_boop(lane: int) -> bool:
 	if not enabled or mode != Mode.IDLE:
 		return false
 	var cr: GameState.CreatureState = _state().players[_human()].lanes[lane].creature
-	if cr == null or cr.card.trigger != &"on_boop":
+	if cr == null or not cr.card.has_effect(&"on_boop") or cr.hushed:
 		return false
 	var err: String = Rules.validate(_state(), Action.boop(_human(), lane, []))
 	return err == "" or err == "Invalid target"
@@ -154,7 +158,7 @@ func request_boop(lane: int) -> void:
 	var cr: GameState.CreatureState = _state().players[_human()].lanes[lane].creature
 	if cr == null:
 		return
-	if cr.card.trigger != &"on_boop":
+	if not cr.card.has_effect(&"on_boop") or cr.hushed:
 		match_ctl.toast.show_message("%s has no boop ability" % cr.card.display_name)
 		return
 	var err: String = Rules.validate(_state(), Action.boop(_human(), lane, []))

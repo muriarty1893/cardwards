@@ -1,6 +1,13 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_7llcb"]
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[sub_resource type="Resource" id="Resource_0qgnx"]
+script = ExtResource("1_7llcb")
+when = &"on_play"
+op = &"draw"
+amount = 2
 
 [resource]
 script = ExtResource("1_card")
@@ -8,11 +15,5 @@ id = &"sugar_rush"
 display_name = "Sugar Rush"
 kind = 2
 land = 2
-level = 0
-cost = 1
-attack = 0
-health = 0
-trigger = &"on_play"
-ability_id = &"draw_2"
-target = &"none"
-text = "Draw 2 cards."
+cost = 2
+effects = Array[ExtResource("1_7llcb")]([SubResource("Resource_0qgnx")])

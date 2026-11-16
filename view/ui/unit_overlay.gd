@@ -163,7 +163,7 @@ func refresh(s: GameState) -> void:
 	for l: int in 4:
 		var cr: GameState.CreatureState = s.players[MatchController.HUMAN].lanes[l].creature
 		var b: Button = _boops[l]
-		b.visible = cr != null and cr.card.trigger == &"on_boop"
+		b.visible = cr != null and cr.card.has_effect(&"on_boop") and not cr.hushed
 		b.disabled = not (b.visible and _m.input.can_boop(l) and not _m.busy)
 		_style_boop(b)
 

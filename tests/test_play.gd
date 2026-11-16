@@ -10,7 +10,7 @@ func test_play_creature() -> bool:
 	var s: GameState = Fx.blank()
 	var i: int = Fx.give(s, 0, &"mossback")
 	var ev: Array[GameEvent] = Rules.apply(s, Action.play(0, i, 2))
-	assert_eq(s.players[0].magic, 1, "magic spent")
+	assert_eq(s.players[0].magic, 0, "magic spent (mossback costs 2)")
 	assert_true(s.players[0].lanes[2].creature != null, "creature placed")
 	assert_eq(s.players[0].lanes[2].creature.card.id, &"mossback", "right creature")
 	assert_eq(s.players[0].hand.size(), 0, "left hand")
@@ -30,9 +30,11 @@ func test_not_enough_magic() -> bool:
 
 func test_level_requirement() -> bool:
 	var s: GameState = Fx.blank([E, M, K, F])
+	s.players[0].magic = 9
 	var i: int = Fx.give(s, 0, &"magmaw")
 	assert_eq(Rules.validate(s, Action.play(0, i, 0)), "Needs 2 Ember Flats lands", "needs 2 ember")
 	var s2: GameState = Fx.blank([E, E, K, F])
+	s2.players[0].magic = 9
 	var j: int = Fx.give(s2, 0, &"magmaw")
 	assert_eq(Rules.validate(s2, Action.play(0, j, 3)), "", "ok on a frost land with 2 ember lands")
 	return true

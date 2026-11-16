@@ -40,9 +40,10 @@ func test_every_spell_plays() -> bool:
 		s.players[0].discard.append(CardDB.card(&"cinderpup"))
 		m.sync_all()
 		var i: int = Fx.give(s, 0, c.id)
-		s.players[0].magic = 5
-		var valid: Array[Dictionary] = Rules.valid_targets(s, 0, c)
-		var need: int = 2 if c.target == &"own_two_creatures" else (0 if c.target == &"none" else 1)
+		s.players[0].magic = 9
+		var who: StringName = Targeting.chosen_who(c, &"on_play")
+		var valid: Array[Dictionary] = Targeting.valid(s, 0, who)
+		var need: int = 0 if who == &"" else Targeting.needed(who)
 		var targets: Array[Dictionary] = []
 		for t: int in mini(need, valid.size()):
 			targets.append(valid[t])
@@ -58,7 +59,7 @@ func test_every_boop_plays() -> bool:
 	_fast(m)
 	var s: GameState = m.state
 	for c: CardData in CardDB.all_cards():
-		if c.trigger != &"on_boop":
+		if not c.has_effect(&"on_boop"):
 			continue
 		_clear_board(m)
 		Fx.put_creature(s, 0, 1, c.id)
@@ -67,9 +68,10 @@ func test_every_boop_plays() -> bool:
 		Fx.put_creature(s, 1, 2, &"cinderpup")
 		Fx.put_building(s, 1, 1, &"kiln_tower")
 		m.sync_all()
-		var valid: Array[Dictionary] = Rules.valid_targets(s, 0, c, 1)
+		var who: StringName = Targeting.chosen_who(c, &"on_boop")
+		var valid: Array[Dictionary] = Targeting.valid(s, 0, who, 1)
 		var targets: Array[Dictionary] = []
-		if c.target != &"none" and not valid.is_empty():
+		if who != &"" and not valid.is_empty():
 			targets.append(valid[0])
 		var err: String = Rules.validate(s, Action.boop(0, 1, targets))
 		assert_eq(err, "", "%s boop is legal" % c.id)

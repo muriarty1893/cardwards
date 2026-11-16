@@ -1,18 +1,21 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_nggxj"]
+
+[sub_resource type="Resource" id="Resource_vgksa"]
+script = ExtResource("1_nggxj")
+when = &"after_damage"
+op = &"freeze"
+who = &"damaged_creature"
 
 [resource]
 script = ExtResource("1_card")
 id = &"frostfang"
 display_name = "Frostfang"
-kind = 0
 land = 3
 level = 1
-cost = 1
+cost = 3
 attack = 3
-health = 4
-trigger = &"on_deal_damage"
-ability_id = &"freeze_damaged"
-target = &"none"
-text = "After it damages a creature, freeze that creature."
+health = 3
+effects = Array[ExtResource("1_nggxj")]([SubResource("Resource_vgksa")])

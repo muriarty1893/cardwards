@@ -39,7 +39,7 @@ func test_zero_attack() -> bool:
 
 func test_empty_lane_hits_hero() -> bool:
 	var s: GameState = Fx.blank()
-	Fx.put_creature(s, 0, 0, &"cinderpup")
+	Fx.put_creature(s, 0, 0, &"flarebeak")
 	_attack_phase(s)
 	var ev: Array[GameEvent] = Rules.apply(s, Action.attack(0, 0, C, true))
 	assert_eq(s.players[1].hero_hp, 20, "25 - ceil(4.5)")
@@ -91,7 +91,7 @@ func test_booped_cannot_attack() -> bool:
 func test_frostfang_freezes() -> bool:
 	var s: GameState = Fx.blank()
 	Fx.put_creature(s, 0, 0, &"frostfang")
-	Fx.put_creature(s, 1, 0, &"sporeling")
+	Fx.put_creature(s, 1, 0, &"glimmer_morel")
 	Fx.fill_deck(s, 0, &"mossback", 5)
 	Fx.fill_deck(s, 1, &"mossback", 5)
 	_attack_phase(s)

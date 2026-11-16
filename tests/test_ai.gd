@@ -4,8 +4,9 @@ extends TestCase
 func test_ai_takes_lethal() -> bool:
 	var s: GameState = Fx.blank()
 	s.players[1].hero_hp = 2
+	s.players[0].magic = 3
 	Fx.give(s, 0, &"mossback")
-	Fx.give(s, 0, &"flarebeak")
+	Fx.give(s, 0, &"cinderpup")
 	Fx.fill_deck(s, 1, &"mossback", 3)
 	var me := AIPlayer.new(0, AIPlayer.Difficulty.EASY, 1)
 	var foe := AIPlayer.new(1, AIPlayer.Difficulty.EASY, 2)
@@ -18,7 +19,7 @@ func test_ai_takes_lethal() -> bool:
 
 func test_ai_prefers_kill() -> bool:
 	var s: GameState = Fx.blank()
-	s.players[0].magic = 1
+	s.players[0].magic = 2
 	Fx.put_creature(s, 1, 2, &"flarebeak")
 	Fx.give(s, 0, &"sugar_rush")
 	Fx.give(s, 0, &"fireball")

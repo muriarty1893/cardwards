@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_suqvp"]
+[ext_resource type="Script" path="res://core/card_data.gd" id="2_bknl0"]
+
+[sub_resource type="Resource" id="Resource_7p1ix"]
+script = ExtResource("1_suqvp")
+when = &"on_play"
+op = &"gain_magic"
+amount = 1
+
+[resource]
+script = ExtResource("2_bknl0")
+id = &"star_shard"
+display_name = "Star Shard"
+kind = 2
+land = 4
+effects = Array[ExtResource("1_suqvp")]([SubResource("Resource_7p1ix")])

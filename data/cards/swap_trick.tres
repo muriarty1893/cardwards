@@ -1,6 +1,20 @@
 [gd_resource type="Resource" script_class="CardData" format=3]
 
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_325no"]
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[sub_resource type="Resource" id="Resource_wpys4"]
+script = ExtResource("1_325no")
+when = &"on_play"
+op = &"swap"
+who = &"chosen_two_own_creatures"
+
+[sub_resource type="Resource" id="Resource_3l3hq"]
+script = ExtResource("1_325no")
+when = &"on_play"
+op = &"draw"
+amount = 1
+combo = true
 
 [resource]
 script = ExtResource("1_card")
@@ -8,11 +22,5 @@ id = &"swap_trick"
 display_name = "Swap Trick"
 kind = 2
 land = 2
-level = 0
-cost = 0
-attack = 0
-health = 0
-trigger = &"on_play"
-ability_id = &"swap_two"
-target = &"own_two_creatures"
-text = "Swap two of your creatures between lanes."
+cost = 1
+effects = Array[ExtResource("1_325no")]([SubResource("Resource_wpys4"), SubResource("Resource_3l3hq")])
