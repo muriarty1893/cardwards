@@ -28,6 +28,9 @@ static func put_creature(s: GameState, p: int, lane: int, id: StringName, damage
 	c.card = CardDB.card(id)
 	c.damage = damage
 	c.played_turn = s.turn - 1
+	c.ready = true
+	c.bubble = &"bubble" in c.card.keywords
+	c.hidden = &"hidden" in c.card.keywords
 	s.players[p].lanes[lane].creature = c
 
 

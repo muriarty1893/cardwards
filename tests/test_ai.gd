@@ -71,3 +71,19 @@ func test_ai_vs_ai_100() -> bool:
 			wins[decks[b].id] += 1
 	print("AI-vs-AI deck results (wins/games): ", wins, " / ", games, "  avg turns: ", total_turns / 100.0)
 	return true
+
+
+func test_ai_resolves_dream_up() -> bool:
+	var s: GameState = Fx.blank([0, 1, 2, 3], [2, 2, 2, 3])
+	s.active = 1
+	s.players[1].magic = 9
+	Fx.give(s, 1, &"bonbon_behemoth")
+	Fx.fill_deck(s, 0, &"mossback", 5)
+	Fx.fill_deck(s, 1, &"mossback", 5)
+	var me := AIPlayer.new(1, AIPlayer.Difficulty.MEDIUM, 3)
+	var foe := AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 4)
+	var ev: Array[GameEvent] = []
+	AIRunner.play_turn(s, me, foe, ev)
+	assert_true(&"dream_up_chosen" in Fx.types(ev), "picked a Dream Up card")
+	assert_eq(s.active, 0, "turn passed")
+	return true

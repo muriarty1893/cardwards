@@ -304,6 +304,7 @@ func test_blizzard_titan() -> bool:
 	var s: GameState = Fx.blank([3, 3, 3, 3])
 	_cast(s, 0, &"blizzard_titan", 0)
 	assert_true(s.players[0].lanes[0].creature.bubble, "enters with its bubble up")
+	s.players[0].lanes[0].creature.ready = true  # as on its owner's next turn
 	Fx.put_creature(s, 1, 0, &"mossback")
 	Fx.put_creature(s, 1, 3, &"mossback")
 	_boop(s, 0, 0)

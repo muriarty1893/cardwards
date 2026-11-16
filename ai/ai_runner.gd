@@ -7,7 +7,7 @@ const MAX_MAIN_ACTIONS := 30
 
 static func play_turn(s: GameState, ai: AIPlayer, defender_ai: AIPlayer, ev: Array[GameEvent]) -> void:
 	for i: int in MAX_MAIN_ACTIONS:
-		if s.phase != GameState.Phase.MAIN:
+		if s.phase != GameState.Phase.MAIN and s.phase != GameState.Phase.CHOOSING:
 			break
 		var a: Action = ai.choose_main_action(s)
 		ev.append_array(Rules.apply(s, a))

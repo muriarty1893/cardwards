@@ -180,8 +180,16 @@ func _on_action_requested(a: Action) -> void:
 	busy = true
 	refresh_ui()
 	await perform(a)
+	await _human_dream_up()
 	busy = false
 	refresh_ui()
+
+
+## Interim until the Dream Up picker (Rules 2.0 plan Task 15): take the first card offered.
+func _human_dream_up() -> void:
+	if state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
+		toast.show_message("Dream Up: %s" % state.pending_choice[0].display_name, 1.5)
+		await perform(Action.choose(HUMAN, 0))
 
 
 func _on_end_turn_pressed() -> void:
@@ -211,7 +219,7 @@ func _on_end_turn_pressed() -> void:
 ## The AI's whole turn, shown step by step. Ends after the AI's END_TURN (human's turn started).
 func _ai_turn() -> void:
 	for i: int in AIRunner.MAX_MAIN_ACTIONS:
-		if state.phase != GameState.Phase.MAIN:
+		if state.phase != GameState.Phase.MAIN and state.phase != GameState.Phase.CHOOSING:
 			break
 		await get_tree().create_timer(AI_PAUSE / pace).timeout
 		var a: Action = ai.choose_main_action(state)

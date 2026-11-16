@@ -21,6 +21,8 @@ static func setup(deck_a: DeckData, deck_b: DeckData, seed: int) -> GameState:
 		for i: int in GameState.START_HAND:
 			s.players[p].hand.append(s.players[p].deck.pop_back())
 	s.first_player = s.rng.randi_range(0, 1)
+	# Going second: a Star Shard to make up for it (spec 3.1).
+	s.players[1 - s.first_player].hand.append(CardDB.card(&"star_shard"))
 	s.active = s.first_player
 	s.turn = 1
 	s.phase = GameState.Phase.MAIN
@@ -41,10 +43,16 @@ static func start_turn(s: GameState) -> Array[GameEvent]:
 	var ps: GameState.PlayerState = s.players[p]
 	s.phase = GameState.Phase.MAIN
 	ev.append(GameEvent.make(&"turn_started", {"player": p, "turn": s.turn}))
-	ps.magic = GameState.MAGIC_PER_TURN
+	ps.max_magic = mini(ps.max_magic + 1, GameState.MAGIC_CAP)
+	ps.magic = ps.max_magic
+	ps.cards_played = 0
+	for lane: GameState.LaneState in ps.lanes:
+		if lane.creature:
+			lane.creature.ready = true
+			lane.creature.attacks_used = 0
+			lane.creature.booped = false
 	_run_lane_triggers(s, p, &"start_of_turn", ev)
-	ps.max_magic = ps.magic
-	ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic}))
+	ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic, "max": ps.max_magic}))
 	if s.turn != 1:
 		draw(s, p, ev)
 	resolve_deaths(s, ev)
@@ -134,8 +142,10 @@ static func _validate_boop(s: GameState, a: Action) -> String:
 		return "No boop ability"
 	if cr.is_frozen():
 		return "Creature is frozen"
-	if cr.acted:
+	if cr.acted or cr.booped or cr.attacks_used > 0:
 		return "Creature already acted"
+	if not cr.ready:
+		return "Not ready yet"
 	return _validate_targets(s, a.player, cr.card, &"on_boop", a.lane, a.targets)
 
 
@@ -156,6 +166,13 @@ static func _validate_targets(s: GameState, p: int, c: CardData, when: StringNam
 	if needed == 2 and targets[0] == targets[1]:
 		return "Invalid target"
 	return ""
+
+
+## Ready, not frozen, hasn't attacked or booped this turn, and has an un-hushed boop.
+static func can_boop(s: GameState, p: int, lane: int) -> bool:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	return cr != null and cr.ready and not cr.is_frozen() and not cr.booped and not cr.acted \
+		and cr.attacks_used == 0 and cr.card.has_effect(&"on_boop") and not cr.hushed
 
 
 static func matching_lands(s: GameState, p: int, land: int) -> int:
@@ -180,6 +197,7 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 		Action.Type.BOOP:
 			var cr: GameState.CreatureState = s.players[a.player].lanes[a.lane].creature
 			cr.acted = true
+			cr.booped = true
 			ev.append(GameEvent.make(&"booped", {"player": a.player, "lane": a.lane}))
 			reveal(s, a.player, a.lane, ev)
 			Effects.run(s, a.player, a.lane, cr.card, &"on_boop", a.targets, ev)

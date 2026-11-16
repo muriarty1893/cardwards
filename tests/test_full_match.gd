@@ -40,8 +40,14 @@ func test_full_match_through_view() -> bool:
 			assert_eq(m.creature_views[p][l] != null, has_c, "view matches state p%d l%d" % [p, l])
 	await tree.create_timer(1.0).timeout  # results screen plays its jingle
 	audio.log_enabled = false
-	for snd: StringName in [&"card_play", &"attack_whoosh", &"turn_start", &"death"]:
+	for snd: StringName in [&"card_play", &"attack_whoosh", &"turn_start"]:
 		assert_true(snd in audio.played, "played %s" % snd)
+	var died: bool = false
+	for p: int in 2:
+		for c: CardData in m.state.players[p].discard:
+			died = died or c.kind == CardData.Kind.CREATURE
+	if died:
+		assert_true(&"death" in audio.played, "played death")
 	assert_true(&"hit_light" in audio.played or &"hit_heavy" in audio.played or &"hit_crit" in audio.played, "played a hit")
 	assert_true(&"victory" in audio.played or &"defeat" in audio.played, "played the result jingle")
 	print("full match through view: winner %d on turn %d after %d frames" % [m.state.winner, m.state.turn, frames])

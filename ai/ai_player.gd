@@ -22,6 +22,8 @@ func _init(p: int, d: Difficulty, seed: int) -> void:
 
 ## Best main-phase action that improves the position, otherwise BEGIN_ATTACKS.
 func choose_main_action(s: GameState) -> Action:
+	if s.phase == GameState.Phase.CHOOSING:
+		return _best_choice(s)
 	var best: Action = Action.begin_attacks(player)
 	var best_score: float = evaluate(s)
 	for a: Action in Rules.legal_actions(s):
@@ -33,6 +35,20 @@ func choose_main_action(s: GameState) -> Action:
 		if score > best_score + 0.001:
 			best_score = score
 			best = a
+	return best
+
+
+## Dream Up: the offered card that leaves the best position.
+func _best_choice(s: GameState) -> Action:
+	var best: Action = null
+	var best_score: float = -INF
+	for a: Action in Rules.legal_actions(s):
+		var sim: GameState = s.clone()
+		Rules.apply(sim, a)
+		var score: float = evaluate(sim)
+		if best == null or score > best_score:
+			best = a
+			best_score = score
 	return best
 
 

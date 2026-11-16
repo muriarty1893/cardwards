@@ -8,8 +8,8 @@ enum Phase { MAIN, ATTACK, OVER, CHOOSING }
 const START_HP := 25
 const MAX_HP := 25
 const START_HAND := 5
-const HAND_LIMIT := 7
-const MAGIC_PER_TURN := 2
+const HAND_LIMIT := 8
+## Max magic grows by 1 each turn up to this.
 const MAGIC_CAP := 8
 const FATIGUE_DAMAGE := 2
 const LANES := 4

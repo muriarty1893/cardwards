@@ -47,6 +47,7 @@ func test_spell_targeting_by_click() -> bool:
 	m.sync_all()
 	s.players[0].hand.clear()
 	s.players[0].hand.append(CardDB.card(&"fireball"))
+	s.players[0].magic = 9
 	m.refresh_ui()
 	m.input.on_drag_started(0)
 	m.input.on_dropped(0, Vector2(640, 300))
