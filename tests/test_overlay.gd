@@ -29,7 +29,7 @@ func test_boop_button_matches_rules() -> bool:
 	assert_true(not m.overlay.boop_button(1).visible, "no button without boop")
 	m.overlay.boop_button(0).pressed.emit()
 	await (Engine.get_main_loop() as SceneTree).create_timer(1.0).timeout
-	assert_true(m.state.players[0].lanes[0].creature.acted, "boop resolved via button")
+	assert_true(m.state.players[0].lanes[0].creature.booped, "boop resolved via button")
 	m.queue_free()
 	return true
 

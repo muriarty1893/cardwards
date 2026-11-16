@@ -3,7 +3,7 @@ extends RefCounted
 ## The full state of one match. Pure data: no nodes, no visuals.
 
 ## CHOOSING: waiting for a Dream Up pick (only CHOOSE is legal).
-enum Phase { MAIN, ATTACK, OVER, CHOOSING }
+enum Phase { MAIN, OVER, CHOOSING }
 
 const START_HP := 25
 const MAX_HP := 25
@@ -72,8 +72,6 @@ class CreatureState:
 	var damage: int = 0
 	## Turn the freeze was applied; -1 when not frozen.
 	var freeze_turn: int = -1
-	## Attacked or booped this turn.
-	var acted: bool = false
 	var played_turn: int = 0
 	## Keywords gained from effects (printed ones live on the card).
 	var gained: Array[StringName] = []
@@ -99,7 +97,6 @@ class CreatureState:
 		c.card = card
 		c.damage = damage
 		c.freeze_turn = freeze_turn
-		c.acted = acted
 		c.played_turn = played_turn
 		c.gained = gained.duplicate()
 		c.hushed = hushed

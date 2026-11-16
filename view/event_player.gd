@@ -185,7 +185,8 @@ func _attack(d: Dictionary) -> void:
 		return
 	var foe: int = 1 - p
 	var home: Vector3 = v.position
-	var target: Vector3 = m.board.anchor(foe, lane) if d["target"] == "creature" else m.board.hero_point(foe, lane)
+	var tl: int = int(d.get("target_lane", -1))
+	var target: Vector3 = m.board.anchor(foe, tl) if tl >= 0 else m.board.hero_point(foe, lane)
 	target = home.lerp(target, 0.78)
 	v.busy = true
 	# Wind-up squash, then the leap (the impact plays with the damage event that follows).

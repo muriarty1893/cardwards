@@ -63,8 +63,8 @@ func test_spell_discarded() -> bool:
 
 func test_wrong_phase() -> bool:
 	var s: GameState = Fx.blank()
-	s.phase = GameState.Phase.ATTACK
-	assert_eq(Rules.validate(s, Action.play(0, Fx.give(s, 0, &"mossback"), 0)), "Can't do that now", "wrong phase")
+	s.phase = GameState.Phase.CHOOSING
+	assert_eq(Rules.validate(s, Action.play(0, Fx.give(s, 0, &"mossback"), 0)), "Choose a card first", "wrong phase")
 	return true
 
 

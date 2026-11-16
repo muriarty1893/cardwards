@@ -81,13 +81,13 @@ func _demo_attack() -> void:
 	_demo_put(1, 1, &"glacier_tortoise")
 	sync_all()
 	busy = true
-	await perform(Action.begin_attacks(HUMAN))
-	await perform(Action.attack(HUMAN, 1, Action.Hit.CRIT, false))
+	await perform(Action.attack(HUMAN, 1, 1, Action.Hit.CRIT, false))
 
 
 func _demo_put(p: int, l: int, id: StringName) -> void:
 	var c := GameState.CreatureState.new()
 	c.card = CardDB.card(id)
+	c.ready = true
 	state.players[p].lanes[l].creature = c
 
 
@@ -198,47 +198,52 @@ func _on_end_turn_pressed() -> void:
 	input.cancel()
 	busy = true
 	refresh_ui()
-	await perform(Action.begin_attacks(HUMAN))
-	for lane: int in Rules.attackers(state):
-		if state.phase == GameState.Phase.OVER:
-			break
-		var hit: Action.Hit = await timing_bar.run_attack()
-		var blocked: bool = false
-		if Rules.has_defender(state, lane):
-			blocked = ai.roll_block()
-			await timing_bar.simulate_block(blocked)
-		await perform(Action.attack(HUMAN, lane, hit, blocked))
-	if state.phase != GameState.Phase.OVER:
-		await perform(Action.end_turn(HUMAN))
+	await perform(Action.end_turn(HUMAN))
 	if state.phase != GameState.Phase.OVER and state.active == AI:
 		await _ai_turn()
 	busy = false
 	refresh_ui()
 
 
+## Human attack: the attacker bar sets the hit, the AI may block a creature target.
+func request_attack(lane: int, target_lane: int) -> void:
+	if busy or state.active != HUMAN:
+		return
+	var err: String = Rules.validate(state, Action.attack(HUMAN, lane, target_lane))
+	if err != "":
+		toast.show_message(err)
+		return
+	input.cancel()
+	busy = true
+	refresh_ui()
+	var hit: Action.Hit = await timing_bar.run_attack()
+	var blocked: bool = false
+	if target_lane >= 0:
+		blocked = ai.roll_block()
+		await timing_bar.simulate_block(blocked)
+	await perform(Action.attack(HUMAN, lane, target_lane, hit, blocked))
+	busy = false
+	refresh_ui()
+
+
 ## The AI's whole turn, shown step by step. Ends after the AI's END_TURN (human's turn started).
 func _ai_turn() -> void:
-	for i: int in AIRunner.MAX_MAIN_ACTIONS:
-		if state.phase != GameState.Phase.MAIN and state.phase != GameState.Phase.CHOOSING:
-			break
-		await get_tree().create_timer(AI_PAUSE / pace).timeout
-		var a: Action = ai.choose_main_action(state)
-		await perform(a)
-		if a.type == Action.Type.BEGIN_ATTACKS:
-			break
-	if state.phase == GameState.Phase.MAIN:
-		await perform(Action.begin_attacks(AI))
-	for lane: int in Rules.attackers(state):
-		if state.phase == GameState.Phase.OVER:
+	for i: int in AIRunner.MAX_ACTIONS:
+		if state.phase == GameState.Phase.OVER or state.active != AI:
 			return
-		var hit: Action.Hit = ai.roll_hit()
-		await timing_bar.simulate_attack(hit)
-		var blocked: bool = false
-		if Rules.has_defender(state, lane):
-			blocked = await timing_bar.run_block()
-		await perform(Action.attack(AI, lane, hit, blocked))
-	if state.phase == GameState.Phase.ATTACK:
-		await get_tree().create_timer(AI_PAUSE * 0.5 / pace).timeout
+		await get_tree().create_timer(AI_PAUSE / pace).timeout
+		var a: Action = ai.choose_action(state)
+		if a.type == Action.Type.ATTACK:
+			a.hit = ai.roll_hit()
+			await timing_bar.simulate_attack(a.hit)
+			if a.target_lane >= 0:
+				a.blocked = await timing_bar.run_block()
+		await perform(a)
+		if a.type == Action.Type.END_TURN:
+			return
+	if state.phase == GameState.Phase.CHOOSING:
+		await perform(Action.choose(state.pending_player, 0))
+	if state.phase != GameState.Phase.OVER and state.active == AI:
 		await perform(Action.end_turn(AI))
 
 

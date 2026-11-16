@@ -4,9 +4,9 @@ extends TestCase
 func test_ai_takes_lethal() -> bool:
 	var s: GameState = Fx.blank()
 	s.players[1].hero_hp = 2
-	s.players[0].magic = 3
+	Fx.put_creature(s, 0, 1, &"cinderpup")
+	Fx.put_creature(s, 0, 2, &"mossback")  # two attackers: lethal even through glancing hits
 	Fx.give(s, 0, &"mossback")
-	Fx.give(s, 0, &"cinderpup")
 	Fx.fill_deck(s, 1, &"mossback", 3)
 	var me := AIPlayer.new(0, AIPlayer.Difficulty.EASY, 1)
 	var foe := AIPlayer.new(1, AIPlayer.Difficulty.EASY, 2)
@@ -25,7 +25,7 @@ func test_ai_prefers_kill() -> bool:
 	Fx.give(s, 0, &"fireball")
 	Fx.fill_deck(s, 0, &"mossback", 5)
 	var me := AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1)
-	var a: Action = me.choose_main_action(s)
+	var a: Action = me.choose_action(s)
 	assert_eq(a.type, Action.Type.PLAY_CARD, "plays a card")
 	assert_eq(s.players[0].hand[a.hand_index].id, &"fireball", "picks fireball")
 	assert_eq(a.targets, [{"player": 1, "lane": 2}] as Array[Dictionary], "targets the flarebeak")

@@ -154,7 +154,6 @@ func test_smokestack() -> bool:
 	var s: GameState = Fx.blank()
 	Fx.put_building(s, 0, 2, &"smokestack")
 	Fx.fill_deck(s, 1, &"mossback", 3)
-	Rules.apply(s, Action.begin_attacks(0))
 	var ev: Array[GameEvent] = Rules.apply(s, Action.end_turn(0))
 	assert_eq(s.players[1].hero_hp, 24, "smokestack end of turn")
 	assert_true(&"ability_triggered" in Fx.types(ev), "announced")

@@ -96,18 +96,20 @@ static func validate(s: GameState, a: Action) -> String:
 			return _validate_play(s, a)
 		Action.Type.BOOP:
 			return _validate_boop(s, a)
-		Action.Type.BEGIN_ATTACKS:
-			if s.phase != GameState.Phase.MAIN:
-				return "Can't do that now"
 		Action.Type.ATTACK:
-			if s.phase != GameState.Phase.ATTACK:
-				return "Can't do that now"
-			if not a.lane in attackers(s):
-				return "Can't attack"
-		Action.Type.END_TURN:
-			if s.phase != GameState.Phase.ATTACK:
-				return "Can't do that now"
+			return _validate_attack(s, a)
 	return ""
+
+
+static func _validate_attack(s: GameState, a: Action) -> String:
+	if a.lane < 0 or a.lane >= GameState.LANES or not can_attack(s, a.player, a.lane):
+		return "Can't attack"
+	var targets: Array[int] = attack_targets(s, a.player, a.lane)
+	if a.target_lane in targets:
+		return ""
+	if a.target_lane >= -1 and a.target_lane < GameState.LANES and _guarded(s, s.opponent(a.player)):
+		return "Must attack a Guard"
+	return "Invalid target"
 
 
 static func _validate_play(s: GameState, a: Action) -> String:
@@ -142,7 +144,7 @@ static func _validate_boop(s: GameState, a: Action) -> String:
 		return "No boop ability"
 	if cr.is_frozen():
 		return "Creature is frozen"
-	if cr.acted or cr.booped or cr.attacks_used > 0:
+	if cr.booped or cr.attacks_used > 0:
 		return "Creature already acted"
 	if not cr.ready:
 		return "Not ready yet"
@@ -171,7 +173,7 @@ static func _validate_targets(s: GameState, p: int, c: CardData, when: StringNam
 ## Ready, not frozen, hasn't attacked or booped this turn, and has an un-hushed boop.
 static func can_boop(s: GameState, p: int, lane: int) -> bool:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
-	return cr != null and cr.ready and not cr.is_frozen() and not cr.booped and not cr.acted \
+	return cr != null and cr.ready and not cr.is_frozen() and not cr.booped \
 		and cr.attacks_used == 0 and cr.card.has_effect(&"on_boop") and not cr.hushed
 
 
@@ -196,17 +198,13 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 			_play(s, a, ev)
 		Action.Type.BOOP:
 			var cr: GameState.CreatureState = s.players[a.player].lanes[a.lane].creature
-			cr.acted = true
 			cr.booped = true
 			ev.append(GameEvent.make(&"booped", {"player": a.player, "lane": a.lane}))
 			reveal(s, a.player, a.lane, ev)
 			Effects.run(s, a.player, a.lane, cr.card, &"on_boop", a.targets, ev)
 			resolve_deaths(s, ev)
-		Action.Type.BEGIN_ATTACKS:
-			s.phase = GameState.Phase.ATTACK
-			ev.append(GameEvent.make(&"phase_changed", {"phase": int(s.phase)}))
 		Action.Type.ATTACK:
-			_attack(s, a, ev)
+			Combat.resolve(s, a, ev)
 		Action.Type.END_TURN:
 			_end_turn(s, ev)
 		Action.Type.CHOOSE:
@@ -256,10 +254,10 @@ static func legal_actions(s: GameState) -> Array[Action]:
 					var a: Action = Action.boop(p, lane, t)
 					if validate(s, a) == "":
 						out.append(a)
-			out.append(Action.begin_attacks(p))
-		GameState.Phase.ATTACK:
-			for lane: int in attackers(s):
-				out.append(Action.attack(p, lane, Action.Hit.NORMAL, false))
+			for lane: int in GameState.LANES:
+				if can_attack(s, p, lane):
+					for t: int in attack_targets(s, p, lane):
+						out.append(Action.attack(p, lane, t))
 			out.append(Action.end_turn(p))
 	return out
 
@@ -284,35 +282,42 @@ static func _target_options(s: GameState, p: int, c: CardData, when: StringName,
 	return out
 
 
-static func attackers(s: GameState) -> Array[int]:
+## Ready (or just played with Dash), not frozen or booped, attacks left, and ATK above 0.
+static func can_attack(s: GameState, p: int, lane: int) -> bool:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr == null or cr.is_frozen() or cr.booped:
+		return false
+	if not cr.ready and not (cr.played_turn == s.turn and has_keyword(s, p, lane, &"dash")):
+		return false
+	var allowed: int = 2 if has_keyword(s, p, lane, &"flurry") else 1
+	return cr.attacks_used < allowed and effective_attack(s, p, lane) > 0
+
+
+## Enemy lanes this creature may attack, then -1 for the enemy hero (spec 3.4).
+static func attack_targets(s: GameState, p: int, lane: int) -> Array[int]:
+	var foe: int = s.opponent(p)
 	var out: Array[int] = []
-	if s.turn == 1 or s.phase == GameState.Phase.OVER:
-		return out
+	var guarded: bool = _guarded(s, foe)
 	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[s.active].lanes[l].creature
-		if cr and not cr.acted and not cr.is_frozen():
-			out.append(l)
+		var cr: GameState.CreatureState = s.players[foe].lanes[l].creature
+		if cr == null or cr.hidden:
+			continue
+		if guarded and not has_keyword(s, foe, l, &"guard"):
+			continue
+		out.append(l)
+	var mine: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if not guarded and mine and mine.ready:
+		out.append(-1)
 	return out
 
 
-static func has_defender(s: GameState, lane: int) -> bool:
-	return s.players[s.opponent(s.active)].lanes[lane].creature != null
-
-
-static func _attack(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
-	var p: int = a.player
-	var foe: int = s.opponent(p)
-	var cr: GameState.CreatureState = s.players[p].lanes[a.lane].creature
-	cr.acted = true
-	var atk: int = effective_attack(s, p, a.lane)
-	if has_defender(s, a.lane):
-		ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "hit": int(a.hit), "target": "creature"}))
-		var d: int = Combat.attack_damage(atk, a.hit, a.blocked, damage_reduction(s, foe, a.lane) > 0)
-		damage_creature(s, foe, a.lane, d, {"player": p, "lane": a.lane, "kind": &"attack"}, ev, a.hit, a.blocked)
-	else:
-		ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "hit": int(a.hit), "target": "hero"}))
-		damage_hero(s, foe, Combat.hero_damage(atk, a.hit), ev, {"player": p, "lane": a.lane, "kind": &"attack"})
-	resolve_deaths(s, ev)
+## True while player p has a Guard that is not Hidden.
+static func _guarded(s: GameState, p: int) -> bool:
+	for l: int in GameState.LANES:
+		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+		if cr and not cr.hidden and has_keyword(s, p, l, &"guard"):
+			return true
+	return false
 
 
 static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
@@ -352,7 +357,6 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
 		if cr == null:
 			continue
-		cr.acted = false
 		if cr.freeze_turn >= 0 and cr.freeze_turn < s.turn:
 			cr.freeze_turn = -1
 			ev.append(GameEvent.make(&"unfrozen", {"player": p, "lane": l}))

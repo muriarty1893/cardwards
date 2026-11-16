@@ -47,3 +47,10 @@ func test_replay_identical() -> bool:
 	assert_eq(types_b, types_a, "same event stream")
 	assert_true(log.size() > 20, "match had real length (%d actions)" % log.size())
 	return true
+
+
+func test_action_round_trip_new_fields() -> bool:
+	for a: Action in [Action.attack(1, 2, 3, Action.Hit.CRIT, true), Action.attack(0, 1, -1, Action.Hit.GLANCE), Action.choose(1, 2)]:
+		var b: Action = Action.from_dict(a.to_dict())
+		assert_eq([b.type, b.player, b.lane, b.target_lane, b.hit, b.blocked, b.choice], [a.type, a.player, a.lane, a.target_lane, a.hit, a.blocked, a.choice], "round trip %s" % a)
+	return true

@@ -72,6 +72,8 @@ static func put(s: GameState, p: int, lane: int, c: CardData) -> GameState.Creat
 	cr.card = c
 	cr.played_turn = s.turn - 1
 	cr.ready = true
+	cr.bubble = &"bubble" in c.keywords
+	cr.hidden = &"hidden" in c.keywords
 	s.players[p].lanes[lane].creature = cr
 	return cr
 

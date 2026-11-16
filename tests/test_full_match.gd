@@ -26,12 +26,17 @@ func test_full_match_through_view() -> bool:
 		frames += 1
 		if m.busy or m.state.active != MatchController.HUMAN:
 			continue
-		var a: Action = me.choose_main_action(m.state)
+		var a: Action = me.choose_action(m.state)
 		actions += 1
-		if a.type == Action.Type.BEGIN_ATTACKS:
-			m.hud.end_turn_pressed.emit()
-		else:
-			m.input.action_requested.emit(a)
+		match a.type:
+			Action.Type.END_TURN:
+				m.hud.end_turn_pressed.emit()
+			Action.Type.ATTACK:
+				m.request_attack(a.lane, a.target_lane)
+			Action.Type.CHOOSE:
+				m.perform(a)
+			_:
+				m.input.action_requested.emit(a)
 	assert_eq(m.state.phase, GameState.Phase.OVER, "match finished (turn %d, %d human actions)" % [m.state.turn, actions])
 	var views: int = 0
 	for p: int in 2:

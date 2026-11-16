@@ -41,7 +41,6 @@ func test_second_turn_draws() -> bool:
 	var s: GameState = Rules.setup(CardDB.deck(&"grove_guard"), CardDB.deck(&"blaze_rush"), 5)
 	Rules.start_turn(s)
 	var first: int = s.active
-	Rules.apply(s, Action.begin_attacks(first))
 	var ev: Array[GameEvent] = Rules.apply(s, Action.end_turn(first))
 	assert_eq(s.turn, 2, "turn 2")
 	assert_eq(s.active, 1 - first, "other player active")
@@ -70,14 +69,13 @@ func test_action_roundtrip() -> bool:
 	var a: Action = Action.play(1, 3, 2, [{"player": 0, "lane": 1}])
 	var b: Action = Action.from_dict(a.to_dict())
 	assert_eq(b.to_dict(), a.to_dict(), "play roundtrip")
-	var c: Action = Action.attack(0, 2, Action.Hit.CRIT, true)
+	var c: Action = Action.attack(0, 2, 1, Action.Hit.CRIT, true)
 	var d: Action = Action.from_dict(c.to_dict())
-	assert_eq([d.type, d.player, d.lane, d.hit, d.blocked], [Action.Type.ATTACK, 0, 2, Action.Hit.CRIT, true], "attack roundtrip")
+	assert_eq([d.type, d.player, d.lane, d.target_lane, d.hit, d.blocked], [Action.Type.ATTACK, 0, 2, 1, Action.Hit.CRIT, true], "attack roundtrip")
 	return true
 
 
 func _pass(s: GameState) -> void:
-	Rules.apply(s, Action.begin_attacks(s.active))
 	Rules.apply(s, Action.end_turn(s.active))
 
 

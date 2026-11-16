@@ -2,7 +2,7 @@ class_name Action
 extends RefCounted
 ## Something a player (human or AI) wants to do. Plain data so it can go over a network.
 
-enum Type { PLAY_CARD, BOOP, BEGIN_ATTACKS, ATTACK, END_TURN, CHOOSE }
+enum Type { PLAY_CARD, BOOP, ATTACK, CHOOSE, END_TURN }
 enum Hit { NORMAL, CRIT, GLANCE }
 
 var type: Type = Type.END_TURN
@@ -13,6 +13,8 @@ var lane: int = -1
 var targets: Array[Dictionary] = []
 var hit: Hit = Hit.NORMAL
 var blocked: bool = false
+## ATTACK: the enemy lane attacked, or -1 for the enemy hero.
+var target_lane: int = -1
 ## CHOOSE: index into GameState.pending_choice.
 var choice: int = -1
 
@@ -39,13 +41,11 @@ static func boop(p: int, lane: int, targets: Array[Dictionary] = []) -> Action:
 	return a
 
 
-static func begin_attacks(p: int) -> Action:
-	return _make(Type.BEGIN_ATTACKS, p)
-
-
-static func attack(p: int, lane: int, hit: Hit, blocked: bool) -> Action:
+## Creature in `lane` attacks the enemy creature in `target_lane`, or the enemy hero (-1).
+static func attack(p: int, lane: int, target_lane: int, hit: Hit = Hit.NORMAL, blocked: bool = false) -> Action:
 	var a := _make(Type.ATTACK, p)
 	a.lane = lane
+	a.target_lane = target_lane
 	a.hit = hit
 	a.blocked = blocked
 	return a
@@ -65,6 +65,7 @@ func to_dict() -> Dictionary:
 	return {
 		"type": int(type), "player": player, "hand_index": hand_index, "lane": lane,
 		"targets": targets.duplicate(true), "hit": int(hit), "blocked": blocked, "choice": choice,
+		"target_lane": target_lane,
 	}
 
 
@@ -83,6 +84,7 @@ static func from_dict(d: Dictionary) -> Action:
 	a.hit = int(d.get("hit", 0)) as Hit
 	a.blocked = bool(d.get("blocked", false))
 	a.choice = int(d.get("choice", -1))
+	a.target_lane = int(d.get("target_lane", -1))
 	return a
 
 

@@ -20,14 +20,15 @@ func _init(p: int, d: Difficulty, seed: int) -> void:
 	rng.seed = seed
 
 
-## Best main-phase action that improves the position, otherwise BEGIN_ATTACKS.
-func choose_main_action(s: GameState) -> Action:
+## Best action that improves the position (attacks simulated as normal, unblocked hits),
+## otherwise END_TURN. While a Dream Up is pending, the best pick.
+func choose_action(s: GameState) -> Action:
 	if s.phase == GameState.Phase.CHOOSING:
 		return _best_choice(s)
-	var best: Action = Action.begin_attacks(player)
+	var best: Action = Action.end_turn(player)
 	var best_score: float = evaluate(s)
 	for a: Action in Rules.legal_actions(s):
-		if a.type == Action.Type.BEGIN_ATTACKS:
+		if a.type == Action.Type.END_TURN:
 			continue
 		var sim: GameState = s.clone()
 		Rules.apply(sim, a)
@@ -81,12 +82,4 @@ func evaluate(s: GameState) -> float:
 				var remaining: int = Rules.effective_max_hp(s, q, l) - cr.damage
 				score += sign * float(Rules.effective_attack(s, q, l) + remaining)
 	score += 0.3 * s.players[me].hand.size()
-	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[me].lanes[l].creature
-		if cr == null or cr.acted or cr.is_frozen():
-			continue
-		var atk: float = float(Rules.effective_attack(s, me, l))
-		if s.players[foe].lanes[l].creature == null:
-			atk *= 1.2
-		score += 0.8 * atk
 	return score
