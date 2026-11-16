@@ -19,9 +19,12 @@ uniform float alpha_cut = 0.5;
 #ifdef INSTANCE_FX
 instance uniform float flash = 0.0;
 instance uniform float dissolve = 0.0;
+// 1 = darkened to 80% (a creature that already acted this turn).
+instance uniform float shade = 0.0;
 #else
 const float flash = 0.0;
 const float dissolve = 0.0;
+const float shade = 0.0;
 #endif
 
 varying vec3 world_pos;
@@ -69,6 +72,7 @@ void fragment() {
 	float luma = dot(base, vec3(0.299, 0.587, 0.114));
 	// Recolour toward the tint while keeping the model's light/dark detail readable.
 	base = mix(base, clamp(src_lin(tint.rgb) * (0.6 + 0.8 * luma), 0.0, 1.0), tint.a);
+	base *= 1.0 - 0.2 * shade;
 	base = mix(base, vec3(1.0), flash);
 	ALBEDO = out_col(base);
 	ROUGHNESS = 1.0;

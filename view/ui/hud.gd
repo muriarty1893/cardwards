@@ -1,7 +1,7 @@
 class_name Hud
 extends Control
 ## Screen layout: hero corners (portrait, health bar, magic), a bottom tray (deck and discard
-## counters, room for the hand, magic orb, BATTLE! button), and a pause button.
+## counters, room for the hand, magic gems, END TURN button), and a pause button.
 
 signal end_turn_pressed
 signal menu_requested
@@ -21,7 +21,10 @@ var _you_bar: Control
 var _rival_bar: Control
 var _tray: Panel
 var _refs: Dictionary = {}
-var _orb_label: Label
+var _gems: MagicGems
+## END TURN pulses when nothing else is left to do.
+var end_turn_pulsing: bool = false
+var _pulse: Tween
 var _deck_label: Label
 var _discard_label: Label
 ## Full-screen pause menu. The match moves it above the hand so it takes the mouse first.
@@ -57,7 +60,7 @@ func refresh(s: GameState, human: int) -> void:
 	var foe: GameState.PlayerState = s.players[s.opponent(human)]
 	_fill_corner("Rival", foe, "%d CARDS" % foe.hand.size())
 	var me: GameState.PlayerState = s.players[human]
-	_orb_label.text = str(me.magic)
+	_gems.set_magic(me.magic, me.max_magic)
 	_deck_label.text = "DECK  %d" % me.deck.size()
 	_discard_label.text = "DISCARD  %d" % me.discard.size()
 	var mine: bool = s.active == human and s.phase != GameState.Phase.OVER
@@ -65,6 +68,20 @@ func refresh(s: GameState, human: int) -> void:
 	_rival.modulate = Color.WHITE if not mine else Color(0.82, 0.82, 0.82)
 	_you_bar.modulate = _you.modulate
 	_rival_bar.modulate = _rival.modulate
+
+
+func set_end_turn_pulse(on: bool) -> void:
+	if on == end_turn_pulsing:
+		return
+	end_turn_pulsing = on
+	if _pulse:
+		_pulse.kill()
+	end_turn_button.pivot_offset = end_turn_button.size / 2.0
+	end_turn_button.scale = Vector2.ONE
+	if on:
+		_pulse = end_turn_button.create_tween().set_loops()
+		_pulse.tween_property(end_turn_button, "scale", Vector2.ONE * 1.07, 0.45).set_trans(Tween.TRANS_SINE)
+		_pulse.tween_property(end_turn_button, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_SINE)
 
 
 func is_paused() -> bool:
@@ -111,7 +128,7 @@ func discard_screen_pos() -> Vector2:
 ## Centre of the magic orb that a gained gem flies to.
 func orb_screen_pos(human_side: bool) -> Vector2:
 	if human_side:
-		return _orb_label.get_global_rect().get_center()
+		return _gems.get_global_rect().get_center()
 	return (_refs["Rival"]["orb"] as Control).get_global_rect().get_center()
 
 
@@ -239,7 +256,7 @@ func _hero_bar(left: bool, who: String) -> Control:
 
 func _fill_corner(who: String, ps: GameState.PlayerState, plate_text: String) -> void:
 	var r: Dictionary = _refs[who]
-	(r["orb"] as Label).text = str(ps.magic)
+	(r["orb"] as Label).text = str(ps.magic) if who == "You" else "%d/%d" % [ps.magic, ps.max_magic]
 	(r["plate"] as Label).text = plate_text
 	var b: Dictionary = _refs[who + "Bar"]
 	(b["bar"] as ProgressBar).value = clampi(ps.hero_hp, 0, GameState.MAX_HP)
@@ -277,17 +294,23 @@ func _build_tray() -> void:
 	_discard_label = _plate("DISCARD", Vector2(148, 44))
 	_discard_label.position = Vector2(14, 96)
 	_tray.add_child(_discard_label)
-	_orb_label = _orb(92, 44)
-	_orb_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_orb_label.offset_left = -158
-	_orb_label.offset_right = -66
-	_orb_label.offset_top = -40
-	_orb_label.offset_bottom = 52
-	_tray.add_child(_orb_label)
+	# Magic gems on a dark plate above the END TURN button.
+	var plate := Panel.new()
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_theme_stylebox_override("panel", _frame(Color("#1f1c40"), 12, 3))
+	plate.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	plate.offset_left = -214
+	plate.offset_right = -10
+	plate.offset_top = 8
+	plate.offset_bottom = 54
+	_tray.add_child(plate)
+	_gems = MagicGems.new()
+	_gems.position = Vector2(-4, 0)
+	plate.add_child(_gems)
 	end_turn_button = Button.new()
-	end_turn_button.name = "Battle"
-	end_turn_button.text = "BATTLE!"
-	end_turn_button.add_theme_font_size_override("font_size", 34)
+	end_turn_button.name = "EndTurn"
+	end_turn_button.text = "END TURN"
+	end_turn_button.add_theme_font_size_override("font_size", 30)
 	UiStyle.title(end_turn_button)
 	for st: String in ["normal", "hover", "pressed", "disabled", "focus"]:
 		var b := _frame(Palette.GREEN if st != "disabled" else Color("#6c6a8a"), 16, 5)

@@ -88,3 +88,28 @@ func test_overlay_uses_title_font_and_icons() -> bool:
 	assert_true(icon != null and icon.texture != null and icon.texture.resource_path == VisualDB.badge_icon(&"kiln_tower"), "kiln badge shows its icon")
 	m.queue_free()
 	return true
+
+
+func test_readiness_states() -> bool:
+	var m: MatchController = await Fx.load_match()
+	var s: GameState = m.state
+	m.player.speed = 20.0
+	m.pace = 20.0
+	m.timing_bar.auto_stop = true
+	m.timing_bar.force_needle = 0.5
+	for p: int in 2:
+		for l: int in 4:
+			s.players[p].lanes[l].creature = null
+	Fx.put_creature(s, 0, 0, &"flarebeak")
+	s.players[0].magic = 9
+	s.players[0].hand = [CardDB.card(&"ashmite")] as Array[CardData]  # blaze rush lands: ember
+	m.sync_all()
+	await m.perform(Action.play(0, 0, 1))
+	m.refresh_pieces()
+	assert_eq((m.creature_views[0][1] as CreatureView).readiness, CreatureView.Readiness.SLEEPING, "just played: asleep")
+	assert_eq((m.creature_views[0][0] as CreatureView).readiness, CreatureView.Readiness.READY, "ready one")
+	await m.request_attack(0, -1)
+	m.refresh_pieces()
+	assert_eq((m.creature_views[0][0] as CreatureView).readiness, CreatureView.Readiness.SPENT, "after attacking: spent")
+	m.queue_free()
+	return true

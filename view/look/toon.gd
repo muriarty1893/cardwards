@@ -78,6 +78,11 @@ static func is_toon(m: Material) -> bool:
 	return sm != null and sm.shader != null and sm.shader.resource_path in [SHADER_PATH, CUTOUT_PATH, FX_PATH, FX_CUTOUT_PATH]
 
 
+## Darkens fx pieces (creatures) toward 80% brightness at v = 1.
+static func set_shade(root: Node, v: float) -> void:
+	_set_instance(root, &"shade", v)
+
+
 static func set_flash(root: Node, v: float) -> void:
 	_set_instance(root, &"flash", v)
 

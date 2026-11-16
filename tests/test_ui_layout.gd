@@ -137,3 +137,57 @@ func test_hand_reuses_cards_when_unchanged() -> bool:
 	hand.queue_free()
 	await tree.process_frame
 	return true
+
+
+func test_eight_cards_fit() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	var hand := Hand.new()
+	tree.root.add_child(hand)
+	var cards: Array[CardData] = []
+	var playable: Array[bool] = []
+	for id: StringName in [&"mossback", &"fireball", &"gumdrop", &"iceling", &"magmaw", &"sugar_rush", &"cold_snap", &"star_shard"]:
+		cards.append(CardDB.card(id))
+		playable.append(true)
+	for sz: Vector2 in [Vector2(1280, 720), Vector2(1366, 768), Vector2(1920, 1080)]:
+		hand.size = sz
+		hand.show_hand(cards, playable)
+		hand.show_hand(cards.duplicate(), playable)
+		var ws: Array = hand.get_children().filter(func(n: Node) -> bool: return n is CardWidget and not n.is_queued_for_deletion())
+		assert_eq(ws.size(), 8, "8 cards at %s" % sz)
+		for i: int in ws.size():
+			var r := Rect2((ws[i] as CardWidget).position, CardWidget.SIZE)
+			assert_true(r.position.x >= Hand.REGION_LEFT - 1 and r.end.x <= sz.x - Hand.REGION_RIGHT + 1, "card %d inside the tray at %s" % [i, sz])
+			assert_true(r.end.y <= sz.y and r.position.y >= sz.y - Hud.TRAY_H, "card %d in the tray band at %s" % [i, sz])
+			if i > 0:
+				assert_true(r.position.x - (ws[i - 1] as CardWidget).position.x >= 60.0, "cards %d/%d far enough apart at %s" % [i - 1, i, sz])
+	hand.queue_free()
+	return true
+
+
+func test_magic_gems() -> bool:
+	var g := MagicGems.new()
+	g.set_magic(3, 5)
+	assert_eq(g.gem_states(), [2, 2, 2, 1, 1, 0, 0, 0] as Array[int], "3 filled, 2 empty, 3 hidden")
+	assert_eq(g.extra(), 0, "no overflow")
+	g.set_magic(9, 8)
+	assert_eq(g.gem_states(), [2, 2, 2, 2, 2, 2, 2, 2] as Array[int], "all filled")
+	assert_eq(g.extra(), 1, "+1 beyond the cap")
+	g.free()
+	return true
+
+
+func test_end_turn_label_and_pulse() -> bool:
+	var m: MatchController = await Fx.load_match()
+	var s: GameState = m.state
+	assert_eq(m.hud.end_turn_button.text, "END TURN", "label")
+	s.players[0].hand.clear()
+	for l: int in 4:
+		s.players[0].lanes[l].creature = null
+	m.sync_all()
+	m.refresh_ui()
+	assert_true(m.hud.end_turn_pulsing, "nothing left to do: pulse")
+	s.players[0].hand.append(CardDB.card(&"star_shard"))
+	m.refresh_ui()
+	assert_true(not m.hud.end_turn_pulsing, "a card to play: no pulse")
+	m.queue_free()
+	return true

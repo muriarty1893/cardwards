@@ -159,6 +159,8 @@ func refresh_ui() -> void:
 					break
 		playable.append(ok and state.active == HUMAN)
 	hand.show_hand(cards, playable)
+	var only_end: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and Rules.legal_actions(state).size() == 1
+	hud.set_end_turn_pulse(only_end and not busy)
 	var paused: bool = hud.is_paused()
 	var can_act: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and not busy and not paused
 	input.enabled = can_act
@@ -315,7 +317,20 @@ func place_building(p: int, l: int, c: CardData) -> BuildingView:
 	return v
 
 
-## Update freeze visuals from the state.
+func _readiness(p: int, l: int, cr: GameState.CreatureState) -> CreatureView.Readiness:
+	if state.phase == GameState.Phase.OVER or cr.is_frozen():
+		return CreatureView.Readiness.NONE
+	var can_act: bool = Rules.can_attack(state, p, l) or Rules.can_boop(state, p, l)
+	if not cr.ready and not can_act:
+		return CreatureView.Readiness.SLEEPING
+	if p != HUMAN or state.active != HUMAN:
+		return CreatureView.Readiness.NONE
+	if can_act:
+		return CreatureView.Readiness.READY
+	return CreatureView.Readiness.SPENT if cr.attacks_used > 0 or cr.booped else CreatureView.Readiness.NONE
+
+
+## Update freeze and readiness visuals from the state.
 func refresh_pieces() -> void:
 	for p: int in 2:
 		for l: int in 4:
@@ -323,4 +338,5 @@ func refresh_pieces() -> void:
 			var cr: GameState.CreatureState = state.players[p].lanes[l].creature
 			if v and cr:
 				v.set_frozen(cr.is_frozen())
+				v.set_readiness(_readiness(p, l, cr))
 	overlay.refresh(state)

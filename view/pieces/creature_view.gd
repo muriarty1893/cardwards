@@ -28,6 +28,14 @@ var _dying: bool = false
 ## Faded out while it can't be chosen as an attack target.
 var dimmed: bool = false
 
+## On your turn: READY to act (glowing ring), SLEEPING (played this turn: "z" puffs) or SPENT
+## (already acted: slightly darker).
+enum Readiness { NONE, READY, SLEEPING, SPENT }
+var readiness: Readiness = Readiness.NONE
+var _ring: Node3D
+var _ring_tw: Tween
+var _zzz_in: float = 0.0
+
 
 static func create(c: CardData, model_override: String = "") -> CreatureView:
 	var v := CreatureView.new()
@@ -142,6 +150,81 @@ func dissolve(duration: float = 0.35) -> void:
 	await tw.finished
 
 
+func set_readiness(r: Readiness) -> void:
+	if r == readiness:
+		return
+	readiness = r
+	if body:
+		Toon.set_shade(body, 1.0 if r == Readiness.SPENT else 0.0)
+	if r == Readiness.READY:
+		_show_ring()
+	elif is_instance_valid(_ring):
+		_ring.queue_free()
+		_ring = null
+	_zzz_in = 0.0
+
+
+func _show_ring() -> void:
+	if is_instance_valid(_ring):
+		return
+	var w: float = clampf(height * 0.42, 0.42, 0.75)
+	_ring = Node3D.new()
+	_ring.name = "ReadyRing"
+	_ring.position.y = Island.TOP_Y - BASE_Y + 0.04
+	_ring.scale = Vector3(1, 0.15, 1)
+	add_child(_ring)
+	# A dark ink band under a bright green one, so it reads on every lane colour.
+	var ink: StandardMaterial3D = _ring_material(Color(Palette.INK, 0.6), -91)
+	var glow: StandardMaterial3D = _ring_material(Color("#5dff3a", 1.0), -90)
+	_ring.add_child(_torus(w, 0.13, ink))
+	_ring.add_child(_torus(w, 0.08, glow))
+	_ring_tw = _ring.create_tween().set_loops()
+	_ring_tw.tween_property(glow, "albedo_color:a", 0.55, 0.6).set_trans(Tween.TRANS_SINE)
+	_ring_tw.tween_property(glow, "albedo_color:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
+
+
+func _ring_material(col: Color, priority: int) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = col
+	mat.render_priority = priority
+	return mat
+
+
+func _torus(radius: float, half_width: float, mat: Material) -> MeshInstance3D:
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius - half_width
+	torus.outer_radius = radius + half_width
+	torus.rings = 32
+	torus.ring_segments = 6
+	var mi := MeshInstance3D.new()
+	mi.mesh = torus
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+## One "z" drifting up from a sleeping creature.
+func _puff_z() -> void:
+	var z := Label3D.new()
+	z.text = "z"
+	z.font = load(UiStyle.TITLE_FONT) as FontFile
+	z.font_size = 96
+	z.pixel_size = 0.004
+	z.outline_size = 22
+	z.outline_modulate = Palette.INK
+	z.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	z.no_depth_test = true
+	z.position = Vector3(0.25, Island.TOP_Y - BASE_Y + height + 0.2, 0)
+	add_child(z)
+	var tw := z.create_tween().set_parallel(true)
+	tw.tween_property(z, "position", z.position + Vector3(0.25, 0.55, 0), 1.4)
+	tw.tween_property(z, "modulate:a", 0.0, 1.4).set_ease(Tween.EASE_IN)
+	tw.tween_property(z, "outline_modulate:a", 0.0, 1.4).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(z.queue_free)
+
+
 func set_dimmed(on: bool) -> void:
 	if on == dimmed:
 		return
@@ -166,6 +249,11 @@ func is_frozen_visual() -> bool:
 
 
 func _process(delta: float) -> void:
+	if readiness == Readiness.SLEEPING:
+		_zzz_in -= delta
+		if _zzz_in <= 0.0:
+			_zzz_in = 0.9
+			_puff_z()
 	_fidget_in -= delta
 	if _fidget_in <= 0.0:
 		_fidget_in = randf_range(6.0, 12.0)
