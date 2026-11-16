@@ -14,7 +14,7 @@ static func blank(lands_a: Array[int] = [0, 1, 2, 3], lands_b: Array[int] = [0, 
 			lane.land = lands[i]
 			ps.lanes.append(lane)
 		ps.magic = 2
-		ps.magic_cap = 2
+		ps.max_magic = 2
 		s.players.append(ps)
 	s.turn = 3
 	s.active = 0
@@ -33,6 +33,44 @@ static func put_creature(s: GameState, p: int, lane: int, id: StringName, damage
 
 static func put_building(s: GameState, p: int, lane: int, id: StringName) -> void:
 	s.players[p].lanes[lane].building = CardDB.card(id)
+
+
+## A test-only effect step; `extra` may set amount2, keyword, filter_kind, filter_land, combo.
+static func eff(when: StringName, op: StringName, amount: int, who: StringName, extra: Dictionary = {}) -> EffectData:
+	var e := EffectData.new()
+	e.when = when
+	e.op = op
+	e.amount = amount
+	e.who = who
+	for k: String in extra:
+		e.set(k, extra[k])
+	return e
+
+
+## A test-only level-1 Mushroom card.
+static func card(id: StringName, kind: CardData.Kind, cost: int, atk: int, hp: int, keywords: Array[StringName] = [], effects: Array[EffectData] = []) -> CardData:
+	var c := CardData.new()
+	c.id = id
+	c.display_name = String(id)
+	c.kind = kind
+	c.land = CardData.Land.MUSHROOM
+	c.level = 1 if kind == CardData.Kind.CREATURE else 0
+	c.cost = cost
+	c.attack = atk
+	c.health = hp
+	c.keywords = keywords
+	c.effects = effects
+	return c
+
+
+## Places a built creature that has been on the board since last turn.
+static func put(s: GameState, p: int, lane: int, c: CardData) -> GameState.CreatureState:
+	var cr := GameState.CreatureState.new()
+	cr.card = c
+	cr.played_turn = s.turn - 1
+	cr.ready = true
+	s.players[p].lanes[lane].creature = cr
+	return cr
 
 
 static func give(s: GameState, p: int, id: StringName) -> int:

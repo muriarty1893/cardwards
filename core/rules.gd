@@ -43,7 +43,7 @@ static func start_turn(s: GameState) -> Array[GameEvent]:
 	ev.append(GameEvent.make(&"turn_started", {"player": p, "turn": s.turn}))
 	ps.magic = GameState.MAGIC_PER_TURN
 	_run_lane_triggers(s, p, &"start_of_turn", ev)
-	ps.magic_cap = ps.magic
+	ps.max_magic = ps.magic
 	ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic}))
 	if s.turn != 1:
 		draw(s, p, ev)

@@ -180,7 +180,7 @@ func test_gain_magic_1() -> bool:
 	Fx.put_building(s2, 0, 0, &"candy_mill")
 	Fx.fill_deck(s2, 0, &"mossback", 3)
 	Rules.start_turn(s2)
-	assert_eq([s2.players[0].magic, s2.players[0].magic_cap], [3, 3], "candy mill")
+	assert_eq([s2.players[0].magic, s2.players[0].max_magic], [3, 3], "candy mill")
 	return true
 
 

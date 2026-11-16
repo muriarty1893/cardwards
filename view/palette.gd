@@ -2,9 +2,10 @@ class_name Palette
 extends RefCounted
 ## Shared colours for the toy-diorama look.
 
-const LAND_TOP: Array[Color] = [Color("#7bd36a"), Color("#ff7a3a"), Color("#ffb3dd"), Color("#dff4ff")]
-const LAND_SIDE: Array[Color] = [Color("#8a5a3a"), Color("#5a3a3a"), Color("#c88a5a"), Color("#7aa0c0")]
-const LAND_CARD: Array[Color] = [Color("#7bd36a"), Color("#ff8a4a"), Color("#ff9fcf"), Color("#9fd8ff")]
+## Indexed by CardData.Land; the last entry is NEUTRAL (gold).
+const LAND_TOP: Array[Color] = [Color("#7bd36a"), Color("#ff7a3a"), Color("#ffb3dd"), Color("#dff4ff"), Color("#ffcf3a")]
+const LAND_SIDE: Array[Color] = [Color("#8a5a3a"), Color("#5a3a3a"), Color("#c88a5a"), Color("#7aa0c0"), Color("#8a6a2a")]
+const LAND_CARD: Array[Color] = [Color("#7bd36a"), Color("#ff8a4a"), Color("#ff9fcf"), Color("#9fd8ff"), Color("#ffcf3a")]
 const SKY := Color("#8fd3ff")
 const MEADOW := Color("#9be07a")
 const SLAB := Color("#c89a6a")

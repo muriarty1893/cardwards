@@ -140,6 +140,8 @@ func _spell_subject(c: CardData) -> Node3D:
 
 
 func _land_strip(land: int) -> Node3D:
+	if land == CardData.Land.NEUTRAL:
+		return Node3D.new()  # no land under neutral cards
 	var isl := Island.new()
 	isl.setup(land, 0, 0)
 	isl.position = Vector3(0, -Island.TOP_Y, -0.6)

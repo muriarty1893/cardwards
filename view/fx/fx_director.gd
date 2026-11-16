@@ -9,7 +9,8 @@ const KINDS: Array[StringName] = [
 	&"damage", &"heal", &"draw", &"magic", &"move", &"return_building", &"freeze", &"smoke_puff", &"spore_puff", &"gem_pop", &"none",
 	&"attack_hit", &"plain",
 ]
-const ELEMENT_BY_LAND: Array[StringName] = [&"spore", &"fire", &"candy", &"ice"]
+## Indexed by CardData.Land (NEUTRAL last).
+const ELEMENT_BY_LAND: Array[StringName] = [&"spore", &"fire", &"candy", &"ice", &"magic"]
 ## Which event types each kind draws itself; anything else falls back to plain.
 const OWNS: Dictionary = {
 	&"fireball": [&"creature_damaged"],

@@ -40,7 +40,7 @@ func _ready() -> void:
 func _cards() -> void:
 	var rows: Array[Array] = [[], [], [], []]
 	for c: CardData in CardDB.all_cards():
-		if c.is_creature():
+		if c.is_creature() and c.land < rows.size():
 			rows[c.land].append(c)
 	for r: int in 4:
 		var cards: Array = rows[r]

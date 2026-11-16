@@ -12,6 +12,8 @@ const EFFECT_EVENTS: Array[StringName] = [
 	&"card_drawn", &"card_returned", &"creature_moved", &"building_returned", &"magic_changed",
 ]
 const HIT_STOP := 0.07
+## Landing / death burst preset per CardData.Land (NEUTRAL last).
+const LAND_BURSTS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow", &"stars"]
 const HIT_STOP_SCALE := 0.05
 
 var m: MatchController
@@ -137,7 +139,7 @@ func _play_creature(d: Dictionary) -> void:
 	Audio.sfx(&"creature_land")
 	var feet: Vector3 = target - Vector3(0, 0.4, 0)
 	Burst.spawn(m, &"dust_ring", feet)
-	Burst.spawn(m, [&"leaves", &"embers", &"sprinkles", &"snow"][c.land], feet + Vector3(0, 0.3, 0), Color.WHITE, 1.2)
+	Burst.spawn(m, LAND_BURSTS[c.land], feet + Vector3(0, 0.3, 0), Color.WHITE, 1.2)
 	m.rig.kick(0.08)
 
 
@@ -168,7 +170,7 @@ func _death(d: Dictionary) -> void:
 	var at: Vector3 = v.global_position + Vector3(0, 0.3, 0)
 	Burst.spawn(m, &"smoke", at, Color.WHITE, 1.2)
 	if v.card:
-		Burst.spawn(m, [&"leaves", &"embers", &"sprinkles", &"snow"][v.card.land], at, Color.WHITE, 1.2)
+		Burst.spawn(m, LAND_BURSTS[v.card.land], at, Color.WHITE, 1.2)
 	await v.dissolve(0.35 / speed)
 	if is_instance_valid(v):
 		v.queue_free()

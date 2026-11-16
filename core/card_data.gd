@@ -3,9 +3,10 @@ extends Resource
 ## Static definition of one card. Immutable at runtime: game state references it, never edits it.
 
 enum Kind { CREATURE, BUILDING, SPELL }
-enum Land { MUSHROOM, EMBER, CANDY, FROST }
+## NEUTRAL: cards of no land (Star Shard); never a land on the board.
+enum Land { MUSHROOM, EMBER, CANDY, FROST, NEUTRAL }
 
-const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hills", "Frostpeak"]
+const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hills", "Frostpeak", "Neutral"]
 
 @export var id: StringName = &""
 @export var display_name: String = ""
@@ -21,7 +22,26 @@ const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hill
 ## none, any_creature, own_creature, own_empty_lane, own_two_creatures, discard_creature
 @export var target: StringName = &"none"
 @export_multiline var text: String = ""
+## Printed keywords (Keywords.ORDER ids).
+@export var keywords: Array[StringName] = []
+@export var spell_power: int = 0
+@export var effects: Array[EffectData] = []
 
 
 func is_creature() -> bool:
 	return kind == Kind.CREATURE
+
+
+func effects_for(when_: StringName) -> Array[EffectData]:
+	var out: Array[EffectData] = []
+	for e: EffectData in effects:
+		if e.when == when_:
+			out.append(e)
+	return out
+
+
+func has_effect(when_: StringName) -> bool:
+	for e: EffectData in effects:
+		if e.when == when_:
+			return true
+	return false
