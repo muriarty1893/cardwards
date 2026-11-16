@@ -2,7 +2,8 @@ class_name GameState
 extends RefCounted
 ## The full state of one match. Pure data: no nodes, no visuals.
 
-enum Phase { MAIN, ATTACK, OVER }
+## CHOOSING: waiting for a Dream Up pick (only CHOOSE is legal).
+enum Phase { MAIN, ATTACK, OVER, CHOOSING }
 
 const START_HP := 25
 const MAX_HP := 25
@@ -20,6 +21,9 @@ var turn: int = 1
 var phase: Phase = Phase.MAIN
 var winner: int = -1
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Dream Up: the cards on offer and who picks.
+var pending_choice: Array[CardData] = []
+var pending_player: int = -1
 
 
 class PlayerState:
@@ -119,6 +123,8 @@ func clone() -> GameState:
 	s.turn = turn
 	s.phase = phase
 	s.winner = winner
+	s.pending_choice = pending_choice.duplicate()
+	s.pending_player = pending_player
 	s.rng.seed = rng.seed
 	s.rng.state = rng.state
 	return s

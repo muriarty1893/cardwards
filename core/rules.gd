@@ -71,9 +71,19 @@ static func draw(s: GameState, p: int, ev: Array[GameEvent]) -> void:
 static func validate(s: GameState, a: Action) -> String:
 	if s.phase == GameState.Phase.OVER:
 		return "Game is over"
+	if s.phase == GameState.Phase.CHOOSING:
+		if a.type != Action.Type.CHOOSE:
+			return "Choose a card first"
+		if a.player != s.pending_player:
+			return "Not your choice"
+		if a.choice < 0 or a.choice >= s.pending_choice.size():
+			return "No such card"
+		return ""
 	if a.player != s.active:
 		return "Not your turn"
 	match a.type:
+		Action.Type.CHOOSE:
+			return "Can't do that now"
 		Action.Type.PLAY_CARD:
 			return _validate_play(s, a)
 		Action.Type.BOOP:
@@ -205,7 +215,23 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 			_attack(s, a, ev)
 		Action.Type.END_TURN:
 			_end_turn(s, ev)
+		Action.Type.CHOOSE:
+			_choose(s, a, ev)
 	return ev
+
+
+static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
+	var c: CardData = s.pending_choice[a.choice]
+	s.pending_choice = []
+	s.pending_player = -1
+	s.phase = GameState.Phase.MAIN
+	ev.append(GameEvent.make(&"dream_up_chosen", {"player": a.player, "card": c.id}))
+	var ps: GameState.PlayerState = s.players[a.player]
+	if ps.hand.size() >= GameState.HAND_LIMIT:
+		ps.discard.append(c)
+		ev.append(GameEvent.make(&"card_burned", {"player": a.player, "card": c.id}))
+	else:
+		ps.hand.append(c)
 
 
 ## Every legal action for the active player. Used by the AI and tests.
@@ -213,6 +239,9 @@ static func legal_actions(s: GameState) -> Array[Action]:
 	var out: Array[Action] = []
 	var p: int = s.active
 	match s.phase:
+		GameState.Phase.CHOOSING:
+			for i: int in s.pending_choice.size():
+				out.append(Action.choose(s.pending_player, i))
 		GameState.Phase.MAIN:
 			var hand: Array[CardData] = s.players[p].hand
 			for i: int in hand.size():
@@ -357,7 +386,7 @@ static func effective_attack(s: GameState, p: int, lane: int) -> int:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
 		return 0
-	var atk: int = cr.card.attack
+	var atk: int = cr.card.attack + cr.atk_bonus + _aura(s, p, lane, &"lane_atk") - _aura(s, s.opponent(p), lane, &"opposing_atk")
 	match _building_ability(s, p, lane):
 		&"lane_atk_2":
 			atk += 2
@@ -372,13 +401,174 @@ static func effective_max_hp(s: GameState, p: int, lane: int) -> int:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
 		return 0
-	var hp: int = cr.card.health
+	var hp: int = cr.card.health + cr.hp_bonus + _aura(s, p, lane, &"lane_hp")
 	match _building_ability(s, p, lane):
 		&"lane_max_hp_3":
 			hp += 3
 		&"lane_atk_1_hp_1":
 			hp += 1
 	return hp
+
+
+## Sum of a building aura's amounts in player p's lane.
+static func _aura(s: GameState, p: int, lane: int, op: StringName) -> int:
+	var b: CardData = s.players[p].lanes[lane].building
+	var n: int = 0
+	if b:
+		for e: EffectData in b.effects:
+			if e.when == &"aura" and e.op == op:
+				n += e.amount
+	return n
+
+
+## Damage taken from attacks and hit-back is reduced by this (Ice Wall), to a minimum of 1.
+static func damage_reduction(s: GameState, p: int, lane: int) -> int:
+	return _aura(s, p, lane, &"lane_damage_taken")
+
+
+static func keywords_of(s: GameState, p: int, lane: int) -> Array[StringName]:
+	var out: Array[StringName] = []
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr == null:
+		return out
+	if not cr.hushed:
+		for k: StringName in cr.card.keywords:
+			if not (k == &"second_wind" and cr.second_wind_used):
+				out.append(k)
+	for k: StringName in cr.gained:
+		if not k in out:
+			out.append(k)
+	var b: CardData = s.players[p].lanes[lane].building
+	if b:
+		for e: EffectData in b.effects:
+			if e.when == &"aura" and e.op == &"lane_keyword" and not e.keyword in out:
+				out.append(e.keyword)
+	return out
+
+
+static func has_keyword(s: GameState, p: int, lane: int, kw: StringName) -> bool:
+	return kw in keywords_of(s, p, lane)
+
+
+## Bonus damage for player p's spells: the sum over their un-hushed creatures.
+static func spell_power(s: GameState, p: int) -> int:
+	var n: int = 0
+	for lane: GameState.LaneState in s.players[p].lanes:
+		if lane.creature and not lane.creature.hushed:
+			n += lane.creature.card.spell_power
+	return n
+
+
+## Puts a fresh creature into a lane (played, or back from Second Wind). Not ready yet.
+static func enter_creature(s: GameState, p: int, lane: int, c: CardData, _ev: Array[GameEvent]) -> GameState.CreatureState:
+	var cr := GameState.CreatureState.new()
+	cr.card = c
+	cr.played_turn = s.turn
+	cr.ready = false
+	cr.bubble = &"bubble" in c.keywords
+	cr.hidden = &"hidden" in c.keywords
+	s.players[p].lanes[lane].creature = cr
+	return cr
+
+
+## Damage to a creature from `src` = {"player", "lane" (-1: not a creature), "kind":
+## attack | hit_back | ability | spell}. Applies Bubble, Venom, Leech and the source's
+## after_damage effects. Returns the damage dealt.
+static func damage_creature(s: GameState, p: int, lane: int, amount: int, src: Dictionary, ev: Array[GameEvent], hit: Action.Hit = Action.Hit.NORMAL, blocked: bool = false) -> int:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr == null:
+		return 0
+	var dealt: int = maxi(amount, 0)
+	if dealt > 0 and cr.bubble:
+		cr.bubble = false
+		ev.append(GameEvent.make(&"bubble_popped", {"player": p, "lane": lane}))
+		dealt = 0
+	var sp: int = int(src.get("player", -1))
+	var sl: int = int(src.get("lane", -1))
+	var sc: GameState.CreatureState = s.players[sp].lanes[sl].creature if sp >= 0 and sl >= 0 else null
+	var venom: bool = false
+	if dealt > 0:
+		cr.damage += dealt
+		if sc and has_keyword(s, sp, sl, &"venom"):
+			venom = true
+			cr.damage = maxi(cr.damage, effective_max_hp(s, p, lane))
+	ev.append(GameEvent.make(&"creature_damaged", {"player": p, "lane": lane, "amount": dealt, "hit": int(hit), "blocked": blocked, "kind": src.get("kind", &"ability"), "venom": venom}))
+	if dealt > 0 and sc:
+		_leech(s, sp, sl, dealt, ev)
+		Effects.run(s, sp, sl, sc.card, &"after_damage", [], ev, {"damaged": {"player": p, "lane": lane}})
+	return dealt
+
+
+static func _leech(s: GameState, sp: int, sl: int, dealt: int, ev: Array[GameEvent]) -> void:
+	if has_keyword(s, sp, sl, &"leech"):
+		ev.append(GameEvent.make(&"leeched", {"player": sp, "lane": sl, "amount": dealt}))
+		heal_hero(s, sp, dealt, ev)
+
+
+## Removes keywords, effects, stat changes and freeze (spec 4.2). Damage stays.
+static func hush(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr == null:
+		return
+	cr.hushed = true
+	cr.gained.clear()
+	cr.atk_bonus = 0
+	cr.hp_bonus = 0
+	cr.bubble = false
+	cr.hidden = false
+	cr.freeze_turn = -1
+	ev.append(GameEvent.make(&"hushed", {"player": p, "lane": lane}))
+
+
+static func give_keyword(s: GameState, p: int, lane: int, kw: StringName, ev: Array[GameEvent]) -> void:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr == null:
+		return
+	if not kw in cr.gained:
+		cr.gained.append(kw)
+	if kw == &"bubble":
+		cr.bubble = true
+	elif kw == &"hidden":
+		cr.hidden = true
+	ev.append(GameEvent.make(&"keyword_gained", {"player": p, "lane": lane, "keyword": kw}))
+
+
+static func buff(s: GameState, p: int, lane: int, atk: int, hp: int, ev: Array[GameEvent]) -> void:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr == null:
+		return
+	cr.atk_bonus += atk
+	cr.hp_bonus += hp
+	ev.append(GameEvent.make(&"buffed", {"player": p, "lane": lane, "atk": atk, "hp": hp}))
+
+
+## Marks a creature to die; resolve_deaths removes it.
+static func destroy_creature(s: GameState, p: int, lane: int, _ev: Array[GameEvent]) -> void:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr:
+		cr.damage = maxi(cr.damage, effective_max_hp(s, p, lane))
+
+
+static func reveal(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr and cr.hidden:
+		cr.hidden = false
+		ev.append(GameEvent.make(&"revealed", {"player": p, "lane": lane}))
+
+
+## Offers up to 3 different random cards matching the filter; play waits for CHOOSE.
+static func offer_dream_up(s: GameState, p: int, filter_kind: int, filter_land: int, ev: Array[GameEvent]) -> void:
+	var pool: Array[CardData] = CardDB.dream_up_pool(filter_kind, filter_land)
+	if pool.is_empty():
+		return
+	_shuffle(s, pool)
+	s.pending_choice = pool.slice(0, mini(3, pool.size()))
+	s.pending_player = p
+	s.phase = GameState.Phase.CHOOSING
+	var ids: Array[StringName] = []
+	for c: CardData in s.pending_choice:
+		ids.append(c.id)
+	ev.append(GameEvent.make(&"dream_up_offered", {"player": p, "cards": ids}))
 
 
 static func has_ice_wall(s: GameState, p: int, lane: int) -> bool:
@@ -402,9 +592,13 @@ static func heal_creature(s: GameState, p: int, lane: int, amount: int, ev: Arra
 	ev.append(GameEvent.make(&"creature_healed", {"player": p, "lane": lane, "amount": healed}))
 
 
-static func damage_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent]) -> void:
+static func damage_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent], src: Dictionary = {}) -> void:
 	s.players[p].hero_hp -= amount
 	ev.append(GameEvent.make(&"hero_damaged", {"player": p, "amount": amount}))
+	var sp: int = int(src.get("player", -1))
+	var sl: int = int(src.get("lane", -1))
+	if amount > 0 and sp >= 0 and sl >= 0 and s.players[sp].lanes[sl].creature:
+		_leech(s, sp, sl, amount, ev)
 
 
 static func heal_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent]) -> void:
@@ -431,22 +625,38 @@ static func return_to_hand(s: GameState, p: int, c: CardData, ev: Array[GameEven
 		ev.append(GameEvent.make(&"card_returned", {"player": p, "card": c.id}))
 
 
+static func _hero_down(s: GameState) -> bool:
+	return s.players[0].hero_hp <= 0 or s.players[1].hero_hp <= 0
+
+
 static func resolve_deaths(s: GameState, ev: Array[GameEvent]) -> void:
 	if s.phase == GameState.Phase.OVER:
 		return
 	var any: bool = true
-	while any:
+	while any and not _hero_down(s):
 		any = false
-		for p: int in 2:
+		for p: int in [s.active, s.opponent(s.active)]:
 			for l: int in GameState.LANES:
+				if _hero_down(s):
+					break
 				var cr: GameState.CreatureState = s.players[p].lanes[l].creature
 				if cr and cr.damage >= effective_max_hp(s, p, l):
 					any = true
+					var second_wind: bool = has_keyword(s, p, l, &"second_wind") and not cr.second_wind_used
 					s.players[p].lanes[l].creature = null
 					s.players[p].discard.append(cr.card)
 					ev.append(GameEvent.make(&"creature_destroyed", {"player": p, "lane": l, "card": cr.card.id}))
-					if cr.card.trigger == &"on_destroyed":
+					if not cr.card.effects.is_empty():
+						if not cr.hushed:
+							Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)
+					elif cr.card.trigger == &"on_destroyed":
 						Abilities.run(s, p, l, cr.card, [], ev)
+					if second_wind and not _hero_down(s) and s.players[p].lanes[l].creature == null:
+						s.players[p].discard.erase(cr.card)
+						var back: GameState.CreatureState = enter_creature(s, p, l, cr.card, ev)
+						back.second_wind_used = true
+						back.damage = effective_max_hp(s, p, l) - 1
+						ev.append(GameEvent.make(&"second_wind", {"player": p, "lane": l, "card": cr.card.id}))
 	var dead: Array[bool] = [s.players[0].hero_hp <= 0, s.players[1].hero_hp <= 0]
 	if dead[0] or dead[1]:
 		s.phase = GameState.Phase.OVER

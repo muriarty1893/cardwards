@@ -2,7 +2,7 @@ class_name Action
 extends RefCounted
 ## Something a player (human or AI) wants to do. Plain data so it can go over a network.
 
-enum Type { PLAY_CARD, BOOP, BEGIN_ATTACKS, ATTACK, END_TURN }
+enum Type { PLAY_CARD, BOOP, BEGIN_ATTACKS, ATTACK, END_TURN, CHOOSE }
 enum Hit { NORMAL, CRIT, GLANCE }
 
 var type: Type = Type.END_TURN
@@ -13,6 +13,8 @@ var lane: int = -1
 var targets: Array[Dictionary] = []
 var hit: Hit = Hit.NORMAL
 var blocked: bool = false
+## CHOOSE: index into GameState.pending_choice.
+var choice: int = -1
 
 
 static func _make(t: Type, p: int) -> Action:
@@ -53,10 +55,16 @@ static func end_turn(p: int) -> Action:
 	return _make(Type.END_TURN, p)
 
 
+static func choose(p: int, index: int) -> Action:
+	var a := _make(Type.CHOOSE, p)
+	a.choice = index
+	return a
+
+
 func to_dict() -> Dictionary:
 	return {
 		"type": int(type), "player": player, "hand_index": hand_index, "lane": lane,
-		"targets": targets.duplicate(true), "hit": int(hit), "blocked": blocked,
+		"targets": targets.duplicate(true), "hit": int(hit), "blocked": blocked, "choice": choice,
 	}
 
 
@@ -74,6 +82,7 @@ static func from_dict(d: Dictionary) -> Action:
 		a.targets.append(td)
 	a.hit = int(d.get("hit", 0)) as Hit
 	a.blocked = bool(d.get("blocked", false))
+	a.choice = int(d.get("choice", -1))
 	return a
 
 

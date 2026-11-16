@@ -24,6 +24,17 @@ static func all_cards() -> Array[CardData]:
 	return _card_list.duplicate()
 
 
+## Cards Dream Up may offer: never neutral ones. -1 means any kind / any land.
+static func dream_up_pool(filter_kind: int, filter_land: int) -> Array[CardData]:
+	var out: Array[CardData] = []
+	for c: CardData in all_cards():
+		if c.land == CardData.Land.NEUTRAL:
+			continue
+		if (filter_kind < 0 or c.kind == filter_kind) and (filter_land < 0 or c.land == filter_land):
+			out.append(c)
+	return out
+
+
 static func deck(id: StringName) -> DeckData:
 	_ensure_loaded()
 	if not _decks.has(id):
