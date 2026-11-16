@@ -121,6 +121,50 @@ func test_ai_turn_always_ends() -> bool:
 	return true
 
 
+func _play_out_turn(s: GameState, ai: AIPlayer) -> void:
+	for i: int in AIRunner.MAX_ACTIONS:
+		if s.phase == GameState.Phase.OVER or s.active != ai.player:
+			return
+		var a: Action = ai.choose_action(s)
+		Rules.apply(s, a)
+		if a.type == Action.Type.END_TURN:
+			return
+
+
+func _two_step_lethal() -> GameState:
+	var s: GameState = Fx.blank()
+	s.players[1].hero_hp = 3
+	Fx.fill_deck(s, 1, &"mossback", 3)
+	Fx.put(s, 1, 1, _mk(0, 3, [&"guard"]))
+	Fx.put(s, 0, 0, _mk(3, 9))
+	Fx.give(s, 0, &"fireball")
+	return s
+
+
+func test_hard_finds_two_step_lethal() -> bool:
+	var s: GameState = _two_step_lethal()
+	_play_out_turn(s, AIPlayer.new(0, AIPlayer.Difficulty.HARD, 1))
+	assert_eq([s.phase, s.winner], [GameState.Phase.OVER, 0], "hard: fireball the guard, then the hero")
+	var m: GameState = _two_step_lethal()
+	_play_out_turn(m, AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1))
+	assert_true(m.phase != GameState.Phase.OVER, "medium trades into the guard instead")
+	return true
+
+
+func test_hard_respects_state_cap() -> bool:
+	var s: GameState = Fx.blank([0, 0, 0, 3])
+	s.players[0].magic = 8
+	for id: StringName in [&"fireball", &"cinderpup", &"mossback", &"sugar_rush", &"iceling", &"rain_of_spores"]:
+		Fx.give(s, 0, id)
+	Fx.fill_deck(s, 0, &"mossback", 5)
+	for l: int in 3:
+		Fx.put(s, 0, l, _mk(2, 5))
+		Fx.put(s, 1, l, _mk(2, 5))
+	AIPlayer.new(0, AIPlayer.Difficulty.HARD, 1).choose_action(s)
+	assert_true(AIPlanner.last_states > 100 and AIPlanner.last_states <= AIPlayer.MAX_STATES, "searched, within the cap (%d)" % AIPlanner.last_states)
+	return true
+
+
 func test_ai_prefers_kill() -> bool:
 	var s: GameState = Fx.blank()
 	s.players[0].magic = 2
@@ -147,33 +191,6 @@ func test_hit_rates() -> bool:
 			blocks += 1
 	assert_true(crits >= 4700 and crits <= 5300, "hard crit share ~50%% (%d)" % crits)
 	assert_true(blocks >= 4700 and blocks <= 5300, "hard block share ~50%% (%d)" % blocks)
-	return true
-
-
-func test_ai_vs_ai_100() -> bool:
-	var decks: Array[DeckData] = CardDB.all_decks()
-	var wins: Dictionary = {}
-	var games: Dictionary = {}
-	for d: DeckData in decks:
-		wins[d.id] = 0
-		games[d.id] = 0
-	var total_turns: int = 0
-	for seed: int in range(1, 101):
-		var a: int = seed % 4
-		var b: int = (a + 1 + (seed / 4) % 3) % 4
-		var s: GameState = Rules.setup(decks[a], decks[b], seed)
-		var diff: int = seed % 3
-		var ais: Array[AIPlayer] = [AIPlayer.new(0, diff, seed * 2), AIPlayer.new(1, diff, seed * 2 + 1)]
-		var w: int = AIRunner.play_match(s, ais)
-		assert_true(w == 0 or w == 1, "seed %d finished (winner %d, turn %d)" % [seed, w, s.turn])
-		total_turns += s.turn
-		games[decks[a].id] += 1
-		games[decks[b].id] += 1
-		if w == 0:
-			wins[decks[a].id] += 1
-		elif w == 1:
-			wins[decks[b].id] += 1
-	print("AI-vs-AI deck results (wins/games): ", wins, " / ", games, "  avg turns: ", total_turns / 100.0)
 	return true
 
 

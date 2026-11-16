@@ -14,6 +14,9 @@ const WIN_SCORE := 1000.0
 const EASY_RANDOM := 0.25
 const HAND_CARD := 0.6
 const ENEMY_LETHAL_PENALTY := 4.0
+## Hard's turn planner: states kept per step, and the most states simulated per decision.
+const BEAM := 6
+const MAX_STATES := 1500
 ## Flat keyword worth; bubble and flurry also scale with ATK (see _creature_value).
 const KEYWORD_VALUE: Dictionary = {
 	&"guard": 1.5, &"bubble": 1.5, &"venom": 2.5, &"leech": 1.0, &"flurry": 0.0,
@@ -36,6 +39,9 @@ func _init(p: int, d: Difficulty, seed: int) -> void:
 func choose_action(s: GameState) -> Action:
 	if s.phase == GameState.Phase.CHOOSING:
 		return _best_choice(s)
+	if difficulty == Difficulty.HARD:
+		var plan: Array[Action] = AIPlanner.plan(s, self, BEAM, MAX_STATES)
+		return plan[0] if not plan.is_empty() else Action.end_turn(player)
 	if difficulty == Difficulty.EASY and rng.randf() < EASY_RANDOM:
 		var options: Array[Action] = Rules.legal_actions(s).filter(func(a: Action) -> bool: return a.type != Action.Type.END_TURN)
 		if not options.is_empty():
