@@ -25,6 +25,8 @@ var _idle: StringName = &""
 var _fidget_in: float = 0.0
 ## Set by play_death(): the model holds its death pose instead of returning to idle.
 var _dying: bool = false
+## Faded out while it can't be chosen as an attack target.
+var dimmed: bool = false
 
 
 static func create(c: CardData, model_override: String = "") -> CreatureView:
@@ -138,6 +140,16 @@ func dissolve(duration: float = 0.35) -> void:
 	if _blob:
 		tw.parallel().tween_property(_blob, "transparency", 1.0, duration)
 	await tw.finished
+
+
+func set_dimmed(on: bool) -> void:
+	if on == dimmed:
+		return
+	dimmed = on
+	if body == null:
+		return
+	for n: Node in body.find_children("*", "GeometryInstance3D", true, false):
+		(n as GeometryInstance3D).transparency = 0.55 if on else 0.0
 
 
 ## Ice shell on while frozen; it shatters when the freeze ends.

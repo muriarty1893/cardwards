@@ -3,7 +3,8 @@ extends Node3D
 ## One land: a long painted lane strip with wavy outlined edges and land props.
 ## (Named Island for history; it is the tile a creature and building stand on.)
 
-enum Highlight { OFF, VALID, TARGET }
+## GUARD: an enemy Guard that must be attacked first (pulsing red-gold).
+enum Highlight { OFF, VALID, TARGET, GUARD }
 
 const WIDTH := 2.32
 const LENGTH := 4.5
@@ -11,6 +12,7 @@ const TOP_Y := 0.14
 const EDGE: Array[Color] = [Color("#ffe14a"), Color("#4ae8ff")]
 
 var land: int = 0
+var highlight: Highlight = Highlight.OFF
 var _mat: ShaderMaterial
 
 
@@ -35,6 +37,7 @@ func setup(land_type: int, player: int = 0, lane: int = 0) -> void:
 
 
 func set_highlight(mode: Highlight) -> void:
+	highlight = mode
 	_mat.set_shader_parameter("highlight", float(mode))
 
 

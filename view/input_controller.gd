@@ -4,7 +4,11 @@ extends Node
 
 signal action_requested(action: Action)
 
-enum Mode { IDLE, DRAGGING, TARGETING }
+## AIMING: dragging an attack arrow from one of the human's creatures.
+enum Mode { IDLE, DRAGGING, TARGETING, AIMING }
+
+## A press that moves less than this is a click (boop), not an attack drag.
+const CLICK_SLOP := 14.0
 
 var match_ctl: MatchController
 var mode: Mode = Mode.IDLE
@@ -16,6 +20,8 @@ var _is_boop: bool = false
 var _card: CardData
 var _targets: Array[Dictionary] = []
 var _needed: int = 0
+var _aim_lane: int = -1
+var _press_pos := Vector2.ZERO
 
 
 func _state() -> GameState:
@@ -137,7 +143,84 @@ func _unhandled_input(event: InputEvent) -> void:
 			_send()
 		return
 	if mode == Mode.IDLE and t["player"] == _human():
-		request_boop(t["lane"])
+		if Rules.can_attack(_state(), _human(), t["lane"]) and not match_ctl.busy:
+			_start_aim(t["lane"], mb.position)
+		else:
+			request_boop(t["lane"])
+
+
+# --- Drag to attack ----------------------------------------------------------
+
+## While aiming, motion and the release come here first so HUD panels can't swallow them.
+func _input(event: InputEvent) -> void:
+	if mode != Mode.AIMING:
+		return
+	var mm := event as InputEventMouseMotion
+	var mb := event as InputEventMouseButton
+	var key := event as InputEventKey
+	if mm:
+		_update_aim(mm.position)
+	elif mb and mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed or key and key.pressed and key.keycode == KEY_ESCAPE:
+		cancel()
+	elif mb and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+		_release(mb.position)
+	else:
+		return
+	if is_inside_tree():
+		get_viewport().set_input_as_handled()
+
+
+func _start_aim(lane: int, pos: Vector2) -> void:
+	mode = Mode.AIMING
+	_aim_lane = lane
+	_press_pos = pos
+	var foe: int = 1 - _human()
+	var targets: Array[int] = Rules.attack_targets(_state(), _human(), lane)
+	for l: int in 4:
+		if _state().players[foe].lanes[l].creature == null:
+			continue
+		if l in targets:
+			var guard: bool = Rules.has_keyword(_state(), foe, l, &"guard")
+			match_ctl.board.island(foe, l).set_highlight(Island.Highlight.GUARD if guard else Island.Highlight.TARGET)
+		elif match_ctl.creature_views[foe][l]:
+			(match_ctl.creature_views[foe][l] as CreatureView).set_dimmed(true)
+	_update_aim(pos)
+
+
+func _aim_origin() -> Vector2:
+	return match_ctl.rig.camera.unproject_position(match_ctl.board.anchor(_human(), _aim_lane))
+
+
+## The enemy lane under the pointer, -1 for the enemy hero's corner, -2 for nothing.
+func _target_at(pos: Vector2) -> int:
+	if match_ctl.hud.hero_rect(false).has_point(pos):
+		return -1
+	var hit: Dictionary = match_ctl.board.lane_at_screen(match_ctl.rig.camera, pos)
+	if not hit.is_empty() and int(hit["player"]) != _human():
+		return int(hit["lane"])
+	return -2
+
+
+func _update_aim(pos: Vector2) -> void:
+	var t: int = _target_at(pos)
+	var ok: bool = t != -2 and t in Rules.attack_targets(_state(), _human(), _aim_lane)
+	match_ctl.attack_arrow.aim(_aim_origin(), pos, ok)
+
+
+func _release(pos: Vector2) -> void:
+	var lane: int = _aim_lane
+	var moved: bool = pos.distance_to(_press_pos) > CLICK_SLOP
+	cancel()
+	if not moved:
+		request_boop(lane)
+		return
+	var t: int = _target_at(pos)
+	if t == -2:
+		return
+	if Rules.validate(_state(), Action.attack(_human(), lane, t)) != "":
+		match_ctl.toast.show_message("Can't attack that")
+		return
+	match_ctl.request_attack(lane, t)
 
 
 ## True when the human's creature in `lane` can boop right now (targets may still be needed).
@@ -172,11 +255,17 @@ func request_boop(lane: int) -> void:
 func cancel() -> void:
 	mode = Mode.IDLE
 	_targets = []
+	_aim_lane = -1
 	_clear_highlights()
 	match_ctl.hand.cancel_drag()
 
 
 func _clear_highlights() -> void:
+	if match_ctl.attack_arrow:
+		match_ctl.attack_arrow.clear()
 	for p: int in 2:
 		for l: int in 4:
 			match_ctl.board.island(p, l).set_highlight(Island.Highlight.OFF)
+			var v: CreatureView = match_ctl.creature_views[p][l]
+			if is_instance_valid(v):
+				v.set_dimmed(false)

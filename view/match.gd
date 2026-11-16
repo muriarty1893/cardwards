@@ -19,6 +19,7 @@ var player: EventPlayer
 var timing_bar: TimingBar
 var results: Results
 var overlay: UnitOverlay
+var attack_arrow: AttackArrow
 var ai: AIPlayer
 var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
 const AI_PAUSE := 0.6
@@ -112,6 +113,9 @@ func _build_ui() -> void:
 	hand = Hand.new()
 	root.add_child(hand)
 	hand.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	attack_arrow = AttackArrow.new()
+	root.add_child(attack_arrow)
+	attack_arrow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	toast = Toast.new()
 	root.add_child(toast)
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)

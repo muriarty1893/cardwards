@@ -2,7 +2,8 @@ shader_type spatial;
 render_mode cull_back;
 // Painted lane: 0 Mushroom Forest, 1 Ember Flats, 2 Candy Hills, 3 Frostpeak.
 // Wavy outlined edges (outside the wave shows the soil below), a thin side-coloured rim,
-// and animated highlight outlines (1 = valid drop, 2 = target). Lit with the cartoon bands.
+// and animated highlight outlines (1 = valid drop, 2 = target, 3 = Guard that must be attacked).
+// Lit with the cartoon bands.
 
 #include "res://view/look/toon_light.gdshaderinc"
 #include "res://view/look/color_space.gdshaderinc"
@@ -104,9 +105,13 @@ void fragment() {
 	col = mix(col, src_lin(edge_color), (1.0 - smoothstep(0.05, 0.07, m)) * 0.6);
 	if (highlight > 0.5) {
 		bool target = highlight > 1.5;
-		vec3 hc = target ? vec3(1.0, 0.353, 0.353) : vec3(1.0, 0.882, 0.290);
-		float band = 1.0 - smoothstep(0.1, 0.24, m);
-		float anim = target ? 0.55 + 0.45 * sin(TIME * 6.283 * 3.0) : 0.55 + 0.45 * step(0.5, fract((p.y + p.x) * 1.5 - TIME * 1.2));
+		bool guard = highlight > 2.5;
+		float beat = 0.5 + 0.5 * sin(TIME * 6.283 * 2.0);
+		vec3 hc = guard ? mix(vec3(1.0, 0.25, 0.2), vec3(1.0, 0.82, 0.25), beat)
+			: (target ? vec3(1.0, 0.353, 0.353) : vec3(1.0, 0.882, 0.290));
+		float band = 1.0 - smoothstep(guard ? 0.16 : 0.1, guard ? 0.34 : 0.24, m);
+		float anim = guard ? 0.75 + 0.25 * beat
+			: (target ? 0.55 + 0.45 * sin(TIME * 6.283 * 3.0) : 0.55 + 0.45 * step(0.5, fract((p.y + p.x) * 1.5 - TIME * 1.2)));
 		col = mix(col, hc, band * anim);
 		emi += pow(hc, vec3(2.2)) * band * anim * 0.9;
 	}

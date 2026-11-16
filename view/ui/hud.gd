@@ -115,6 +115,11 @@ func orb_screen_pos(human_side: bool) -> Vector2:
 	return (_refs["Rival"]["orb"] as Control).get_global_rect().get_center()
 
 
+## The hero corner: dropping an attack here targets that hero.
+func hero_rect(human_side: bool) -> Rect2:
+	return (_you if human_side else _rival).get_global_rect()
+
+
 func hero_screen_pos(human_side: bool) -> Vector2:
 	return (_you if human_side else _rival).get_global_rect().get_center()
 
