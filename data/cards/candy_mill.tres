@@ -15,5 +15,5 @@ id = &"candy_mill"
 display_name = "Candy Mill"
 kind = 1
 land = 2
-cost = 3
+cost = 2
 effects = Array[ExtResource("1_lhnrd")]([SubResource("Resource_tnhu3")])

@@ -258,7 +258,7 @@ func test_sugar_shack() -> bool:
 	var s: GameState = Fx.blank()
 	Fx.put_creature(s, 0, 0, &"gumdrop")
 	Fx.put_building(s, 0, 0, &"sugar_shack")
-	assert_eq([Rules.effective_attack(s, 0, 0), Rules.effective_max_hp(s, 0, 0)], [2, 4], "+1/+1")
+	assert_eq([Rules.effective_attack(s, 0, 0), Rules.effective_max_hp(s, 0, 0)], [3, 5], "+1/+1 on a 2/4")
 	return true
 
 
@@ -473,7 +473,7 @@ func test_combo_active_event() -> bool:
 func test_game_over_mid_cascade() -> bool:
 	var s: GameState = Fx.blank()
 	s.players[0].hero_hp = 2
-	Fx.put_creature(s, 0, 0, &"jellywobble", 3)
+	Fx.put_creature(s, 0, 0, &"jellywobble", 4)  # 6 HP: Ember Rain's 2 finishes it
 	var ev: Array[GameEvent] = []
 	Rules.give_keyword(s, 0, 0, &"second_wind", ev)
 	s.active = 1

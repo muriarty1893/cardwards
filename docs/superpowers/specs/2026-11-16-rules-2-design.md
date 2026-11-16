@@ -214,15 +214,15 @@ Costs and stats are a first pass, tuned by playtesting; they are data only.
 
 | Card | Type | Lvl | Cost | ATK/HP | Text | Was |
 |---|---|---|---|---|---|---|
-| Gumdrop | Creature | 1 | 2 | 1/3 | Boop: Draw a card. | 1 · 2/3 |
-| Taffy Snail | Creature | 1 | 2 | 1/4 | On play: Gain 1 magic. | 1 · 1/5 |
-| Lollibat | Creature | 1 | 3 | 2/3 | Flurry. Boop: Move this creature to one of your empty lanes. | 1 · 3/3 |
-| Sugar Sprite | Creature | 2 | 3 | 3/2 | Hidden. On play, Combo: Return the opposing building to its owner's hand. | 1 · 3/4 (Boop) |
-| Jellywobble | Creature | 2 | 4 | 3/5 | When destroyed: Draw 2 cards. | 2 · 4/6 |
-| Bonbon Behemoth | Creature | 3 | 7 | 5/7 | On play: Dream Up a Candy Hills card. Boop: Draw 2 cards. | 2 · 5/8 |
+| Gumdrop | Creature | 1 | 2 | 2/4 | Boop: Draw a card. | 1 · 2/3 |
+| Taffy Snail | Creature | 1 | 2 | 3/4 | On play: Gain 1 magic. | 1 · 1/5 |
+| Lollibat | Creature | 1 | 3 | 2/4 | Flurry. Boop: Move this creature to one of your empty lanes. | 1 · 3/3 |
+| Sugar Sprite | Creature | 2 | 3 | 3/3 | Hidden. On play, Combo: Return the opposing building to its owner's hand. | 1 · 3/4 (Boop) |
+| Jellywobble | Creature | 2 | 4 | 4/6 | When destroyed: Draw 2 cards. | 2 · 4/6 |
+| Bonbon Behemoth | Creature | 3 | 6 | 6/7 | On play: Dream Up a Candy Hills card. Boop: Draw 2 cards. | 2 · 5/8 |
 | Sugar Shack | Building | — | 1 | — | The creature in this lane has +1 ATK and +1 HP. | 1 |
-| Candy Mill | Building | — | 3 | — | Start of your turn: Gain 1 magic. | 1 |
-| Sugar Rush | Spell | — | 2 | — | Draw 2 cards. | 1 |
+| Candy Mill | Building | — | 2 | — | Start of your turn: Gain 1 magic. | 1 |
+| Sugar Rush | Spell | — | 1 | — | Draw 2 cards. | 1 |
 | Swap Trick | Spell | — | 1 | — | Swap two of your creatures between lanes. Combo: Draw a card. | 0 |
 
 ### Frostpeak (control: Bubble, Hush, Freeze)
@@ -230,11 +230,11 @@ Costs and stats are a first pass, tuned by playtesting; they are data only.
 | Card | Type | Lvl | Cost | ATK/HP | Text | Was |
 |---|---|---|---|---|---|---|
 | Snowmite | Creature | 1 | 2 | 1/3 | Boop: Freeze the opposing creature. | 1 · 1/4 |
-| Iceling | Creature | 1 | 2 | 2/2 | Bubble. | 1 · 2/5 |
+| Iceling | Creature | 1 | 2 | 2/3 | Bubble. | 1 · 2/5 |
 | Frostfang | Creature | 1 | 3 | 3/3 | After this damages a creature, freeze it. | 1 · 3/4 |
-| Glacier Tortoise | Creature | 2 | 3 | 2/6 | Bubble. | 1 · 2/9 |
-| Rimewing | Creature | 2 | 4 | 3/4 | On play: Hush the opposing creature. | 2 · 4/5 (freeze) |
-| Blizzard Titan | Creature | 3 | 8 | 6/8 | Bubble. Boop: Freeze all enemy creatures. | 2 · 6/9 |
+| Glacier Tortoise | Creature | 2 | 3 | 3/6 | Bubble. | 1 · 2/9 |
+| Rimewing | Creature | 2 | 4 | 4/4 | On play: Hush the opposing creature. | 2 · 4/5 (freeze) |
+| Blizzard Titan | Creature | 3 | 7 | 6/8 | Bubble. Boop: Freeze all enemy creatures. | 2 · 6/9 |
 | Ice Wall | Building | — | 2 | — | The creature in this lane takes 1 less damage from attacks and hit-back (minimum 1). | 1 |
 | Frost Spire | Building | — | 2 | — | The opposing creature has −1 ATK (minimum 0). | 1 |
 | Cold Snap | Spell | — | 1 | — | Freeze a creature. Draw a card. | 0 |
@@ -245,6 +245,10 @@ Costs and stats are a first pass, tuned by playtesting; they are data only.
 | Card | Type | Cost | Text |
 |---|---|---|---|
 | Star Shard | Spell | 0 | Gain 1 magic. (Given to the second player; not in decks, not in Dream Up.) |
+
+Balance pass 2026-11-16 (user-approved, after the AI suites): Sugar Storm and Deep Freeze
+cards above were buffed; Medium-vs-Medium win rates over 120 games per deck went from
+65/65/22/26% to 60/63/39/36% (Grove Guard / Blaze Rush / Sugar Storm / Deep Freeze).
 
 Every mechanic appears on at least one card. The four pre-made decks keep their current lists
 (the deck rules in the v1 spec, section 5.1) with these new numbers.

@@ -16,6 +16,6 @@ display_name = "Rimewing"
 land = 3
 level = 2
 cost = 4
-attack = 3
+attack = 4
 health = 4
 effects = Array[ExtResource("1_iveao")]([SubResource("Resource_7133j")])
