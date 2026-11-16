@@ -1,19 +1,123 @@
 extends TestCase
 
 
+const CR := CardData.Kind.CREATURE
+
+
+func _mk(atk: int, hp: int, kws: Array[StringName] = []) -> CardData:
+	return Fx.card(&"ai%d_%d" % [atk, hp], CR, 1, atk, hp, kws)
+
+
 func test_ai_takes_lethal() -> bool:
 	var s: GameState = Fx.blank()
-	s.players[1].hero_hp = 2
-	Fx.put_creature(s, 0, 1, &"cinderpup")
-	Fx.put_creature(s, 0, 2, &"mossback")  # two attackers: lethal even through glancing hits
+	s.players[1].hero_hp = 3
+	Fx.put(s, 0, 0, _mk(3, 1))
+	Fx.put(s, 1, 2, _mk(5, 5))
 	Fx.give(s, 0, &"mossback")
-	Fx.fill_deck(s, 1, &"mossback", 3)
-	var me := AIPlayer.new(0, AIPlayer.Difficulty.EASY, 1)
-	var foe := AIPlayer.new(1, AIPlayer.Difficulty.EASY, 2)
-	var ev: Array[GameEvent] = []
-	AIRunner.play_turn(s, me, foe, ev)
-	assert_eq(s.phase, GameState.Phase.OVER, "game over this turn")
-	assert_eq(s.winner, 0, "AI wins")
+	var a: Action = AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1).choose_action(s)
+	assert_eq([a.type, a.lane, a.target_lane], [Action.Type.ATTACK, 0, -1], "goes for the hero first")
+	return true
+
+
+func test_ai_respects_guard() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put(s, 0, 0, _mk(3, 9))
+	Fx.put(s, 1, 1, _mk(1, 5, [&"guard"]))
+	Fx.put(s, 1, 3, _mk(2, 2))
+	var a: Action = AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1).choose_action(s)
+	assert_eq([a.type, a.target_lane], [Action.Type.ATTACK, 1], "attacks the guard")
+	return true
+
+
+func test_ai_pops_bubble_with_small_creature() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put(s, 0, 0, _mk(1, 1))
+	Fx.put(s, 0, 1, _mk(5, 5))
+	Fx.put(s, 1, 0, _mk(6, 6, [&"guard", &"bubble"]))
+	var a: Action = AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1).choose_action(s)
+	assert_eq([a.type, a.lane, a.target_lane], [Action.Type.ATTACK, 0, 0], "the 1/1 pops the bubble")
+	return true
+
+
+func test_ai_trades_venom_into_big() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put(s, 0, 0, _mk(1, 1, [&"venom"]))
+	Fx.put(s, 1, 2, _mk(8, 8))
+	var a: Action = AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1).choose_action(s)
+	assert_eq([a.type, a.lane, a.target_lane], [Action.Type.ATTACK, 0, 2], "venom into the 8/8")
+	return true
+
+
+func test_ai_picks_best_dream_up() -> bool:
+	var s: GameState = Fx.blank()
+	s.phase = GameState.Phase.CHOOSING
+	s.pending_player = 0
+	s.pending_choice = [CardDB.card(&"cinderpup"), CardDB.card(&"blizzard_titan"), CardDB.card(&"gumdrop")]
+	var a: Action = AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1).choose_action(s)
+	assert_eq([a.type, a.choice], [Action.Type.CHOOSE, 1], "the titan")
+	return true
+
+
+func test_ai_values_keywords() -> bool:
+	var s: GameState = Fx.blank()
+	var me := AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1)
+	var plain: float = me.evaluate(s)
+	Fx.put(s, 0, 0, _mk(2, 2))
+	var vanilla: float = me.evaluate(s) - plain
+	s.players[0].lanes[0].creature = null
+	Fx.put(s, 0, 0, _mk(2, 2, [&"venom", &"guard"]))
+	assert_true(me.evaluate(s) - plain > vanilla + 1.5, "venom + guard worth more than a vanilla 2/2")
+	return true
+
+
+func test_ai_fears_enemy_lethal() -> bool:
+	var s: GameState = Fx.blank()
+	var me := AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1)
+	s.players[0].hero_hp = 5
+	Fx.put(s, 1, 0, _mk(3, 9))
+	var safe: float = me.evaluate(s)
+	Fx.put(s, 1, 1, _mk(3, 9))
+	var after: float = me.evaluate(s)
+	assert_true(safe - after > 4.0 + 5.0, "second 3/9 costs its value plus the lethal penalty")
+	Fx.put(s, 0, 2, _mk(1, 9, [&"guard"]))
+	assert_true(not me.enemy_has_lethal(s), "a 9-HP guard soaks it")
+	return true
+
+
+func test_easy_sometimes_random() -> bool:
+	var s: GameState = Fx.blank()
+	s.players[0].magic = 9
+	for id: StringName in [&"mossback", &"fireball", &"cinderpup", &"sugar_rush", &"iceling"]:
+		Fx.give(s, 0, id)
+	Fx.fill_deck(s, 0, &"mossback", 5)
+	Fx.put(s, 1, 1, _mk(2, 6))
+	Fx.put(s, 0, 3, _mk(2, 9))
+	var best: Dictionary = AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1).choose_action(s).to_dict()
+	var easy := AIPlayer.new(0, AIPlayer.Difficulty.EASY, 77)
+	var differ: int = 0
+	for i: int in 200:
+		if easy.choose_action(s).to_dict() != best:
+			differ += 1
+	assert_true(differ >= 30 and differ <= 70, "easy strays 15-35%% of the time (%d/200)" % differ)
+	return true
+
+
+func test_ai_turn_always_ends() -> bool:
+	var s: GameState = Fx.blank()
+	for i: int in 8:
+		Fx.give(s, 0, &"star_shard")
+	Fx.put(s, 0, 0, _mk(1, 9, [&"flurry"]))
+	Fx.put(s, 0, 1, _mk(1, 9, [&"flurry"]))
+	Fx.put_creature(s, 0, 2, &"gumdrop")
+	Fx.fill_deck(s, 0, &"star_shard", 20)
+	Fx.fill_deck(s, 1, &"mossback", 5)
+	Fx.put(s, 1, 3, _mk(0, 30))
+	for d: AIPlayer.Difficulty in [AIPlayer.Difficulty.EASY, AIPlayer.Difficulty.MEDIUM]:
+		var t: GameState = s.clone()
+		var ev: Array[GameEvent] = []
+		AIRunner.play_turn(t, AIPlayer.new(0, d, 5), AIPlayer.new(1, d, 6), ev)
+		assert_eq(t.active, 1, "turn ended (difficulty %d)" % d)
+		assert_eq(ev[ev.size() - 1].type in [&"magic_changed", &"card_drawn", &"card_burned", &"fatigue", &"turn_started"], true, "ended with the next turn starting")
 	return true
 
 
