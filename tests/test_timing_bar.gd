@@ -19,7 +19,8 @@ func test_timeout_is_normal() -> bool:
 	var hit: Action.Hit = await bar.run_attack()
 	var elapsed: float = (Time.get_ticks_msec() - start) / 1000.0
 	assert_eq(hit, Action.Hit.NORMAL, "no tap -> NORMAL")
-	assert_true(elapsed >= 1.9 and elapsed <= 2.3, "about 2 s (%.2f)" % elapsed)
+	# TIMEOUT (2 s) plus the 0.35 s the bar stays up after it stops.
+	assert_true(elapsed >= 2.2 and elapsed <= 2.7, "about 2 s + hide (%.2f)" % elapsed)
 	var blocked: bool = await bar.run_block()
 	assert_eq(blocked, false, "no tap -> no block")
 	bar.queue_free()
