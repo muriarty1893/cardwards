@@ -62,7 +62,8 @@ func test_piece_at_finds_creature() -> bool:
 	var m: MatchController = await Fx.load_match()
 	Fx.put_creature(m.state, 1, 2, &"mossback")
 	m.sync_all()
-	var at: Vector2 = m.rig.camera.unproject_position(m.board.anchor(1, 2) + Vector3(0, 0.5, 0))
+	var v: CreatureView = m.creature_views[1][2]
+	var at: Vector2 = m.rig.camera.unproject_position(v.global_position + Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + v.height * 0.5, 0))
 	var hit: Dictionary = m.overlay.piece_at(at)
 	assert_eq(hit.get("lane", -1), 2, "lane"); assert_eq(hit.get("player", -1), 1, "player")
 	m.queue_free()
