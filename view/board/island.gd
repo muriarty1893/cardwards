@@ -16,8 +16,15 @@ var highlight: Highlight = Highlight.OFF
 var _mat: ShaderMaterial
 
 
-func setup(land_type: int, player: int = 0, lane: int = 0) -> void:
+var _player: int = 0
+var _lane: int = 0
+var _dressing: Node3D
+
+
+func setup(land_type: int, player: int = 0, lane: int = 0, density: float = 1.0) -> void:
 	land = land_type
+	_player = player
+	_lane = lane
 	var plane := PlaneMesh.new()
 	# A little wider than the hit area so the wavy painted edge fits inside the mesh.
 	plane.size = Vector2(WIDTH + 0.12, LENGTH)
@@ -31,9 +38,16 @@ func setup(land_type: int, player: int = 0, lane: int = 0) -> void:
 	_mat.set_shader_parameter("edge_color", EDGE[player])
 	var mi := Palette.mesh(plane, _mat, Vector3(0, TOP_Y, 0), false)
 	add_child(mi)
-	var props: Node3D = LaneDressing.build(land, player, player * 4 + lane)
-	props.position.y = TOP_Y
-	add_child(props)
+	set_density(density)
+
+
+## Rebuilds the ground cover at `density` (1 = High, 0.5 = Low).
+func set_density(density: float) -> void:
+	if is_instance_valid(_dressing):
+		_dressing.free()
+	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, density)
+	_dressing.position.y = TOP_Y
+	add_child(_dressing)
 
 
 func set_highlight(mode: Highlight) -> void:

@@ -5,13 +5,88 @@ extends TestCase
 func test_props_clear_of_pieces() -> bool:
 	for land: int in 4:
 		for p: int in 2:
-			var root: Node3D = LaneDressing.build(land, p, p * 4 + land)
+			var root: Node3D = LaneDressing.build(land, p, p * 4 + land, 1.0)
 			var pos: Array[Vector3] = LaneDressing.prop_positions(root)
-			assert_true(pos.size() >= 7 and pos.size() <= 10, "7-10 props land %d p%d" % [land, p])
+			assert_true(pos.size() >= 4 and pos.size() <= 8, "4-8 accent props land %d p%d (%d)" % [land, p, pos.size()])
 			for v: Vector3 in pos:
 				assert_true(LaneDressing.is_clear(v, p), "prop %s clear land %d p%d" % [v, land, p])
 			root.free()
 	return true
+
+
+## Tile-local building and boop spots for `player` (the tile centre is LANE_X, STRIP_Z).
+static func _spots(player: int) -> Array[Vector2]:
+	var s: float = 1.0 if player == 0 else -1.0
+	var back: float = (Board.SEAM / 2.0 + Island.LENGTH * (1.0 - Board.BUILDING_DEPTH / 2.0)) * s - Board.STRIP_Z[player]
+	return [Vector2(0.0, back), Vector2(Board.BOOP_X, back)]
+
+
+func test_dressing_avoids_spots() -> bool:
+	for land: int in 4:
+		for p: int in 2:
+			var root: Node3D = LaneDressing.build(land, p, p * 4 + land, 1.0)
+			var spots: Array[Vector2] = _spots(p)
+			var n: int = 0
+			for mmi: Node in root.find_children("*", "MultiMeshInstance3D", true, false):
+				var mm: MultiMesh = (mmi as MultiMeshInstance3D).multimesh
+				var base: Transform3D = (mmi as MultiMeshInstance3D).transform
+				for i: int in mm.instance_count:
+					var o: Vector3 = base * mm.get_instance_transform(i).origin
+					n += 1
+					assert_true(Vector2(o.x, o.z).distance_to(spots[0]) >= LaneDressing.BUILDING_R, "land %d p%d cover %d clear of building" % [land, p, i])
+					if p == 0:
+						assert_true(Vector2(o.x, o.z).distance_to(spots[1]) >= LaneDressing.BOOP_R, "land %d p%d cover %d clear of boop" % [land, p, i])
+					assert_true(absf(o.x) <= Island.WIDTH / 2.0 and absf(o.z) <= Island.LENGTH / 2.0, "land %d cover %d on its tile" % [land, i])
+			assert_true(n >= LaneDressing.DENSITY[land] * 0.8, "land %d p%d dense (%d)" % [land, p, n])
+			root.free()
+	return true
+
+
+static func _cover_count(root: Node) -> int:
+	var n: int = 0
+	for mmi: Node in root.find_children("*", "MultiMeshInstance3D", true, false):
+		n += (mmi as MultiMeshInstance3D).multimesh.instance_count
+	return n
+
+
+func test_low_density_halves() -> bool:
+	for land: int in 4:
+		var hi: Node3D = LaneDressing.build(land, 0, land, 1.0)
+		var lo: Node3D = LaneDressing.build(land, 0, land, 0.5)
+		assert_true(_cover_count(lo) <= int(_cover_count(hi) * 0.55), "land %d low %d <= 55%% of %d" % [land, _cover_count(lo), _cover_count(hi)])
+		hi.free()
+		lo.free()
+	return true
+
+
+func test_bend_points_uniform() -> bool:
+	var b: Board = _board()
+	var pts := PackedVector3Array([Vector3(1, 0.6, 2), Vector3(-2, 0.6, -1), Vector3(4, 0.6, 3)])
+	b.set_bend_points(pts)
+	var mat: ShaderMaterial = LaneDressing.cover_material()
+	var arr: Variant = mat.get_shader_parameter("bend_points")
+	assert_eq((arr as Array).size(), 8, "8 bend slots")
+	for i: int in 3:
+		var v: Vector4 = arr[i]
+		assert_true(Vector3(v.x, v.y, v.z).distance_to(pts[i]) < 0.001 and v.w > 0.0, "slot %d holds point %d" % [i, i])
+	for i: int in range(3, 8):
+		assert_eq((arr[i] as Vector4).w, 0.0, "slot %d unused" % i)
+	b.free()
+	return true
+
+
+## WebGL fits only ~256 instances with instance uniforms: the cover shader must not use them.
+func test_dressing_no_instance_fx() -> bool:
+	var mat: ShaderMaterial = LaneDressing.cover_material()
+	assert_true(not "instance uniform" in mat.shader.code, "cover shader has no instance uniforms")
+	var root: Node3D = LaneDressing.build(2, 0, 3, 1.0)
+	for n: Node in root.find_children("*", "GeometryInstance3D", true, false):
+		var sm := (n as GeometryInstance3D).material_override as ShaderMaterial
+		if sm and sm.shader:
+			assert_true(not sm.shader.resource_path in [Toon.FX_PATH, Toon.FX_CUTOUT_PATH], "no fx toon on dressing")
+	root.free()
+	return true
+
 
 func test_ambient_amounts() -> bool:
 	var lands: Array[Array] = [[0, 1, 2, 3], [3, 2, 1, 0]]

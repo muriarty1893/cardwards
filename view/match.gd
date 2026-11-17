@@ -90,6 +90,19 @@ func _begin(opening: Array[GameEvent]) -> void:
 	refresh_ui()
 
 
+## The ground cover leans away from every creature on the board.
+func _process(_delta: float) -> void:
+	if board == null:
+		return
+	var pts := PackedVector3Array()
+	for p: int in 2:
+		for l: int in 4:
+			var v: Variant = creature_views[p][l]
+			if is_instance_valid(v):
+				pts.append((v as Node3D).global_position)
+	board.set_bend_points(pts)
+
+
 ## The opening sweep around the room, with input locked; a click or key press skips it.
 func sweep() -> void:
 	var was: bool = busy

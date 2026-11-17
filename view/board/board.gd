@@ -24,18 +24,22 @@ const FRAME := Color("#8a5a34")
 const FRAME_DARK := Color("#5b3a22")
 const BRASS := Color("#e0b04a")
 const SEAM_COLOR := Color("#ffe9a8")
+## Ground cover within this distance of a creature leans away from it.
+const BEND_R := 0.4
 var ambient: Ambient
+var _density: float = -1.0
 var _islands: Array[Array] = [[], []]
 
 
 func build(lands: Array[Array]) -> void:
+	_density = density_for(Settings.quality)
 	_build_tray()
 	for p: int in 2:
 		for l: int in 4:
 			var isl := Island.new()
 			isl.position = Vector3(LANE_X[l], 0, STRIP_Z[p])
 			add_child(isl)
-			isl.setup(lands[p][l], p, l)
+			isl.setup(lands[p][l], p, l, _density)
 			_islands[p].append(isl)
 	ambient = Ambient.build(lands, Settings.quality)
 	add_child(ambient)
@@ -44,9 +48,30 @@ func build(lands: Array[Array]) -> void:
 		Settings.changed.connect(_on_settings_changed)
 
 
-## Low: half the ambient particles. (Light, shadows and MSAA are Room.apply_quality.)
+## Low: half the ambient particles and ground cover. (Light, shadows and MSAA are Room's.)
 func apply_quality(q: int) -> void:
 	ambient.set_quality(q)
+	var d: float = density_for(q)
+	if d != _density:
+		_density = d
+		for p: int in 2:
+			for isl: Island in _islands[p]:
+				isl.set_density(d)
+
+
+static func density_for(q: int) -> float:
+	return 0.5 if q == GameSettings.Quality.LOW else 1.0
+
+
+## Up to 8 creature positions the ground cover bends away from (radius BEND_R).
+func set_bend_points(points: PackedVector3Array) -> void:
+	var arr: Array[Vector4] = []
+	for i: int in 8:
+		if i < points.size():
+			arr.append(Vector4(points[i].x, points[i].y, points[i].z, BEND_R))
+		else:
+			arr.append(Vector4.ZERO)
+	LaneDressing.cover_material().set_shader_parameter("bend_points", arr)
 
 
 func _on_settings_changed() -> void:
