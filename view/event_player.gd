@@ -40,6 +40,7 @@ func play(events: Array[GameEvent]) -> void:
 
 func _play_one(e: GameEvent) -> void:
 	var d: Dictionary = e.data
+	_rival_react(e)
 	if e.type in EFFECT_EVENTS:
 		var kind: StringName = FxDirector.choose(_source, e)
 		await FxDirector.play(kind, _source, e, m)
@@ -111,6 +112,33 @@ func _play_one(e: GameEvent) -> void:
 			m.hud.refresh(m.state, MatchController.HUMAN)
 
 
+## The seated rival reacts to what happens at the table.
+func _rival_react(e: GameEvent) -> void:
+	var r: RivalSeat = m.rival
+	if r == null:
+		return
+	var d: Dictionary = e.data
+	var ai: bool = int(d.get("player", -1)) == MatchController.AI
+	match e.type:
+		&"creature_played", &"building_played", &"spell_cast":
+			if ai:
+				r.play_card()
+		&"hero_damaged":
+			if int(d.get("amount", 0)) > 0:
+				if ai:
+					r.flinch()
+				else:
+					r.cheer()
+		&"turn_started":
+			r.think(ai)
+		&"game_over":
+			r.think(false)
+			if int(d.get("winner", -1)) == MatchController.AI:
+				r.win()
+			else:
+				r.lose()
+
+
 func _view(p: int, l: int) -> CreatureView:
 	var v: Variant = m.creature_views[p][l]
 	return v as CreatureView if is_instance_valid(v) else null
@@ -160,6 +188,7 @@ func _play_building(d: Dictionary) -> void:
 
 
 func _death(d: Dictionary) -> void:
+	m.input.creature_gone(d["player"], d["lane"])
 	var v: CreatureView = _view(d["player"], d["lane"])
 	if v == null:
 		return
@@ -187,33 +216,84 @@ func _attack(d: Dictionary) -> void:
 	if v == null:
 		return
 	var foe: int = 1 - p
-	var home: Vector3 = v.position
 	var tl: int = int(d.get("target_lane", -1))
-	var target: Vector3 = m.board.anchor(foe, tl) if tl >= 0 else m.board.hero_point(foe, lane)
-	target = home.lerp(target, 0.78)
+	var tv: CreatureView = _view(foe, tl) if tl >= 0 else null
+	var home: Vector3 = v.position
+	var hero: bool = tl < 0
+	var target: Vector3
+	if tv:
+		tv.busy = true
+		# Stop just short of the target, wherever it stands.
+		var to: Vector3 = tv.position
+		var gap := Vector3(to.x - home.x, 0.0, to.z - home.z)
+		target = to - gap.normalized() * minf(0.35, gap.length() * 0.5)
+	else:
+		target = m.board.hero_point(foe, lane)
+		target.x = home.x
 	v.busy = true
-	# Wind-up squash, then the leap (the impact plays with the damage event that follows).
+	var out_t: float = 0.3 / speed
+	var back_t: float = 0.4 / speed
+	m.rig.close_up(v.global_position, Vector3(target.x, home.y, target.z), (0.2 + 0.3 + 0.15 + 0.4 + (0.35 if hero else 0.0)) / speed)
+	# Wind-up squash, then the run (the impact plays with the damage event that follows).
 	var base: Vector3 = v.body.scale
 	var wind := v.create_tween()
 	wind.tween_property(v.body, "scale", base * Vector3(1.15, 0.8, 1.15), 0.12 / speed)
 	wind.tween_property(v.body, "scale", base, 0.08 / speed)
 	await wind.finished
+	if not is_instance_valid(v):
+		return
+	var flat := Vector2(target.x - home.x, target.z - home.z)
+	if flat.length() > 0.01:
+		v.rotation.y = atan2(flat.x, flat.y)
 	v.play_attack()
-	var trail := Burst.spawn(v, &"dust_ring", v.global_position, Color(1, 1, 1, 0.6), 0.6)
+	var trail := Burst.spawn(v, &"dust_ring", v.global_position, Color(1, 1, 1, 0.6), 0.4)
 	trail.one_shot = false
 	var out := v.create_tween()
 	out.tween_method(func(k: float) -> void:
-		v.position = home.lerp(target, k * k) + Vector3(0, sin(k * PI) * 0.9, 0), 0.0, 1.0, 0.3 / speed)
+		v.position = home.lerp(target, k * k) + Vector3(0, sin(k * PI) * 0.5, 0), 0.0, 1.0, out_t)
 	await out.finished
 	if is_instance_valid(trail):
 		trail.queue_free()
+	if not is_instance_valid(v):
+		return
+	var turn_back: Vector3 = target
+	if hero:
+		turn_back = await _hero_leap(v, target, foe)
+		if not is_instance_valid(v):
+			return
+	if tv:
+		var t_ref: CreatureView = tv
+		get_tree().create_timer(0.6 / speed).timeout.connect(func() -> void:
+			if is_instance_valid(t_ref):
+				t_ref.busy = false)
 	var back := v.create_tween()
 	back.tween_interval(0.15 / speed)
 	back.tween_method(func(k: float) -> void:
-		v.position = target.lerp(home, k) + Vector3(0, sin(k * PI) * 0.4, 0), 0.0, 1.0, 0.4 / speed)
+		v.position = turn_back.lerp(home, k) + Vector3(0, sin(k * PI) * 0.3, 0), 0.0, 1.0, back_t)
 	back.tween_callback(func() -> void:
 		v.position = home
 		v.busy = false)
+
+
+## From the board's edge: a leap at the rival (who flinches with the damage) or, when the rival's
+## creature attacks you, at the camera with a shake. Returns where the creature lands again.
+func _hero_leap(v: CreatureView, edge: Vector3, foe: int) -> Vector3:
+	var peak: Vector3
+	if foe == MatchController.AI and m.rival:
+		peak = edge.lerp(m.rival.hand_point(), 0.45)
+	else:
+		peak = edge.lerp(m.rig.camera.global_position, 0.35)
+	var up := v.create_tween()
+	up.tween_method(func(k: float) -> void:
+		v.position = edge.lerp(peak, k) + Vector3(0, sin(k * PI) * 0.4, 0), 0.0, 1.0, 0.18 / speed)
+	await up.finished
+	if foe == MatchController.HUMAN:
+		m.rig.kick(0.6)
+	var down := v.create_tween()
+	down.tween_method(func(k: float) -> void:
+		v.position = peak.lerp(edge, k), 0.0, 1.0, 0.17 / speed)
+	await down.finished
+	return edge
 
 
 ## Brief freeze-frame on impact. Always restores the time scale.

@@ -68,14 +68,14 @@ static func play(kind: StringName, source: Dictionary, e: GameEvent, m: MatchCon
 				var foe: int = 1 - int(source["player"])
 				for l: int in 4:
 					if m.state.players[foe].lanes[l].creature != null or l == int(d["lane"]):
-						pts.append(m.board.anchor(foe, l))
+						pts.append(spot(m, foe, l))
 				Rain.over(m, pts, &"embers", 0.6 / sp)
 				await _wait(m, 0.45 / sp)
 				if not is_instance_valid(m):
 					return
 		&"rain_of_spores":
-			var spot: Array[Vector3] = [m.board.anchor(d["player"], d["lane"])]
-			Rain.over(m, spot, &"spores", 0.5 / sp)
+			var spots: Array[Vector3] = [spot(m, d["player"], d["lane"])]
+			Rain.over(m, spots, &"spores", 0.5 / sp)
 			await _wait(m, 0.4 / sp)
 			if not is_instance_valid(m):
 				return
@@ -170,7 +170,7 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 			# instead of a shake (a shake would fight the flight tween over its position).
 			var hit_back: bool = d.get("kind", &"") == &"hit_back"
 			if hit_back and v:
-				pos = v.global_position + (pos - m.board.anchor(d["player"], d["lane"]))
+				pos = v.global_position + (pos - spot(m, d["player"], d["lane"]))
 			var attack: bool = kind == &"attack_hit"
 			if attack:
 				await m.player.hit_stop()
@@ -229,7 +229,7 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				return
 		&"creature_healed":
 			if int(d["amount"]) > 0:
-				var pos: Vector3 = m.board.anchor(d["player"], d["lane"]) + Vector3(0, 0.6, 0)
+				var pos: Vector3 = spot(m, d["player"], d["lane"]) + Vector3(0, 0.4, 0)
 				Burst.spawn(m, &"heal", pos, Color.WHITE, 1.2)
 				Audio.sfx(&"heal")
 				DamageNumber.spawn(m, _number_pos(m, d["player"], d["lane"]), "+%d" % d["amount"], HEAL)
@@ -298,17 +298,28 @@ static func _view(m: MatchController, d: Dictionary) -> CreatureView:
 ## screen, so its numbers sit lower and toward the middle line to stay visible.
 static func _number_pos(m: MatchController, p: int, lane: int) -> Vector3:
 	if p == MatchController.HUMAN:
-		return m.board.anchor(p, lane) + Vector3(0, 1.2, 0)
-	return m.board.anchor(p, lane) + Vector3(0, 0.7, 1.0)
+		return spot(m, p, lane) + Vector3(0, 0.9, 0)
+	return spot(m, p, lane) + Vector3(0, 0.6, 0.6)
 
 
 static func _creature_pos(m: MatchController, d: Dictionary) -> Vector3:
-	return m.board.anchor(d["player"], d["lane"]) + Vector3(0, 0.5, 0)
+	return spot(m, d["player"], d["lane"]) + Vector3(0, 0.3, 0)
 
 
-## Where a hero "stands": behind the middle of their lanes, toward their own edge.
+## Where the creature in a lane is right now (it wanders); the lane's centre if there is none.
+static func spot(m: MatchController, p: int, lane: int) -> Vector3:
+	var v: Variant = m.creature_views[p][lane]
+	if is_instance_valid(v):
+		return (v as Node3D).global_position
+	return m.board.anchor(p, lane)
+
+
+## Where a hero is: the rival at the far side of the table (their chest), you just in front of
+## your edge of the board.
 static func _hero_pos(m: MatchController, p: int) -> Vector3:
-	return Vector3(0, 1.4, 3.6 if p == MatchController.HUMAN else -3.6)
+	if p == MatchController.AI and m.rival:
+		return m.rival.bone_position(&"chest")
+	return Vector3(0, 1.2, 7.0)
 
 
 static func _source_pos(m: MatchController, source: Dictionary) -> Vector3:
@@ -321,7 +332,7 @@ static func _source_pos(m: MatchController, source: Dictionary) -> Vector3:
 		var b: Variant = m.building_views[p][lane]
 		if is_instance_valid(b):
 			return (b as Node3D).global_position + Vector3(0, 1.0, 0)
-	return m.board.anchor(p, lane) + Vector3(0, 0.6, 0)
+	return spot(m, p, lane) + Vector3(0, 0.4, 0)
 
 
 static func _element(m: MatchController, source: Dictionary) -> StringName:

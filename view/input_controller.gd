@@ -174,6 +174,10 @@ func _start_aim(lane: int, pos: Vector2) -> void:
 	mode = Mode.AIMING
 	_aim_lane = lane
 	_press_pos = pos
+	var av: CreatureView = _aim_view()
+	if av:
+		av.aiming = true
+		av.aim_at = av.position + Vector3(0, 0, -1)
 	var foe: int = 1 - _human()
 	var targets: Array[int] = Rules.attack_targets(_state(), _human(), lane)
 	for l: int in 4:
@@ -187,21 +191,50 @@ func _start_aim(lane: int, pos: Vector2) -> void:
 	_update_aim(pos)
 
 
+## The aimed creature's view (null if it is gone).
+func _aim_view() -> CreatureView:
+	if _aim_lane < 0:
+		return null
+	var v: Variant = match_ctl.creature_views[_human()][_aim_lane]
+	return v as CreatureView if is_instance_valid(v) else null
+
+
+## The arrow starts from wherever the aimed creature stands.
 func _aim_origin() -> Vector2:
-	return match_ctl.rig.camera.unproject_position(match_ctl.board.anchor(_human(), _aim_lane))
+	var v: CreatureView = _aim_view()
+	var at: Vector3 = v.global_position if v else match_ctl.board.anchor(_human(), _aim_lane)
+	return match_ctl.rig.camera.unproject_position(at)
 
 
-## The enemy lane under the pointer, -1 for the enemy hero's corner, -2 for nothing.
+## The table between the board's far edge and the rival (world x/z): pointing there means the hero.
+static func table_strip() -> Rect2:
+	var t: Rect2 = Board.TRAY_RECT
+	return Rect2(t.position.x, Room.TABLE_RECT.position.y, t.size.x, t.position.y - Room.TABLE_RECT.position.y)
+
+
+## The enemy lane under the pointer, -1 for the enemy hero (the rival, their corner panel or the
+## table in front of them), -2 for nothing.
 func _target_at(pos: Vector2) -> int:
-	if match_ctl.hud.hero_rect(false).has_point(pos):
-		return -1
-	var hit: Dictionary = match_ctl.board.lane_at_screen(match_ctl.rig.camera, pos)
+	var cam: Camera3D = match_ctl.rig.camera
+	var hit: Dictionary = match_ctl.board.lane_at_screen(cam, pos)
 	if not hit.is_empty() and int(hit["player"]) != _human():
 		return int(hit["lane"])
+	if match_ctl.hud.hero_rect(false).has_point(pos):
+		return -1
+	if match_ctl.rival and match_ctl.rival.hero_rect(cam).has_point(pos):
+		return -1
+	var g: Vector3 = match_ctl.board.ground_at_screen(cam, pos)
+	if g.is_finite() and table_strip().has_point(Vector2(g.x, g.z)):
+		return -1
 	return -2
 
 
 func _update_aim(pos: Vector2) -> void:
+	var v: CreatureView = _aim_view()
+	if v:
+		var g: Vector3 = match_ctl.board.ground_at_screen(match_ctl.rig.camera, pos)
+		if g.is_finite():
+			v.aim_at = g
 	var t: int = _target_at(pos)
 	var ok: bool = t != -2 and t in Rules.attack_targets(_state(), _human(), _aim_lane)
 	match_ctl.attack_arrow.aim(_aim_origin(), pos, ok)
@@ -252,7 +285,16 @@ func request_boop(lane: int) -> void:
 	_begin_card_targets(-1, lane, true)
 
 
+## A creature left the board: if it was the one being aimed with, drop the aim.
+func creature_gone(p: int, lane: int) -> void:
+	if mode == Mode.AIMING and p == _human() and lane == _aim_lane:
+		cancel()
+
+
 func cancel() -> void:
+	var v: CreatureView = _aim_view()
+	if v:
+		v.aiming = false
 	mode = Mode.IDLE
 	_targets = []
 	_aim_lane = -1
