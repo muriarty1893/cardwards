@@ -346,8 +346,8 @@ func place_creature(p: int, l: int, c: CardData) -> CreatureView:
 func place_building(p: int, l: int, c: CardData) -> BuildingView:
 	var v := BuildingView.create(c)
 	add_child(v)
-	var off: Vector3 = BuildingView.OFFSET if p == HUMAN else -BuildingView.OFFSET
-	v.position = board.anchor(p, l) - Vector3(0, CreatureView.BASE_Y, 0) + off
+	var bp: Vector3 = board.building_point(p, l)
+	v.position = Vector3(bp.x, 0.0, bp.z)
 	v.rotation.y = 0.0 if p == HUMAN else PI
 	building_views[p][l] = v
 	return v

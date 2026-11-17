@@ -5,9 +5,9 @@ extends Node3D
 
 const BASE_Y := 0.58
 ## Standing height in world units by creature level (index 0 unused).
-const HEIGHTS: Array[float] = [1.0, 1.0, 1.3, 1.7]
+const HEIGHTS: Array[float] = [0.55, 0.55, 0.72, 0.95]
 ## Wide flyers are scaled down so they stay inside their lane.
-const MAX_WIDTH := 1.9
+const MAX_WIDTH := 1.05
 const ATTACK_ANIMS: Array[StringName] = [&"Punch", &"Bite_Front", &"Headbutt"]
 const HIT_ANIMS: Array[StringName] = [&"HitReact", &"HitRecieve"]
 const IDLE_ANIMS: Array[StringName] = [&"Idle", &"Flying_Idle"]
@@ -55,7 +55,7 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 func _add_blob() -> void:
 	var box: AABB = Palette.bounds(body)
 	var w: float = maxf(box.size.x, box.size.z) * body.scale.x
-	_blob = BlobShadow.build(clampf(w * 0.36, 0.3, 0.7), height, Island.TOP_Y - BASE_Y + 0.02)
+	_blob = BlobShadow.build(clampf(w * 0.4, 0.14, 0.34), height, Island.TOP_Y - BASE_Y + 0.02)
 	add_child(_blob)
 
 
@@ -167,7 +167,7 @@ func set_readiness(r: Readiness) -> void:
 func _show_ring() -> void:
 	if is_instance_valid(_ring):
 		return
-	var w: float = clampf(height * 0.42, 0.42, 0.75)
+	var w: float = clampf(height * 0.55, 0.24, 0.42)
 	_ring = Node3D.new()
 	_ring.name = "ReadyRing"
 	_ring.position.y = Island.TOP_Y - BASE_Y + 0.04
@@ -176,8 +176,8 @@ func _show_ring() -> void:
 	# A dark ink band under a bright green one, so it reads on every lane colour.
 	var ink: StandardMaterial3D = _ring_material(Color(Palette.INK, 0.6), -91)
 	var glow: StandardMaterial3D = _ring_material(Color("#5dff3a", 1.0), -90)
-	_ring.add_child(_torus(w, 0.13, ink))
-	_ring.add_child(_torus(w, 0.08, glow))
+	_ring.add_child(_torus(w, 0.07, ink))
+	_ring.add_child(_torus(w, 0.045, glow))
 	_ring_tw = _ring.create_tween().set_loops()
 	_ring_tw.tween_property(glow, "albedo_color:a", 0.55, 0.6).set_trans(Tween.TRANS_SINE)
 	_ring_tw.tween_property(glow, "albedo_color:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
@@ -216,10 +216,10 @@ func _puff_z() -> void:
 	z.outline_modulate = Palette.INK
 	z.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	z.no_depth_test = true
-	z.position = Vector3(0.25, Island.TOP_Y - BASE_Y + height + 0.2, 0)
+	z.position = Vector3(0.12, Island.TOP_Y - BASE_Y + height + 0.12, 0)
 	add_child(z)
 	var tw := z.create_tween().set_parallel(true)
-	tw.tween_property(z, "position", z.position + Vector3(0.25, 0.55, 0), 1.4)
+	tw.tween_property(z, "position", z.position + Vector3(0.15, 0.4, 0), 1.4)
 	tw.tween_property(z, "modulate:a", 0.0, 1.4).set_ease(Tween.EASE_IN)
 	tw.tween_property(z, "outline_modulate:a", 0.0, 1.4).set_ease(Tween.EASE_IN)
 	tw.chain().tween_callback(z.queue_free)

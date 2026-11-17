@@ -13,10 +13,9 @@ const PROPS: Array[Array] = [
 ## Rock and crystal tints per land (alpha = strength).
 const TINTS: Array[Color] = [Color(1, 1, 1, 0), Color("#3a2626", 0.75), Color(1, 1, 1, 0), Color("#e4f3ff", 0.65)]
 const SWAY: Array[float] = [0.05, 0.0, 0.0, 0.0]
-const HALF := Vector2(1.1, 2.15)
-const CREATURE_R := 0.8
-const BUILDING_R := 0.6
-const BOOP_R := 0.5
+const HALF := Vector2(Island.WIDTH / 2.0 - 0.06, Island.LENGTH / 2.0 - 0.12)
+const BUILDING_R := 0.8
+const BOOP_R := 0.45
 
 
 static func build(land: int, player: int, seed: int) -> Node3D:
@@ -31,7 +30,7 @@ static func build(land: int, player: int, seed: int) -> Node3D:
 	while placed < count and guard < 400:
 		guard += 1
 		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
-		var pos := Vector3(side * rng.randf_range(0.78, 1.04), 0.0, rng.randf_range(-HALF.y, HALF.y))
+		var pos := Vector3(side * rng.randf_range(HALF.x - 0.22, HALF.x), 0.0, rng.randf_range(-HALF.y, HALF.y))
 		if not is_clear(pos, player):
 			continue
 		var pick: Array = options[rng.randi_range(0, options.size() - 1)]
@@ -46,14 +45,13 @@ static func build(land: int, player: int, seed: int) -> Node3D:
 static func is_clear(local: Vector3, player: int) -> bool:
 	if absf(local.x) > HALF.x or absf(local.z) > HALF.y:
 		return false
+	# Tile-local spots (the tile centre is LANE_X, STRIP_Z): building at the back, boop beside it.
 	var s: float = 1.0 if player == 0 else -1.0
-	var cz: float = Board.SIDE_Z[player] - Board.STRIP_Z[player]
+	var back_z: float = (Board.SEAM / 2.0 + Island.LENGTH * (1.0 - Board.BUILDING_DEPTH / 2.0)) * s - Board.STRIP_Z[player]
 	var p := Vector2(local.x, local.z)
-	if p.distance_to(Vector2(0.0, cz)) < CREATURE_R:
+	if p.distance_to(Vector2(0.0, back_z)) < BUILDING_R:
 		return false
-	if p.distance_to(Vector2(BuildingView.OFFSET.x * s, cz + BuildingView.OFFSET.z * s)) < BUILDING_R:
-		return false
-	if player == 0 and p.distance_to(Vector2(UnitOverlay.BOOP_OFFSET.x, cz + UnitOverlay.BOOP_OFFSET.z)) < BOOP_R:
+	if player == 0 and p.distance_to(Vector2(Board.BOOP_X, back_z)) < BOOP_R:
 		return false
 	return true
 

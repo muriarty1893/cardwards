@@ -10,9 +10,9 @@ signal sweep_finished
 const SEAT_POS := Vector3(0, 7.0, 14.0)
 const SEAT_LOOK := Vector3(0, 1.0, -2.0)
 const SEAT_FOV := 60.0
-const LEAN_POS := Vector3(0, 12.0, 8.0)
-const LEAN_LOOK := Vector3(0, 0.0, 0.5)
-const LEAN_FOV := 52.0
+const LEAN_POS := Vector3(0, 10.0, 9.0)
+const LEAN_LOOK := Vector3(0, 0.0, 2.5)
+const LEAN_FOV := 46.0
 ## One wheel notch at zoom speed 1.
 const ZOOM_STEP := 0.15
 ## Zoom follows its target with this time constant (≈ settled in 0.25 s).

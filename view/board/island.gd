@@ -6,8 +6,8 @@ extends Node3D
 ## GUARD: an enemy Guard that must be attacked first (pulsing red-gold).
 enum Highlight { OFF, VALID, TARGET, GUARD }
 
-const WIDTH := 2.32
-const LENGTH := 4.5
+const WIDTH := 2.6
+const LENGTH := 5.4
 const TOP_Y := 0.14
 const EDGE: Array[Color] = [Color("#ffe14a"), Color("#4ae8ff")]
 

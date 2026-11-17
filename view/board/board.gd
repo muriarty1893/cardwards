@@ -1,21 +1,35 @@
 class_name Board
 extends Node3D
-## The board on the table: soil base, stone rim and the 8 lanes, plus the lanes' ambient particles.
-## The room around it (light, environment, scenery) is Room.
+## The board: a wooden tray on the table holding 8 land tiles (4 lanes, each split at the middle
+## into your half and the rival's), a glowing seam along the middle, and the lanes' ambient
+## particles. Each half-lane has a building spot at its back (owner's edge), a roam zone in front
+## of it for the creature, and (your side) a boop button spot. The room around it is Room.
 
-const LANE_X: Array[float] = [-3.6, -1.2, 1.2, 3.6]
-## Centre of each side's strips. Player 0 (human) is near the camera.
-const STRIP_Z: Array[float] = [2.33, -2.33]
-## Where creatures stand: near the centre line, facing off.
-const SIDE_Z: Array[float] = [1.45, -1.45]
+const LANE_X: Array[float] = [-4.05, -1.35, 1.35, 4.05]
+## Width of the glowing seam between the two halves (z = 0).
+const SEAM := 0.3
+## Centre of each side's tiles. Player 0 (human) is near the camera.
+const STRIP_Z: Array[float] = [2.85, -2.85]
+## The wooden tray around the tiles (world x/z).
+const TRAY_RECT := Rect2(-6.0, -6.1, 12.0, 12.2)
+## The back of each half-lane (owner's edge) holds the building; the rest is the roam zone.
+const BUILDING_DEPTH := 0.25
+## Roam zone inset from the lane edges and the seam.
+const ROAM_INSET := 0.25
+## Boop button spot: this far left of the lane centre, level with the building.
+const BOOP_X := -0.95
+## Origin height of a creature view (its feet are on the tile surface, Island.TOP_Y).
 const CREATURE_Y := 0.58
+const FRAME := Color("#8a5a34")
+const FRAME_DARK := Color("#5b3a22")
+const BRASS := Color("#e0b04a")
+const SEAM_COLOR := Color("#ffe9a8")
 var ambient: Ambient
 var _islands: Array[Array] = [[], []]
 
 
 func build(lands: Array[Array]) -> void:
-	_build_base()
-	_build_rim()
+	_build_tray()
 	for p: int in 2:
 		for l: int in 4:
 			var isl := Island.new()
@@ -43,13 +57,40 @@ func island(player: int, lane: int) -> Island:
 	return _islands[player][lane]
 
 
+## Centre of the creature's roam zone, at a creature view's origin height.
 func anchor(player: int, lane: int) -> Vector3:
-	return Vector3(LANE_X[lane], CREATURE_Y, SIDE_Z[player])
+	var c: Vector2 = roam_rect(player, lane).get_center()
+	return Vector3(c.x, CREATURE_Y, c.y)
 
 
-## World point a creature lunges to when attacking the hero behind `player`'s lane.
+## Where `player`'s creature in `lane` may wander (world x/z): the half-lane's front part (seam
+## side), inset from the lane edges and the seam.
+func roam_rect(player: int, lane: int) -> Rect2:
+	var s: float = 1.0 if player == 0 else -1.0
+	var near: float = SEAM / 2.0 + ROAM_INSET
+	var far: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH) - 0.1
+	var z0: float = minf(near * s, far * s)
+	var w: float = Island.WIDTH - 2.0 * ROAM_INSET
+	return Rect2(LANE_X[lane] - w / 2.0, z0, w, far - near)
+
+
+## Centre of the half-lane's back part (owner's edge), on the tile surface.
+func building_point(player: int, lane: int) -> Vector3:
+	var s: float = 1.0 if player == 0 else -1.0
+	var z: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH / 2.0)
+	return Vector3(LANE_X[lane], Island.TOP_Y, z * s)
+
+
+## The human's boop button spot in `lane`, beside the building.
+func boop_point(lane: int) -> Vector3:
+	var b: Vector3 = building_point(0, lane)
+	return Vector3(LANE_X[lane] + BOOP_X, Island.TOP_Y, b.z)
+
+
+## World point a creature lunges to when attacking the hero behind `player`'s lane: just past
+## the tray edge on that side.
 func hero_point(player: int, lane: int) -> Vector3:
-	return Vector3(LANE_X[lane], CREATURE_Y, 3.6 if player == 0 else -3.6)
+	return Vector3(LANE_X[lane], CREATURE_Y, 6.6 if player == 0 else -6.6)
 
 
 func lane_at_screen(cam: Camera3D, screen_pos: Vector2) -> Dictionary:
@@ -74,26 +115,34 @@ func _box(size: Vector3) -> BoxMesh:
 	return b
 
 
-## Dark soil under the lane block, showing as borders between lanes.
-func _build_base() -> void:
-	add_child(Palette.mesh(_box(Vector3(9.8, 0.1, 9.3)), Toon.plain(Color("#5a4632")), Vector3(0, 0.05, 0), false))
-
-
-## Low stone wall with a turf top around the lane block.
-func _build_rim() -> void:
-	var outer := Vector2(10.4, 9.9)
-	var w: float = 0.35
-	var h: float = 0.22
-	var stone: ShaderMaterial = Toon.plain(Color("#c7b48e"))
-	var turf: ShaderMaterial = Toon.plain(Color("#74c257"))
-	var parts: Array[Array] = [
-		[Vector3(outer.x, h, w), Vector3(0, h / 2.0, outer.y / 2.0 - w / 2.0)],
-		[Vector3(outer.x, h, w), Vector3(0, h / 2.0, -outer.y / 2.0 + w / 2.0)],
-		[Vector3(w, h, outer.y - 2.0 * w), Vector3(outer.x / 2.0 - w / 2.0, h / 2.0, 0)],
-		[Vector3(w, h, outer.y - 2.0 * w), Vector3(-outer.x / 2.0 + w / 2.0, h / 2.0, 0)],
+## Wooden tray: a dark base under the tiles (showing as thin gaps between lanes), a raised frame
+## with brass corner caps, low dividers between lanes and a glowing seam across the middle.
+func _build_tray() -> void:
+	var r: Rect2 = TRAY_RECT
+	var wood: ShaderMaterial = Toon.plain(FRAME)
+	var dark: ShaderMaterial = Toon.plain(FRAME_DARK)
+	var brass: ShaderMaterial = Toon.plain(BRASS)
+	add_child(Palette.mesh(_box(Vector3(r.size.x, 0.12, r.size.y)), dark, Vector3(r.get_center().x, 0.06, r.get_center().y), false))
+	var w: float = 0.42
+	var h: float = 0.3
+	var c: Vector2 = r.get_center()
+	var sides: Array[Array] = [
+		[Vector3(r.size.x, h, w), Vector3(c.x, h / 2.0, r.end.y - w / 2.0)],
+		[Vector3(r.size.x, h, w), Vector3(c.x, h / 2.0, r.position.y + w / 2.0)],
+		[Vector3(w, h, r.size.y - 2.0 * w), Vector3(r.end.x - w / 2.0, h / 2.0, c.y)],
+		[Vector3(w, h, r.size.y - 2.0 * w), Vector3(r.position.x + w / 2.0, h / 2.0, c.y)],
 	]
-	for part: Array in parts:
-		var size: Vector3 = part[0]
-		var pos: Vector3 = part[1]
-		add_child(Palette.mesh(_box(size), stone, pos))
-		add_child(Palette.mesh(_box(Vector3(size.x - 0.06, 0.05, size.z - 0.06)), turf, pos + Vector3(0, h / 2.0 + 0.02, 0), false))
+	for part: Array in sides:
+		add_child(Palette.mesh(_box(part[0]), wood, part[1]))
+	for corner: Vector2 in [r.position, Vector2(r.end.x, r.position.y), Vector2(r.position.x, r.end.y), r.end]:
+		var inward := Vector2(signf(c.x - corner.x), signf(c.y - corner.y)) * (w / 2.0)
+		add_child(Palette.mesh(_box(Vector3(w + 0.1, h + 0.08, w + 0.1)), brass, Vector3(corner.x + inward.x, (h + 0.08) / 2.0, corner.y + inward.y)))
+	# Low dividers between lanes.
+	for i: int in 3:
+		var x: float = (LANE_X[i] + LANE_X[i + 1]) / 2.0
+		add_child(Palette.mesh(_box(Vector3(0.08, 0.2, r.size.y - 2.0 * w)), dark, Vector3(x, 0.1, c.y), false))
+	# The seam: a thin warm glow across the middle.
+	var seam_mat := StandardMaterial3D.new()
+	seam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	seam_mat.albedo_color = SEAM_COLOR
+	add_child(Palette.mesh(_box(Vector3(r.size.x - 2.0 * w, 0.04, SEAM * 0.6)), seam_mat, Vector3(c.x, Island.TOP_Y + 0.01, 0.0), false))

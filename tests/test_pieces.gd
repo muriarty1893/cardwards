@@ -63,3 +63,22 @@ func test_death_does_not_return_to_idle() -> bool:
 	v.queue_free()
 	await tree.process_frame
 	return true
+
+
+func test_piece_heights() -> bool:
+	assert_eq(CreatureView.HEIGHTS, [0.55, 0.55, 0.72, 0.95] as Array[float], "creature heights by level")
+	var lvl1: CreatureView = CreatureView.create(CardDB.card(&"mossback"))
+	var h1: float = Palette.bounds(lvl1.body).size.y * lvl1.body.scale.y
+	assert_true(absf(h1 - 0.55) < 0.055, "level-1 height %.3f ~ 0.55" % h1)
+	lvl1.free()
+	var lvl3: CreatureView = CreatureView.create(CardDB.card(&"elder_shroomhulk"))
+	var box3: AABB = Palette.bounds(lvl3.body)
+	var h3: float = box3.size.y * lvl3.body.scale.y
+	var w3: float = maxf(box3.size.x, box3.size.z) * lvl3.body.scale.x
+	assert_true(absf(h3 - 0.95) < 0.095 or (h3 < 0.95 and absf(w3 - CreatureView.MAX_WIDTH) < 0.03), "level-3 height %.3f ~ 0.95 (or width-capped, w %.3f)" % [h3, w3])
+	lvl3.free()
+	var bv: BuildingView = BuildingView.create(CardDB.card(&"kiln_tower"))
+	var hb: float = Palette.bounds(bv).size.y
+	assert_true(absf(hb - 0.6 - Island.TOP_Y) < 0.06 or hb < 0.6 + Island.TOP_Y, "building height %.3f <= 0.6 above the tile" % hb)
+	bv.free()
+	return true
