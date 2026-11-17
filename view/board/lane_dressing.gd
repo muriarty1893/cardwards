@@ -99,6 +99,8 @@ static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator)
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_custom_data = true
+	# The Compatibility renderer (web) multiplies vertex COLOR by the instance colour: keep it white.
+	mm.use_colors = true
 	mm.mesh = _mesh(kind[0])
 	mm.instance_count = n
 	var colors: Array = kind[6]
@@ -118,6 +120,7 @@ static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator)
 		var c := Color(colors[rng.randi_range(0, colors.size() - 1)]).srgb_to_linear()
 		var shade: float = rng.randf_range(0.88, 1.08)
 		mm.set_instance_custom_data(i, Color(c.r * shade, c.g * shade, c.b * shade, float(kind[4])))
+		mm.set_instance_color(i, Color.WHITE)
 	var mmi := MultiMeshInstance3D.new()
 	mmi.name = String(kind[0]).capitalize()
 	mmi.multimesh = mm
