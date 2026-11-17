@@ -1,6 +1,6 @@
 class_name GameSettings
 extends Node
-## Player settings (autoload "Settings"): graphics quality and volumes, saved to `path`.
+## Player settings (autoload "Settings"): graphics quality, volumes and camera, saved to `path`.
 ## A missing or unreadable file means defaults. `--quality=low|high` overrides the file for one run.
 
 signal changed
@@ -11,11 +11,19 @@ enum Quality { HIGH, LOW }
 const DEFAULT_QUALITY: Quality = Quality.HIGH
 const DEFAULT_MUSIC := 0.8
 const DEFAULT_SFX := 0.9
+const DEFAULT_CLOSEUPS := true
+const DEFAULT_ZOOM_SPEED := 1.0
+const ZOOM_SPEED_MIN := 0.25
+const ZOOM_SPEED_MAX := 2.0
 const SECTION := "settings"
 
 var music_volume: float = DEFAULT_MUSIC
 var sfx_volume: float = DEFAULT_SFX
 var quality: Quality = default_quality()
+## The camera drops into the lane for each attack.
+var battle_closeups: bool = DEFAULT_CLOSEUPS
+## Mouse-wheel / pinch zoom speed multiplier.
+var zoom_speed: float = DEFAULT_ZOOM_SPEED
 var path: String = "user://settings.cfg"
 
 
@@ -42,6 +50,8 @@ func reset() -> void:
 	music_volume = DEFAULT_MUSIC
 	sfx_volume = DEFAULT_SFX
 	quality = default_quality()
+	battle_closeups = DEFAULT_CLOSEUPS
+	zoom_speed = DEFAULT_ZOOM_SPEED
 
 
 ## Integrated GPUs (like the HD 620 this was measured on) only hold 60 fps on Low.
@@ -59,6 +69,9 @@ func load_settings() -> void:
 	music_volume = _volume(cfg.get_value(SECTION, "music_volume", DEFAULT_MUSIC), DEFAULT_MUSIC)
 	sfx_volume = _volume(cfg.get_value(SECTION, "sfx_volume", DEFAULT_SFX), DEFAULT_SFX)
 	quality = _quality(cfg.get_value(SECTION, "quality", DEFAULT_QUALITY))
+	var bc: Variant = cfg.get_value(SECTION, "battle_closeups", DEFAULT_CLOSEUPS)
+	battle_closeups = bool(bc) if typeof(bc) == TYPE_BOOL else DEFAULT_CLOSEUPS
+	zoom_speed = _zoom_speed(cfg.get_value(SECTION, "zoom_speed", DEFAULT_ZOOM_SPEED), DEFAULT_ZOOM_SPEED)
 
 
 func save_settings() -> void:
@@ -66,6 +79,8 @@ func save_settings() -> void:
 	cfg.set_value(SECTION, "music_volume", music_volume)
 	cfg.set_value(SECTION, "sfx_volume", sfx_volume)
 	cfg.set_value(SECTION, "quality", int(quality))
+	cfg.set_value(SECTION, "battle_closeups", battle_closeups)
+	cfg.set_value(SECTION, "zoom_speed", zoom_speed)
 	var err: Error = cfg.save(path)
 	if err != OK:
 		push_warning("Settings: could not save %s (%s)" % [path, error_string(err)])
@@ -79,12 +94,30 @@ func set_value(key: StringName, value: Variant) -> void:
 			sfx_volume = _volume(value, sfx_volume)
 		&"quality":
 			quality = _quality(value)
+		&"battle_closeups":
+			battle_closeups = bool(value)
+		&"zoom_speed":
+			zoom_speed = _zoom_speed(value, zoom_speed)
 		_:
 			push_warning("Settings: unknown key %s" % key)
 			return
 	save_settings()
 	apply_audio()
 	changed.emit()
+
+
+func set_battle_closeups(on: bool) -> void:
+	set_value(&"battle_closeups", on)
+
+
+func set_zoom_speed(v: float) -> void:
+	set_value(&"zoom_speed", v)
+
+
+static func _zoom_speed(v: Variant, fallback: float) -> float:
+	if typeof(v) != TYPE_FLOAT and typeof(v) != TYPE_INT:
+		return fallback
+	return clampf(float(v), ZOOM_SPEED_MIN, ZOOM_SPEED_MAX)
 
 
 static func _volume(v: Variant, fallback: float) -> float:

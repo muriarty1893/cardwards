@@ -45,3 +45,35 @@ func test_corrupt_file_gives_defaults() -> bool:
 	assert_eq(s.quality, GameSettings.default_quality(), "default after unreadable file")
 	s.free()
 	return true
+
+
+func test_camera_settings_defaults() -> bool:
+	var s: GameSettings = _make("user://t_settings_cam_a.cfg", true)
+	s.load_settings()
+	assert_eq(s.battle_closeups, true, "close-ups on by default")
+	assert_eq(s.zoom_speed, 1.0, "zoom speed default")
+	s.free()
+	return true
+
+
+func test_camera_settings_roundtrip() -> bool:
+	var s: GameSettings = _make("user://t_settings_cam_b.cfg", true)
+	s.set_battle_closeups(false)
+	s.set_zoom_speed(1.7)
+	var t: GameSettings = _make("user://t_settings_cam_b.cfg", false)
+	t.load_settings()
+	assert_eq(t.battle_closeups, false, "close-ups saved")
+	assert_true(absf(t.zoom_speed - 1.7) < 0.0001, "zoom speed saved")
+	s.free()
+	t.free()
+	return true
+
+
+func test_zoom_speed_clamped() -> bool:
+	var s: GameSettings = _make("user://t_settings_cam_c.cfg", true)
+	s.set_zoom_speed(9.0)
+	assert_eq(s.zoom_speed, 2.0, "clamped high")
+	s.set_zoom_speed(0.0)
+	assert_eq(s.zoom_speed, 0.25, "clamped low")
+	s.free()
+	return true
