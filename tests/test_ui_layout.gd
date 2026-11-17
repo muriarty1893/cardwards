@@ -74,7 +74,9 @@ func test_settings_panel_writes_settings() -> bool:
 	settings.path = "user://t_settings_panel.cfg"
 	var p: SettingsPanel = SettingsPanel.make()
 	tree.root.add_child(p)
+	# Godot 4.7.2 no longer emits value_changed for values set from code; a drag does both.
 	p.music_slider.value = 0.25
+	p.music_slider.value_changed.emit(0.25)
 	assert_eq(settings.music_volume, 0.25, "slider wrote music volume")
 	p.quality_option.select(1)
 	p.quality_option.item_selected.emit(1)
