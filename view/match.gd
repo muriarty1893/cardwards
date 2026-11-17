@@ -5,6 +5,7 @@ extends Node3D
 ## Human is always player 0 (near the camera).
 const HUMAN := 0
 const AI := 1
+const RIVAL_MODEL := "res://assets/heroes/Barbarian.glb"
 ## Canvas layer of the HUD (stat bars sit below it, the board hover card above it).
 const HUD_LAYER := 2
 
@@ -12,6 +13,7 @@ var state: GameState
 var board: Board
 var rig: CameraRig
 var room: Room
+var rival: RivalSeat
 var hud: Hud
 var hand: Hand
 var toast: Toast
@@ -45,6 +47,9 @@ func _ready() -> void:
 	room = Room.new()
 	add_child(room)
 	room.build(Settings.quality)
+	rival = RivalSeat.new()
+	add_child(rival)
+	rival.setup(RIVAL_MODEL)
 	board = Board.new()
 	add_child(board)
 	var lands: Array[Array] = []

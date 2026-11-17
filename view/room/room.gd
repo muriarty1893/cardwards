@@ -26,6 +26,11 @@ const SUN_FROM := Vector3(-12, 30, -24)
 const DUST_HIGH := 70
 const PATH := "res://assets/room/%s.gltf"
 const NATURE := "res://assets/nature/%s.gltf"
+## The cat curls up on the armchair seat (height above the floor) and breathes slowly.
+const CAT_SEAT_Y := 4.2
+## How far forward of the armchair centre the seat cushion is.
+const CAT_FORWARD := 2.6
+const CAT := "res://assets/monsters/blob/Cat.gltf"
 const CANDY_COLORS: Array[Color] = [Color("#ff5a7a"), Color("#ffd84a"), Color("#5ad1ff"), Color("#7aff7a"), Color("#c38cff")]
 
 var env: Environment
@@ -34,6 +39,7 @@ var fill: DirectionalLight3D
 var _props: Array[Node3D] = []
 var _dust: CPUParticles3D
 var _island: Node3D
+var _cat: Node3D
 var _t: float = 0.0
 
 
@@ -83,6 +89,9 @@ func _process(delta: float) -> void:
 	if _island:
 		_island.position.y = 25.0 + sin(_t * 0.4) * 0.8
 		_island.rotation.y = sin(_t * 0.1) * 0.15
+	if _cat:
+		var breath: float = 1.0 + sin(_t * 1.6) * 0.04
+		_cat.scale = Vector3(1.0, breath, 1.0 + (breath - 1.0) * 0.5)
 
 
 # --- light and environment ---------------------------------------------------------------
@@ -337,9 +346,9 @@ func _build_dust() -> void:
 
 # --- furniture -----------------------------------------------------------------------------
 
-## A KayKit model placed with its footprint centred on `pos` and its base at `pos.y`, turned
-## `yaw` degrees (0 faces +z), scaled `k` (a number or a Vector3) KayKit units → board units.
-func _place(file: String, pos: Vector3, yaw: float = 0.0, k: Variant = SCALE, blob: float = 0.0, on_table: bool = false) -> Node3D:
+## A KayKit room model in the cartoon style, scaled `k` (a number or a Vector3) KayKit units →
+## board units, its footprint centred on the holder's origin and its base at y = 0.
+static func model(file: String, k: Variant = SCALE) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = file.to_pascal_case()
 	var inst := (load(PATH % file) as PackedScene).instantiate() as Node3D
@@ -350,12 +359,19 @@ func _place(file: String, pos: Vector3, yaw: float = 0.0, k: Variant = SCALE, bl
 	var c: Vector3 = box.get_center()
 	inst.position = Vector3(-c.x * s.x, -box.position.y * s.y, -c.z * s.z)
 	Toon.apply(inst)
+	return holder
+
+
+## A room model placed at `pos`, turned `yaw` degrees (0 faces +z); `blob` > 0 adds a ground
+## shadow of that radius; `on_table` things cast real shadows onto the table.
+func _place(file: String, pos: Vector3, yaw: float = 0.0, k: Variant = SCALE, blob: float = 0.0, on_table: bool = false) -> Node3D:
+	var holder: Node3D = model(file, k)
 	if not on_table:
-		_no_shadows(inst)
+		_no_shadows(holder)
 	holder.position = pos
 	holder.rotation_degrees.y = yaw
 	if blob > 0.0:
-		holder.add_child(BlobShadow.build(blob, box.size.y * s.y, 0.05))
+		holder.add_child(BlobShadow.build(blob, Palette.bounds(holder).size.y, 0.05))
 	if on_table:
 		holder.set_meta(&"table", true)
 	add_child(holder)
@@ -380,6 +396,8 @@ func _build_furniture() -> void:
 	_place("cabinet_medium_decorated", Vector3(HALF_W - 4.2, y, -20), -90, SCALE, 7.0)
 	_place("shelf_B_large_decorated", Vector3(HALF_W - 2.2, 9.0, -1.0), -90, 7.0)
 	_place("armchair_pillows", Vector3(31, y, 10), -107, SCALE, 7.5)
+	var fwd := Vector3(sin(deg_to_rad(-107.0)), 0, cos(deg_to_rad(-107.0)))
+	_add_cat(Vector3(31, y + CAT_SEAT_Y, 10) + fwd * CAT_FORWARD, -107)
 	_place("lamp_standing", Vector3(39, y, 22), 0, SCALE, 3.0)
 	_place("pictureframe_large_A", Vector3(HALF_W - 0.9, 6.0, 12), -90, 6.0)
 	_place("pictureframe_medium", Vector3(HALF_W - 0.9, 7.0, 21), -90, 6.0)
@@ -391,6 +409,41 @@ func _build_furniture() -> void:
 	# The rug under the table and the player's own chair.
 	_place("rug_rectangle_stripes_A", Vector3(0, y, 0), 0, Vector3(13, 3, 13))
 	_place("chair_A_wood", Vector3(0, y, TABLE_RECT.end.y + 4.0), 180, SCALE, 3.5)
+
+
+## The cat sleeping on the armchair: idle played very slowly, lying low, breathing.
+func _add_cat(pos: Vector3, yaw: float) -> void:
+	_cat = Palette.model(CAT, 3.2)
+	_cat.name = "Cat"
+	Toon.apply(_cat)
+	_no_shadows(_cat)
+	_cat.position = pos
+	_cat.rotation_degrees.y = yaw
+	var ap := _cat.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if ap and ap.has_animation(&"Idle"):
+		ap.play(&"Idle")
+		ap.speed_scale = 0.3
+	add_child(_cat)
+	_props.append(_cat)
+	var z := Label3D.new()
+	z.name = "Snore"
+	z.text = "z"
+	z.font = load(UiStyle.TITLE_FONT) as Font
+	z.font_size = 96
+	z.outline_size = 18
+	z.modulate = Color("#ffffff")
+	z.outline_modulate = Color(Palette.INK)
+	z.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	z.pixel_size = 0.012
+	add_child(z)
+	var tw := z.create_tween().set_loops()
+	tw.tween_callback(func() -> void:
+		z.position = pos + Vector3(0, 3.2, 0)
+		z.modulate.a = 0.0)
+	tw.tween_property(z, "modulate:a", 1.0, 0.6)
+	tw.parallel().tween_property(z, "position", pos + Vector3(0.8, 5.2, 0), 2.2)
+	tw.tween_property(z, "modulate:a", 0.0, 0.6)
+	tw.tween_interval(0.8)
 
 
 # --- the table and what is on it ------------------------------------------------------------

@@ -20,6 +20,9 @@ func _ready() -> void:
 	var room := Room.new()
 	add_child(room)
 	room.build(Settings.quality)
+	var rival := RivalSeat.new()
+	add_child(rival)
+	rival.setup(MatchController.RIVAL_MODEL)
 	var board := Board.new()
 	add_child(board)
 	var a: Array[int] = [0, 1, 2, 3]
