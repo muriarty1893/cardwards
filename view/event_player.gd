@@ -127,7 +127,10 @@ func _play_creature(d: Dictionary) -> void:
 	var from: Vector2 = m.hand.last_drop_pos if human and m.hand.last_drop_pos != Vector2.ZERO else m.hud.hero_screen_pos(human)
 	FlyingCard.fly(m.hud, c, from, lane_screen, human, 0.22 / speed)
 	await _wait(0.22)
-	var v: CreatureView = m.place_creature(p, d["lane"], c)
+	var drop := Vector3.INF
+	if human and m.hand.last_drop_pos != Vector2.ZERO:
+		drop = m.board.ground_at_screen(m.rig.camera, m.hand.last_drop_pos)
+	var v: CreatureView = m.place_creature(p, d["lane"], c, drop)
 	var target: Vector3 = v.position
 	v.position = target + Vector3(0, 3, 0)
 	v.busy = true
@@ -257,10 +260,13 @@ func move_piece(d: Dictionary, spin: bool) -> void:
 		_skip_move["%d:%d:%d" % [p, from, to]] = true  # Swap Trick emits the reverse move too
 	var dur: float = 0.4 / speed
 	var tw := create_tween().set_parallel(true)
+	var moved: Array[Array] = []
 	for pair: Array in [[a, to], [b, from]]:
 		if not is_instance_valid(pair[0]):
 			continue
-		var node: Node3D = pair[0]
+		var node: CreatureView = pair[0]
+		node.busy = true
+		moved.append(pair)
 		var start: Vector3 = node.position
 		var end: Vector3 = m.board.anchor(p, pair[1])
 		tw.tween_method(func(k: float) -> void:
@@ -268,6 +274,11 @@ func move_piece(d: Dictionary, spin: bool) -> void:
 		if spin:
 			tw.tween_property(node, "rotation:y", node.rotation.y + TAU, dur)
 	await tw.finished
+	for pair: Array in moved:
+		var node: CreatureView = pair[0]
+		if is_instance_valid(node):
+			node.busy = false
+			node.wanderer.set_zone(m.board.roam_rect(p, pair[1]))
 	m.refresh_pieces()
 
 

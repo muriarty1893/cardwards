@@ -113,7 +113,8 @@ func test_attack_cross_lane_playback() -> bool:
 	await m.request_attack(0, 3)
 	await _settle(m)
 	var v: CreatureView = m.creature_views[0][0]
-	assert_true(v.position.distance_to(m.board.anchor(0, 0)) < 0.01, "attacker back home (%s)" % v.position)
+	assert_true(m.board.roam_rect(0, 0).grow(0.05).has_point(Vector2(v.position.x, v.position.z)), "attacker back in its lane (%s)" % v.position)
+	assert_true(not v.busy, "attacker released")
 	assert_eq(m.state.players[0].lanes[0].creature.damage, 2, "took the hit-back")
 	_views_match(m, "cross-lane attack")
 	m.queue_free()

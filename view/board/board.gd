@@ -118,15 +118,22 @@ func hero_point(player: int, lane: int) -> Vector3:
 	return Vector3(LANE_X[lane], CREATURE_Y, 6.6 if player == 0 else -6.6)
 
 
-func lane_at_screen(cam: Camera3D, screen_pos: Vector2) -> Dictionary:
+## The point on the tile surface under `screen_pos` (Vector3.INF if the ray misses the plane).
+func ground_at_screen(cam: Camera3D, screen_pos: Vector2) -> Vector3:
 	var origin: Vector3 = cam.project_ray_origin(screen_pos)
 	var dir: Vector3 = cam.project_ray_normal(screen_pos)
 	if absf(dir.y) < 0.0001:
-		return {}
+		return Vector3.INF
 	var t: float = (Island.TOP_Y - origin.y) / dir.y
 	if t < 0.0:
+		return Vector3.INF
+	return origin + dir * t
+
+
+func lane_at_screen(cam: Camera3D, screen_pos: Vector2) -> Dictionary:
+	var hit: Vector3 = ground_at_screen(cam, screen_pos)
+	if not hit.is_finite():
 		return {}
-	var hit: Vector3 = origin + dir * t
 	for p: int in 2:
 		for l: int in 4:
 			if island(p, l).contains(hit.x - LANE_X[l], hit.z - STRIP_Z[p]):

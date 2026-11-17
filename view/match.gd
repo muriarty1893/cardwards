@@ -14,6 +14,8 @@ var board: Board
 var rig: CameraRig
 var room: Room
 var rival: RivalSeat
+## Creatures placed so far (seeds each one's wandering).
+var _placed: int = 0
 var hud: Hud
 var hand: Hand
 var toast: Toast
@@ -347,13 +349,40 @@ func sync_all() -> void:
 	refresh_pieces()
 
 
-func place_creature(p: int, l: int, c: CardData) -> CreatureView:
+## Places a creature view in its half-lane (at `drop`, clamped into the roam zone, if given) and
+## starts it wandering.
+func place_creature(p: int, l: int, c: CardData, drop: Vector3 = Vector3.INF) -> CreatureView:
 	var v := CreatureView.create(c)
 	add_child(v)
-	v.position = board.anchor(p, l)
-	v.rotation.y = PI * 0.62 if p == HUMAN else PI * -0.12
+	var zone: Rect2 = board.roam_rect(p, l)
+	var at: Vector3 = board.anchor(p, l)
+	if drop.is_finite():
+		at = Vector3(clampf(drop.x, zone.position.x, zone.end.x), Board.CREATURE_Y, clampf(drop.z, zone.position.y, zone.end.y))
+	v.position = at
+	var heading: float = rest_heading(p)
+	v.rotation.y = heading
+	_placed += 1
+	v.wanderer.rest_heading = heading
+	v.wanderer.step_every = Wanderer.STEP_EVERY * (2.0 if Settings.quality == GameSettings.Quality.LOW else 1.0)
+	v.wanderer.footstep = func(pos: Vector3) -> void: _footstep(v, pos)
+	v.wanderer.neighbours = func() -> Array: return creature_views[p]
+	v.wanderer.setup(v, zone, hash([p, l, String(c.id), _placed]))
 	creature_views[p][l] = v
 	return v
+
+
+## Where a creature looks while standing: towards the enemy side, turned to the camera.
+static func rest_heading(p: int) -> float:
+	return PI * 0.62 if p == HUMAN else PI * -0.12
+
+
+## A small puff of the land the creature is walking on.
+func _footstep(v: CreatureView, pos: Vector3) -> void:
+	for p: int in 2:
+		var l: int = creature_views[p].find(v)
+		if l >= 0:
+			Burst.spawn(self, EventPlayer.LAND_BURSTS[state.players[p].lanes[l].land], pos, Color.WHITE, 0.3)
+			return
 
 
 func place_building(p: int, l: int, c: CardData) -> BuildingView:

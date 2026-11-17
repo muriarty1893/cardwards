@@ -12,6 +12,8 @@ const ATTACK_ANIMS: Array[StringName] = [&"Punch", &"Bite_Front", &"Headbutt"]
 const HIT_ANIMS: Array[StringName] = [&"HitReact", &"HitRecieve"]
 const IDLE_ANIMS: Array[StringName] = [&"Idle", &"Flying_Idle"]
 const FIDGET_ANIMS: Array[StringName] = [&"Wave", &"Yes", &"Dance"]
+## Clips for walking around the lane, first found wins (flyers drift with their flying loops).
+const MOVE_ANIMS: Array[StringName] = [&"Walk", &"Fast_Flying", &"Flying_Idle", &"Run"]
 
 var card: CardData
 var busy: bool = false
@@ -27,6 +29,16 @@ var _fidget_in: float = 0.0
 var _dying: bool = false
 ## Faded out while it can't be chosen as an attack target.
 var dimmed: bool = false
+## Wanders the lane (cosmetic); set up by the match with the roam zone.
+var wanderer: Wanderer
+## True while the player drags an attack from this creature; it faces `aim_at`.
+var aiming: bool = false
+var aim_at := Vector3.ZERO
+var _moving: bool = false
+## Models with no walking clip hop instead.
+var _hops: bool = false
+var _body_y: float = 0.0
+var _t: float = 0.0
 
 ## On your turn: READY to act (glowing ring), SLEEPING (played this turn: "z" puffs) or SPENT
 ## (already acted: slightly darker).
@@ -49,6 +61,12 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 	v._fidget_in = randf_range(6.0, 12.0)
 	if not BlobShadow.sun_shadows():
 		v._add_blob()
+	v._body_y = v.body.position.y
+	v._hops = v._anim == null or not (v._anim.has_animation(&"Walk") or v._anim.has_animation(&"Run") or v._anim.has_animation(&"Fast_Flying"))
+	v._t = randf() * TAU
+	v.wanderer = Wanderer.new()
+	v.wanderer.name = "Wanderer"
+	v.add_child(v.wanderer)
 	return v
 
 
@@ -121,9 +139,40 @@ func play_death() -> float:
 	return _play_first([&"Death"])
 
 
-## Plays one of the model's fidget clips. False when busy or the model has none.
-func fidget() -> bool:
+## Walking (true) or standing (false): plays the walk / flying loop, or idle.
+func play_move(on: bool) -> void:
+	if on == _moving:
+		return
+	_moving = on
+	if _anim == null or _dying:
+		return
+	if on:
+		for n: StringName in MOVE_ANIMS:
+			if _anim.has_animation(n):
+				_anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+				_anim.play(n, 0.15)
+				return
+	else:
+		_play_idle()
+
+
+func is_moving() -> bool:
+	return _moving
+
+
+## A friendly wave (at a neighbour); a nod if the model can't wave.
+func wave() -> void:
 	if busy or _dying or _anim == null:
+		return
+	for n: StringName in [&"Wave", &"Yes"]:
+		if _anim.has_animation(n):
+			_anim.play(n, 0.2)
+			return
+
+
+## Plays one of the model's fidget clips. False when busy, walking or the model has none.
+func fidget() -> bool:
+	if busy or _dying or _moving or _anim == null:
 		return false
 	var options: Array[StringName] = []
 	for n: StringName in FIDGET_ANIMS:
@@ -154,6 +203,8 @@ func set_readiness(r: Readiness) -> void:
 	if r == readiness:
 		return
 	readiness = r
+	if wanderer:
+		wanderer.set_resting(r == Readiness.SLEEPING)
 	if body:
 		Toon.set_shade(body, 1.0 if r == Readiness.SPENT else 0.0)
 	if r == Readiness.READY:
@@ -249,6 +300,14 @@ func is_frozen_visual() -> bool:
 
 
 func _process(delta: float) -> void:
+	_t += delta
+	if body and not _dying:
+		var lift: float = 0.0
+		if _moving and _hops:
+			lift = absf(sin(_t * 9.0)) * height * 0.12
+		elif not _moving and readiness == Readiness.READY and not busy:
+			lift = absf(sin(_t * 5.0)) * height * 0.04
+		body.position.y = _body_y + lift
 	if readiness == Readiness.SLEEPING:
 		_zzz_in -= delta
 		if _zzz_in <= 0.0:
