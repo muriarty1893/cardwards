@@ -69,18 +69,45 @@ func _ready() -> void:
 	if "--auto-attack" in OS.get_cmdline_user_args():
 		_demo_attack()
 		return
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--sweep-at="):
+			rig.hold_sweep(float(arg.substr(11)))
+			return
 	_begin(opening)
 
 
 func _begin(opening: Array[GameEvent]) -> void:
 	busy = true
 	refresh_ui()
-	await get_tree().create_timer(0.4).timeout
+	if _wants_sweep():
+		await rig.play_sweep()
+	else:
+		await get_tree().create_timer(0.4).timeout
 	await player.play(opening)
 	if state.active == AI:
 		await _ai_turn()
 	busy = false
 	refresh_ui()
+
+
+## The opening sweep around the room, with input locked; a click or key press skips it.
+func sweep() -> void:
+	var was: bool = busy
+	busy = true
+	refresh_ui()
+	await rig.play_sweep()
+	busy = was
+	refresh_ui()
+
+
+## No sweep headless (tests) or for a screenshot unless --sweep-at asks for one.
+func _wants_sweep() -> bool:
+	if DisplayServer.get_name() == "headless":
+		return false
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--shot=") or arg.begins_with("--fps-log="):
+			return false
+	return true
 
 
 func _demo_attack() -> void:

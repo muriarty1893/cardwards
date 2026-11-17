@@ -12,7 +12,7 @@ const TABLE_RECT := Rect2(-12.0, -9.5, 24.0, 19.0)
 ## Where the board lies: no prop may stand in this x/z rect above the tabletop.
 const BOARD_CLEAR := Rect2(-6.4, -6.4, 12.8, 12.8)
 ## Rival chair centre (z), just beyond the far table edge.
-const SEAT_Z := -11.8
+const SEAT_Z := -12.6
 const FLOOR_Y := -8.0
 const CEIL_Y := 24.0
 const HALF_W := 44.0

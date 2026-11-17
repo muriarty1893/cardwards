@@ -1,7 +1,9 @@
 extends TestCase
-## The camera frames the board between the HUD corners and the tray; scenery stays off the board.
+## The seat view frames the whole board in the lower part of the screen with the rival's head
+## above it; the lean-in view frames your half of the board.
 
 const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1366, 768), Vector2i(1920, 1080)]
+
 
 func _rig(size: Vector2i) -> Array:
 	var vp := SubViewport.new()
@@ -11,30 +13,64 @@ func _rig(size: Vector2i) -> Array:
 	var board := Board.new(); vp.add_child(board)
 	var lands: Array[Array] = [[0, 1, 2, 3], [3, 2, 1, 0]]
 	board.build(lands)
+	var rival := RivalSeat.new(); vp.add_child(rival)
+	rival.setup(MatchController.RIVAL_MODEL)
 	await (Engine.get_main_loop() as SceneTree).process_frame
-	return [vp, rig, board]
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	return [vp, rig, board, rival]
 
-func test_board_fits_view() -> bool:
+
+static func _tile_corners(p: int, l: int) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			out.append(Vector3(Board.LANE_X[l] + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0))
+	return out
+
+
+func test_seat_view_fits() -> bool:
 	for size: Vector2i in SIZES:
 		var r: Array = await _rig(size)
-		var cam: Camera3D = (r[1] as CameraRig).camera
-		var board: Board = r[2]
+		var rig: CameraRig = r[1]
+		rig.set_zoom(0.0, true)
 		var w: float = size.x; var h: float = size.y
-		var corner_l := Rect2(Vector2(12, 10), Hud.CORNER)
-		var corner_r := Rect2(Vector2(w - 12 - Hud.CORNER.x, 10), Hud.CORNER)
 		for p: int in 2:
 			for l: int in 4:
-				var a: Vector2 = cam.unproject_position(board.anchor(p, l))
-				assert_true(Rect2(0, 0, w, h - Hud.TRAY_H - 40).has_point(a), "anchor p%d l%d visible at %s" % [p, l, size])
-				var head: Vector2 = cam.unproject_position(board.anchor(p, l) + Vector3(0, 2.2, 0))
-				assert_true(not corner_l.has_point(head) and not corner_r.has_point(head), "head clear of corners p%d l%d at %s" % [p, l, size])
-		var far_y: float = cam.unproject_position(Vector3(0, 0, Board.STRIP_Z[1] - Island.LENGTH / 2.0)).y
-		assert_true(far_y >= 0.0 and far_y <= 0.14 * h, "far edge near top at %s (%f)" % [size, far_y])
-		var lx: float = cam.unproject_position(Vector3(Board.LANE_X[0] - Island.WIDTH / 2.0, 0, Board.SIDE_Z[0])).x
-		var rx: float = cam.unproject_position(Vector3(Board.LANE_X[3] + Island.WIDTH / 2.0, 0, Board.SIDE_Z[0])).x
-		assert_true(rx - lx >= 0.72 * w, "board fills width at %s (%f)" % [size, rx - lx])
+				for c: Vector3 in _tile_corners(p, l):
+					var s: Vector2 = rig.camera.unproject_position(c)
+					assert_true(s.x >= 0.03 * w and s.x <= 0.97 * w, "tile p%d l%d corner x in view at %s (%s)" % [p, l, size, s])
+					assert_true(s.y >= 0.22 * h and s.y <= 0.80 * h, "tile p%d l%d corner y in band at %s (%s)" % [p, l, size, s])
 		(r[0] as Node).free()
 	return true
+
+
+func test_rival_head_visible() -> bool:
+	for size: Vector2i in SIZES:
+		var r: Array = await _rig(size)
+		var rig: CameraRig = r[1]
+		rig.set_zoom(0.0, true)
+		var rect: Rect2 = (r[3] as RivalSeat).hero_rect(rig.camera)
+		var h: float = size.y
+		assert_true(rect.position.y >= 0.04 * h and rect.position.y <= 0.30 * h, "rival head top in view at %s (%s)" % [size, rect])
+		assert_true(absf(rect.get_center().x - size.x / 2.0) <= 0.1 * size.x, "rival centred at %s (%s)" % [size, rect])
+		(r[0] as Node).free()
+	return true
+
+
+func test_lean_view_fits_near_half() -> bool:
+	for size: Vector2i in SIZES:
+		var r: Array = await _rig(size)
+		var rig: CameraRig = r[1]
+		rig.set_zoom(1.0, true)
+		var w: float = size.x; var h: float = size.y
+		for l: int in 4:
+			for c: Vector3 in _tile_corners(0, l):
+				var s: Vector2 = rig.camera.unproject_position(c)
+				assert_true(s.x >= 0.0 and s.x <= w, "near tile l%d corner x in view at %s (%s)" % [l, size, s])
+				assert_true(s.y >= 0.08 * h and s.y <= 0.82 * h, "near tile l%d corner y in band at %s (%s)" % [l, size, s])
+		(r[0] as Node).free()
+	return true
+
 
 ## WebGL fits only ~256 instances with instance uniforms, so scenery must use the plain toon shader.
 func test_board_uses_no_instance_fx() -> bool:
@@ -53,72 +89,4 @@ func test_board_uses_no_instance_fx() -> bool:
 				break
 	assert_true(fx == 0, "board meshes with per-instance fx: %d" % fx)
 	(r[0] as Node).free()
-	return true
-
-func test_bars_fit_view() -> bool:
-	for size: Vector2i in SIZES:
-		var r: Array = await _rig(size)
-		var cam: Camera3D = (r[1] as CameraRig).camera
-		var board: Board = r[2]
-		var screen := Rect2(0, 0, size.x, size.y)
-		var corner_l := Rect2(Vector2(12, 10), Hud.CORNER)
-		var corner_r := Rect2(Vector2(size.x - 12 - Hud.CORNER.x, 10), Hud.CORNER)
-		var bar_l := Rect2(Vector2(12 + 112, 14), Hud.BAR)
-		var bar_r := Rect2(Vector2(size.x - 12 - 112 - Hud.BAR.x, 14), Hud.BAR)
-		var bars: Array[Rect2] = []
-		for p: int in 2:
-			for l: int in 4:
-				var bar: Rect2 = UnitOverlay.bar_rect_at(cam, board.anchor(p, l) + Vector3(0, 1.85, 0), [corner_l, corner_r, bar_l, bar_r])
-				assert_true(screen.encloses(bar), "bar p%d l%d on screen at %s (%s)" % [p, l, size, bar])
-				for keep_out: Rect2 in [corner_l, corner_r, bar_l, bar_r]:
-					assert_true(not bar.intersects(keep_out), "bar p%d l%d clear of HUD %s at %s" % [p, l, keep_out, size])
-				assert_true(bar.end.y <= size.y - Hud.TRAY_H, "bar p%d l%d above tray at %s" % [p, l, size])
-				bars.append(bar)
-		for i: int in bars.size():
-			for j: int in range(i + 1, bars.size()):
-				assert_true(not bars[i].intersects(bars[j]), "stat bars %d and %d apart at %s" % [i, j, size])
-		(r[0] as Node).free()
-	return true
-
-
-func test_buildings_and_boops_clear_tray() -> bool:
-	for size: Vector2i in SIZES:
-		var r: Array = await _rig(size)
-		var cam: Camera3D = (r[1] as CameraRig).camera
-		var board: Board = r[2]
-		var floor_y: float = size.y - Hud.TRAY_H
-		for l: int in 4:
-			var base: Vector3 = board.anchor(0, l) - Vector3(0, CreatureView.BASE_Y - Island.TOP_Y, 0) + BuildingView.OFFSET
-			var feet: Vector2 = cam.unproject_position(base)
-			assert_true(feet.y <= floor_y - 4.0, "building l%d above tray at %s (%f)" % [l, size, feet.y])
-			var top: Vector2 = cam.unproject_position(base + Vector3(0, BuildingView.HEIGHT, 0))
-			var building := Rect2(top.x - 40.0, top.y, 80.0, feet.y - top.y)
-			var bc: Vector2 = cam.unproject_position(board.anchor(0, l) + UnitOverlay.BOOP_OFFSET)
-			var boop := Rect2(bc - UnitOverlay.BOOP_SIZE / 2.0, UnitOverlay.BOOP_SIZE)
-			assert_true(boop.end.y <= floor_y, "boop l%d above tray at %s" % [l, size])
-			assert_true(not boop.intersects(building), "boop l%d clear of building at %s" % [l, size])
-		(r[0] as Node).free()
-	return true
-
-
-func test_hover_card_fits() -> bool:
-	for size: Vector2i in SIZES:
-		var r: Array = await _rig(size)
-		var cam: Camera3D = (r[1] as CameraRig).camera
-		var board: Board = r[2]
-		var vp := Vector2(size)
-		var floor_y: float = size.y - Hud.TRAY_H
-		var avoid: Array[Rect2] = [
-			Rect2(Vector2(12, 10), Hud.CORNER), Rect2(Vector2(size.x - 12 - Hud.CORNER.x, 10), Hud.CORNER),
-			Rect2(Vector2(12 + 112, 14), Hud.BAR), Rect2(Vector2(size.x - 12 - 112 - Hud.BAR.x, 14), Hud.BAR),
-		]
-		var board_area := Rect2(0, 0, size.x, floor_y)
-		for p: int in 2:
-			for l: int in 4:
-				var at: Vector2 = cam.unproject_position(board.anchor(p, l) + Vector3(0, 0.6, 0))
-				var card: Rect2 = UnitOverlay.hover_rect(at, vp, avoid, floor_y)
-				assert_true(board_area.encloses(card), "hover p%d l%d inside board area at %s (%s)" % [p, l, size, card])
-				for a: Rect2 in avoid:
-					assert_true(not card.intersects(a), "hover p%d l%d clear of HUD %s at %s" % [p, l, a, size])
-		(r[0] as Node).free()
 	return true

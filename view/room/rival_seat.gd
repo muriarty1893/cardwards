@@ -5,18 +5,23 @@ extends Node3D
 ## cheer, flinch) blended over it. Thinking turns the head; losing slumps the back and head.
 
 const SIT := &"Sit_Chair_Idle"
-## Upper-body pose that holds the card fan up in front of the chest (chosen by screenshot).
-const HOLD := &"2H_Melee_Idle"
+## Upper-body pose that holds the card fan up beside the face (chosen by screenshot); the head
+## keeps the seated pose so the rival looks at the board.
+const HOLD := &"1H_Ranged_Aiming"
 const PLAY := &"Interact"
 const CHEER := &"Cheer"
 const FLINCH := &"Hit_A"
 ## Held weapons and props in the KayKit model that a card player has put away.
 const HIDE: Array[String] = ["1H_Axe_Offhand", "Barbarian_Round_Shield", "1H_Axe", "2H_Axe", "Mug", "Barbarian_Cape"]
-## KayKit units → board units for the seated model (a touch larger than the furniture so the
-## rival reads well from the player's seat).
-const MODEL_SCALE := Room.SCALE * 1.15
-## Where the model's root sits relative to the chair (chair-local), so the hips meet the seat.
-const MODEL_OFFSET := Vector3(0.0, 0.0, 0.0)
+## KayKit units → board units for the seated model: a little under furniture scale, so from the
+## player's seat the rival reads as across the table without crowding the board.
+const MODEL_SCALE := Room.SCALE * 0.86
+## The model sits this much higher than a plain chair would put it, so its chest and the card
+## fan clear the tabletop; the chair is stretched taller to match (seat at ~0.55 KayKit units).
+const LIFT := 2.4
+## The seated pose puts the hips behind the model's root; this moves them onto the seat.
+const FORWARD := 2.6
+const CHAIR_K := Vector3(Room.SCALE, Room.SCALE + LIFT / 0.55, Room.SCALE)
 const CARD_BACK := Color("#6a46c8")
 const CARD_RIM := Color("#ffcf3a")
 
@@ -55,10 +60,10 @@ class Pose extends SkeletonModifier3D:
 
 func setup(model_path: String) -> void:
 	position = Vector3(0, Room.FLOOR_Y, Room.SEAT_Z)
-	add_child(Room.model("chair_A_wood", Room.SCALE))
+	add_child(Room.model("chair_A_wood", CHAIR_K))
 	model = (load(model_path) as PackedScene).instantiate() as Node3D
 	model.scale = Vector3.ONE * MODEL_SCALE
-	model.position = MODEL_OFFSET
+	model.position = Vector3(0, LIFT, FORWARD)
 	add_child(model)
 	for n: String in HIDE:
 		var node: Node = model.find_child(n, true, false)
@@ -74,7 +79,7 @@ func setup(model_path: String) -> void:
 	_build_fan()
 
 
-func _upper_paths() -> Array[NodePath]:
+func _upper_paths(include_head: bool = true) -> Array[NodePath]:
 	var upper: Dictionary = {}
 	var spine: int = skeleton.find_bone("spine")
 	for b: int in skeleton.get_bone_count():
@@ -88,7 +93,8 @@ func _upper_paths() -> Array[NodePath]:
 	var a: Animation = _anim.get_animation(SIT)
 	for t: int in a.get_track_count():
 		var path: NodePath = a.track_get_path(t)
-		if upper.has(path.get_concatenated_subnames()):
+		var bone: String = path.get_concatenated_subnames()
+		if upper.has(bone) and (include_head or bone != "head"):
 			out.append(path)
 	return out
 
@@ -111,10 +117,13 @@ func _build_tree() -> void:
 	var shot := AnimationNodeOneShot.new()
 	shot.fadein_time = 0.15
 	shot.fadeout_time = 0.3
-	for f: AnimationNode in [hold, win, shot]:
+	for f: AnimationNode in [win, shot]:
 		f.filter_enabled = true
 		for p: NodePath in paths:
 			f.set_filter_path(p, true)
+	hold.filter_enabled = true
+	for p: NodePath in _upper_paths(false):
+		hold.set_filter_path(p, true)
 	_react_node = AnimationNodeAnimation.new()
 	_react_node.animation = PLAY
 	bt.add_node(&"sit", _looping(SIT))
