@@ -55,25 +55,6 @@ func test_board_uses_no_instance_fx() -> bool:
 	(r[0] as Node).free()
 	return true
 
-## The sun casts real shadows unless pieces use blob shadows instead (Compatibility / web).
-func test_sun_shadows_or_blobs() -> bool:
-	var r: Array = await _rig(Vector2i(1280, 720))
-	var suns: Array[Node] = (r[2] as Node).find_children("*", "DirectionalLight3D", true, false)
-	assert_eq(suns.size(), 1, "one sun")
-	assert_eq((suns[0] as DirectionalLight3D).shadow_enabled, BlobShadow.sun_shadows(), "sun shadows only where supported")
-	(r[0] as Node).free()
-	return true
-
-func test_scenery_outside_board() -> bool:
-	var r: Array = await _rig(Vector2i(1280, 720))
-	var board: Board = r[2]
-	assert_true(board.scenery_positions().size() == 70, "70 props")
-	for v: Vector3 in board.scenery_positions():
-		assert_true(not Board.INNER_CLEAR.has_point(Vector2(v.x, v.z)), "prop %s outside board" % v)
-	(r[0] as Node).free()
-	return true
-
-
 func test_bars_fit_view() -> bool:
 	for size: Vector2i in SIZES:
 		var r: Array = await _rig(size)

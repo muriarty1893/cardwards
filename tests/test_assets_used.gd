@@ -40,3 +40,14 @@ func test_candy_used() -> bool:
 	for f: String in _files("res://assets/candy", "glb"):
 		assert_true(("candy/%s" % f) in src, "candy/%s is used" % f)
 	return true
+
+
+func test_room_models_used() -> bool:
+	var paths: Array[String] = []
+	for f: String in DirAccess.get_files_at("res://view/room"):
+		if f.get_extension() == "gd":
+			paths.append("res://view/room/" + f)
+	var src: String = _source(paths)
+	for f: String in _files("res://assets/room", "gltf"):
+		assert_true(("\"%s\"" % f.get_basename()) in src, "room/%s is used" % f)
+	return true

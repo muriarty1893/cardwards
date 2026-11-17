@@ -36,7 +36,7 @@ static func build(radius: float, height: float = 1.0, at_y: float = 0.0) -> Blob
 	b.ground_y = at_y
 	b.position.y = at_y
 	# Shadow of the piece's middle: the ground shift of a point at 0.35 of its height.
-	var s: Vector3 = Board.SUN_FROM
+	var s: Vector3 = Room.SUN_FROM
 	b.lean = Vector3(-s.x / s.y, 0.0, -s.z / s.y) * height * 0.35
 	return b
 

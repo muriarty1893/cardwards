@@ -37,6 +37,10 @@ unless noted.
 
 - `heroes/`: "KayKit Character Pack: Adventurers" 1.0 (Mage, Barbarian),
   https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0 (see `heroes/LICENSE.txt`).
+- `room/`: "KayKit Furniture Bits" 1.0 (table, chair, armchair, couch, cabinet, shelf, lamp, picture
+  frames, rug, cactus, books), https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0, and
+  "KayKit Restaurant Bits" 1.0 (kitchen counters, wall cabinet, stove, bowl, plate, door),
+  https://github.com/KayKit-Game-Assets/KayKit-Restaurant-Bits-1.0. Both CC0 1.0.
 
 ## game-icons.net (https://game-icons.net), CC BY 3.0
 

@@ -1,5 +1,6 @@
 extends Node3D
-## Title screen over the board on its meadow, slowly orbiting: pick a deck and difficulty, then play.
+## Title screen over the table in the cottage, the camera drifting gently from the player's side:
+## pick a deck and difficulty, then play.
 
 const FLAVOUR: Dictionary = {
 	&"grove_guard": "Outlast them with healing.",
@@ -16,6 +17,9 @@ var _ui_root: Control
 
 
 func _ready() -> void:
+	var room := Room.new()
+	add_child(room)
+	room.build(Settings.quality)
 	var board := Board.new()
 	add_child(board)
 	var a: Array[int] = [0, 1, 2, 3]
@@ -37,7 +41,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta * 0.12
-	_cam.look_at_from_position(Vector3(sin(_t) * 14.0, 6.0, cos(_t) * 14.0 - 0.6), Vector3(0, 1.5, -0.6))
+	_cam.look_at_from_position(Vector3(sin(_t) * 7.0, 11.0 + sin(_t * 0.7) * 1.0, 20.0), Vector3(sin(_t) * 2.0, 1.5, -5.0))
 
 
 func _build_ui() -> void:

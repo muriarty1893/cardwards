@@ -60,8 +60,8 @@ func test_blob_leans_away_from_sun() -> bool:
 		parent.rotation.y = yaw
 		b._process(0.0)
 		var shift: Vector3 = b.global_position - parent.global_position
-		# The sun shines from +x +z (Board.SUN_FROM), so the blob shifts towards -x -z.
-		assert_true(shift.x < 0.0 and shift.z < 0.0, "leans away from sun at yaw %f (%s)" % [yaw, shift])
+		# The blob shifts away from the sun (Room.SUN_FROM) on the ground plane.
+		assert_true(shift.x * Room.SUN_FROM.x < 0.0 and shift.z * Room.SUN_FROM.z < 0.0, "leans away from sun at yaw %f (%s)" % [yaw, shift])
 		assert_true(is_equal_approx(shift.y, 0.1), "stays at ground height")
 	parent.free()
 	return true

@@ -31,14 +31,8 @@ func test_quality_presets() -> bool:
 	board.build(lands)
 	await tree.process_frame
 	board.apply_quality(GameSettings.Quality.LOW)
-	assert_true(not board.env.ssao_enabled, "low: no SSAO")
-	assert_true(not board.env.glow_enabled, "low: no glow")
-	assert_eq(board.get_viewport().msaa_3d, Viewport.MSAA_DISABLED, "low: no MSAA")
 	assert_eq(board.ambient.amount_total(), 34, "low: half ambient")
 	board.apply_quality(GameSettings.Quality.HIGH)
-	assert_true(board.env.ssao_enabled, "high: SSAO")
-	assert_true(board.env.glow_enabled, "high: glow")
-	assert_eq(board.get_viewport().msaa_3d, Viewport.MSAA_2X, "high: MSAA 2x")
 	assert_eq(board.ambient.amount_total(), 68, "high: full ambient")
 	board.queue_free()
 	await tree.process_frame

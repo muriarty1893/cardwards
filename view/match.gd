@@ -11,6 +11,7 @@ const HUD_LAYER := 2
 var state: GameState
 var board: Board
 var rig: CameraRig
+var room: Room
 var hud: Hud
 var hand: Hand
 var toast: Toast
@@ -41,6 +42,9 @@ func _ready() -> void:
 		AIRunner.play_match(state, ais, 6)
 	rig = CameraRig.new()
 	add_child(rig)
+	room = Room.new()
+	add_child(room)
+	room.build(Settings.quality)
 	board = Board.new()
 	add_child(board)
 	var lands: Array[Array] = []
