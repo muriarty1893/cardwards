@@ -2,7 +2,7 @@ class_name Room
 extends Node3D
 ## The sunny cottage room around the table: walls with three windows behind the rival, plank
 ## floor, ceiling beams, the hills and a floating island outside, sunbeams with dust, KayKit
-## furniture, and a few things on the table. Pure decoration; owns the sun, fill light and
+## furniture, and a few things on the table. Pure decoration; owns the sun and the
 ## environment. The tabletop is the plane y = 0 and the board lies on it.
 
 ## KayKit models are in their own units (a table is 1.0 tall); this many board units each.
@@ -21,8 +21,11 @@ const BACK_Z := 34.0
 ## Window centres (x); each is WINDOW_SIZE wide, from the sill at y = 0 up to y = WINDOW_SIZE.y.
 const WINDOWS: Array[float] = [-22.0, 0.0, 22.0]
 const WINDOW_SIZE := Vector2(12.0, 17.0)
-## The sun shines in through the windows from behind-left of the rival, steeply.
-const SUN_FROM := Vector3(-12, 30, -24)
+## The sun: high and from the left, a little in front, so pieces' faces towards the player stay
+## lit with one light (a second directional light costs ~8 ms a frame on integrated GPUs).
+const SUN_FROM := Vector3(-14, 30, 6)
+## The painted sunbeams slant in from the windows behind the rival (they are fake light).
+const BEAM_FROM := Vector3(-12, 30, -24)
 const DUST_HIGH := 70
 const PATH := "res://assets/room/%s.gltf"
 const NATURE := "res://assets/nature/%s.gltf"
@@ -35,9 +38,10 @@ const CANDY_COLORS: Array[Color] = [Color("#ff5a7a"), Color("#ffd84a"), Color("#
 
 var env: Environment
 var sun: DirectionalLight3D
-var fill: DirectionalLight3D
 var _props: Array[Node3D] = []
 var _dust: CPUParticles3D
+## The lower sheet of each sunbeam (hidden on Low).
+var _low_beams: Array[MeshInstance3D] = []
 var _island: Node3D
 var _cat: Node3D
 var _t: float = 0.0
@@ -78,6 +82,8 @@ func apply_quality(q: int) -> void:
 	if is_inside_tree():
 		get_viewport().msaa_3d = Viewport.MSAA_DISABLED if low else Viewport.MSAA_2X
 	_dust.amount = DUST_HIGH / 2 if low else DUST_HIGH
+	for b: MeshInstance3D in _low_beams:
+		b.visible = not low
 
 
 func _on_settings_changed() -> void:
@@ -102,7 +108,7 @@ func _build_lights() -> void:
 	env.background_color = Color("#e9d2ad")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("#fff2e0")
-	env.ambient_light_energy = 0.42
+	env.ambient_light_energy = 0.55
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.ssao_enabled = true
 	env.ssao_intensity = 1.0
@@ -122,14 +128,7 @@ func _build_lights() -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(sun)
 	sun.look_at_from_position(SUN_FROM, Vector3.ZERO)
-	# Soft bounce from the room behind the player, so faces turned to the camera are not dark.
-	fill = DirectionalLight3D.new()
-	fill.name = "Fill"
-	fill.light_color = Color("#fff4e6")
-	fill.light_energy = 0.3
-	fill.shadow_enabled = false
-	add_child(fill)
-	fill.look_at_from_position(Vector3(14, 16, 30), Vector3.ZERO)
+
 
 
 # --- walls, floor, ceiling ---------------------------------------------------------------
@@ -288,7 +287,7 @@ func _build_sunbeams() -> void:
 	mat.albedo_texture = _beam_texture()
 	mat.albedo_color = Color("#ffe6b0", 0.22)
 	mat.disable_receive_shadows = true
-	var d: Vector3 = -SUN_FROM.normalized()
+	var d: Vector3 = -BEAM_FROM.normalized()
 	for cx: float in WINDOWS:
 		var l: float = cx - WINDOW_SIZE.x / 2.0 + 0.6
 		var r: float = cx + WINDOW_SIZE.x / 2.0 - 0.6
@@ -309,6 +308,8 @@ func _build_sunbeams() -> void:
 			mi.material_override = mat
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(mi)
+			if y < 1.0:
+				_low_beams.append(mi)
 
 
 func _build_dust() -> void:

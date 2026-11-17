@@ -37,7 +37,7 @@ func test_sun_shadows_or_blobs() -> bool:
 			shadowed += 1
 	assert_eq(room.sun.shadow_enabled, BlobShadow.sun_shadows(), "sun shadows only where supported")
 	assert_true(shadowed <= 1, "only the sun may cast shadows (%d)" % shadowed)
-	assert_true(not room.fill.shadow_enabled, "fill light casts none")
+	assert_eq(room.find_children("*", "DirectionalLight3D", true, false).size(), 1, "one directional light (a second one costs ~8 ms a frame on integrated GPUs)")
 	room.free()
 	return true
 

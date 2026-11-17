@@ -56,6 +56,7 @@ func test_blob_leans_away_from_sun() -> bool:
 	(Engine.get_main_loop() as SceneTree).root.add_child(parent)
 	var b: BlobShadow = BlobShadow.build(0.5, 1.0, 0.1)
 	parent.add_child(b)
+	await (Engine.get_main_loop() as SceneTree).process_frame
 	for yaw: float in [0.0, PI, PI * 0.62]:
 		parent.rotation.y = yaw
 		b._process(0.0)

@@ -165,10 +165,10 @@ func _build_tray() -> void:
 		[Vector3(w, h, r.size.y - 2.0 * w), Vector3(r.position.x + w / 2.0, h / 2.0, c.y)],
 	]
 	for part: Array in sides:
-		add_child(Palette.mesh(_box(part[0]), wood, part[1]))
+		add_child(Palette.mesh(_box(part[0]), wood, part[1], false))
 	for corner: Vector2 in [r.position, Vector2(r.end.x, r.position.y), Vector2(r.position.x, r.end.y), r.end]:
 		var inward := Vector2(signf(c.x - corner.x), signf(c.y - corner.y)) * (w / 2.0)
-		add_child(Palette.mesh(_box(Vector3(w + 0.1, h + 0.08, w + 0.1)), brass, Vector3(corner.x + inward.x, (h + 0.08) / 2.0, corner.y + inward.y)))
+		add_child(Palette.mesh(_box(Vector3(w + 0.1, h + 0.08, w + 0.1)), brass, Vector3(corner.x + inward.x, (h + 0.08) / 2.0, corner.y + inward.y), false))
 	# Low dividers between lanes.
 	for i: int in 3:
 		var x: float = (LANE_X[i] + LANE_X[i + 1]) / 2.0

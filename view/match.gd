@@ -71,6 +71,8 @@ func _ready() -> void:
 	if "--auto-attack" in OS.get_cmdline_user_args():
 		_demo_attack()
 		return
+	if "--full-board" in OS.get_cmdline_user_args():
+		_demo_full_board()
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--sweep-at="):
 			rig.hold_sweep(float(arg.substr(11)))
@@ -134,6 +136,15 @@ func _demo_attack() -> void:
 	sync_all()
 	busy = true
 	await perform(Action.attack(HUMAN, 1, 1, Action.Hit.CRIT, false))
+
+
+## Dev: a ready creature in all 8 half-lanes (for frame-rate checks and screenshots).
+func _demo_full_board() -> void:
+	var ids: Array[StringName] = [&"mossback", &"flarebeak", &"gumdrop", &"iceling", &"glacier_tortoise", &"lollibat", &"cinderpup", &"sporeling"]
+	for p: int in 2:
+		for l: int in 4:
+			_demo_put(p, l, ids[p * 4 + l])
+	sync_all()
 
 
 func _demo_put(p: int, l: int, id: StringName) -> void:

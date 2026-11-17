@@ -26,8 +26,8 @@ const SWEEP_KEYS: Array[Array] = [
 	[Vector3(12, 12, 6), Vector3(0, 2, -6)],
 ]
 ## Close-up: this far behind and above the attacker, looking past it at the target.
-const CLOSE_BACK := 3.4
-const CLOSE_UP := 1.9
+const CLOSE_BACK := 2.4
+const CLOSE_UP := 2.5
 const CLOSE_FOV := 50.0
 const CLOSE_IN := 0.22
 const CLOSE_OUT := 0.3
@@ -201,7 +201,7 @@ func close_up(from: Vector3, to: Vector3, duration: float) -> void:
 		flat = Vector3(0, 0, -1)
 	var dir: Vector3 = flat.normalized()
 	var pos: Vector3 = from - dir * CLOSE_BACK + Vector3(0, CLOSE_UP, 0) + dir.cross(Vector3.UP) * 0.8
-	var look: Vector3 = from.lerp(to, 0.6) + Vector3(0, 0.4, 0)
+	var look: Vector3 = from.lerp(to, 0.75) + Vector3(0, 0.1, 0)
 	var close := Transform3D(Basis.looking_at(look - pos, Vector3.UP), pos)
 	var start: Transform3D = _base
 	var start_fov: float = _base_fov
