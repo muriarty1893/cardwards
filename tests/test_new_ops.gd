@@ -191,3 +191,17 @@ func test_new_ops_card_text() -> bool:
 	c = _spell(&"t", 0, [Fx.eff(&"on_play", &"destroy", 0, &"chosen_damaged_enemy")])
 	assert_eq(CardText.render(c), "Destroy a damaged enemy creature.", "finish off text")
 	return true
+
+
+func test_discounted_spell_shows_playable() -> bool:
+	var m: MatchController = await Fx.load_match()
+	var ps: GameState.PlayerState = m.state.players[0]
+	ps.hand.clear()
+	ps.hand.append(CardDB.card(&"thorn_lash"))   # 4 cost
+	Fx.put_creature(m.state, 1, 0, &"gumdrop")
+	ps.magic = 2
+	assert_true(not m.hand_playable()[0], "4-cost spell with 2 magic: not playable")
+	ps.spell_discount = 2
+	assert_true(m.hand_playable()[0], "with a 2 discount it is playable")
+	m.queue_free()
+	return true
