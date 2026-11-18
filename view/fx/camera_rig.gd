@@ -71,6 +71,8 @@ func _ready() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--zoom="):
 			zoom = clampf(float(arg.substr(7)), 0.0, 1.0)
+		elif arg.begins_with("--orbit="):
+			set_orbit(deg_to_rad(float(arg.substr(8))), 0.15, true)
 	_zoom_target = zoom
 	_base = pose_at(zoom)
 	_base_fov = fov_at(zoom)
