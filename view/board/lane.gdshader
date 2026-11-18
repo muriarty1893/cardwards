@@ -159,6 +159,30 @@ vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 
 			col = mix(col, vec3(0.78, 0.74, 0.66), stone);
 			col = mix(col, INK, edge * 0.7);
 		}
+	} else if (l == 2) {
+		if (v == 0) {          // Chocolate River: a glossy stream flowing along the side band
+			// Wider than the band (paint may run under the roam zone): it hugs the side and bends inward a little.
+			float inward = sign(-(side_band.x + side_band.z));
+			float cx = (side_band.x + side_band.z) * 0.5 + inward * (0.08 + 0.05 * sin(p.y * 2.2 + 0.5));
+			float half_w = 0.17;
+			float z0 = side_band.y;
+			float z1 = side_band.w;
+			float taper = smoothstep(z0 - 0.05, z0 + 0.15, p.y) * smoothstep(z1 + 0.05, z1 - 0.15, p.y);
+			float dist = abs(p.x - cx);
+			float body = (1.0 - smoothstep(half_w - 0.01, half_w + 0.01, dist)) * taper;
+			float flow = smoothstep(0.75, 0.95, sin(p.y * 18.0 - TIME * 2.4 + dist * 30.0));
+			vec3 choc = mix(vec3(0.3, 0.15, 0.08), vec3(0.72, 0.48, 0.3), flow * 0.7);
+			choc = mix(choc, vec3(0.2, 0.1, 0.05), smoothstep(half_w * 0.5, half_w, dist) * 0.5);
+			col = mix(col, choc, body);
+			col = mix(col, INK, (1.0 - smoothstep(0.004, 0.012, abs(dist - half_w))) * taper * 0.8);
+		} else if (v == 1) {   // Lollipop Grove: soft pink frosting swirls
+			float swirl = smoothstep(0.6, 0.7, fbm(pw * 1.4 + 2.0));
+			col = mix(col, vec3(1.0, 0.82, 0.9), swirl * 0.55);
+		} else {               // Sundae Peak: melted cream puddles around the sundae
+			float d = length((p - bc) / (bs * vec2(0.85, 0.6)));
+			float cream = (1.0 - smoothstep(0.75, 0.95, d + (fbm(pw * 4.0) - 0.5) * 0.3));
+			col = mix(col, vec3(1.0, 0.96, 0.9), cream * 0.85);
+		}
 	} else if (l == 3) {
 		if (v == 1) {          // Frozen Lake: a frosty halo around the ice
 			float d = length((p - bc) / (bs * vec2(0.7, 0.6)));

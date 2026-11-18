@@ -33,6 +33,12 @@ static func build(ctx: Dictionary) -> bool:
 			_frozen_lake(ctx)
 		Vector2i(3, 2):
 			_glacier_ridge(ctx)
+		Vector2i(2, 0):
+			_chocolate_river(ctx)
+		Vector2i(2, 1):
+			_lollipop_grove(ctx)
+		Vector2i(2, 2):
+			_sundae_peak(ctx)
 		_:
 			return false
 	return true
@@ -548,3 +554,142 @@ static func _glacier_ridge(ctx: Dictionary) -> void:
 		boulders.add_child(SetPieces.sphere(br, Color("#b8cfe0"), p + Vector3(0, br * 0.4, 0), Vector3(1.0, 0.8, 1.0), 8))
 		boulders.add_child(SetPieces.sphere(br * 0.75, SNOW, p + Vector3(0, br * 0.95, 0), Vector3(1.0, 0.35, 1.0), 8))
 	SetPieces.add_piece(ctx, boulders, Vector3.ZERO, other, other)
+
+
+# --- Candy Hills ------------------------------------------------------------------------------------
+
+const CANDY: Array[Color] = [Color("#ff5a7a"), Color("#ffd84a"), Color("#5ad1ff"), Color("#7aff7a"), Color("#c38cff")]
+const FROSTING := Color("#ffb3d6")
+const CREAM := Color("#fff4e6")
+const WAFER := Color("#e7b16a")
+
+
+## A chocolate stream along one side (painted by the lane shader) with frosting banks, a wafer bridge over it and
+## gumdrop rocks in the back corner.
+static func _chocolate_river(ctx: Dictionary) -> void:
+	var band: Rect2 = ctx["band"]
+	var rng := _rng(ctx)
+	var river := Node3D.new()
+	river.name = "ChocolateRiver"
+	# A frosting bank along the outer side (the stream itself is painted by the lane shader).
+	var count: int = int(band.size.y / 0.16)
+	var outer: float = band.position.x + 0.03 if band.get_center().x < 0.0 else band.end.x - 0.03
+	for i: int in count:
+		var z: float = lerpf(band.position.y + 0.05, band.end.y - 0.05, float(i) / maxf(count - 1, 1))
+		river.add_child(SetPieces.sphere(0.045, CREAM if i % 2 == 0 else FROSTING, Vector3(outer, 0.01, z), Vector3(1.0, 0.7, 1.5), 8))
+	SetPieces.add_piece(ctx, river, Vector3.ZERO, band, band)
+	var bridge := Node3D.new()
+	bridge.name = "WaferBridge"
+	var span: float = band.size.x * 0.95
+	var bz: float = lerpf(band.position.y, band.end.y, rng.randf_range(0.3, 0.7))
+	for j: int in 3:
+		bridge.add_child(SetPieces.box(Vector3(span, 0.018, 0.16), WAFER if j % 2 == 0 else Color("#c98a4a"), Vector3(0, 0.05 + j * 0.018, 0)))
+	for sx: float in [-1.0, 1.0]:
+		bridge.add_child(SetPieces.box(Vector3(0.04, 0.05, 0.14), Color("#c98a4a"), Vector3(sx * (span / 2.0 - 0.02), 0, 0)))
+	var bpos := Vector3(band.get_center().x, 0, bz)
+	SetPieces.add_piece(ctx, bridge, bpos, Rect2(bpos.x - span / 2.0, bz - 0.08, span, 0.16), band)
+	var box: Rect2 = ctx["box"]
+	var drops := Node3D.new()
+	drops.name = "Gumdrops"
+	for i: int in 3:
+		var gr: float = minf(box.size.x * 0.4, 0.2) * rng.randf_range(0.7, 1.0)
+		var p := Vector3(rng.randf_range(box.position.x + gr, box.end.x - gr), 0.0, lerpf(box.position.y + gr, box.end.y - gr, (i + 0.5) / 3.0))
+		var g := SetPieces.mesh(Palette.cylinder(gr * 0.55, gr, gr * 1.3 * float(ctx["scale"]), 12), CANDY[rng.randi() % CANDY.size()], p + Vector3(0, gr * 0.65 * float(ctx["scale"]), 0))
+		drops.add_child(g)
+		drops.add_child(SetPieces.sphere(gr * 0.56, g.material_override.get_shader_parameter("albedo_color") if g.material_override else CANDY[0], p + Vector3(0, gr * 1.3 * float(ctx["scale"]), 0), Vector3(1, 0.5, 1), 10))
+	SetPieces.add_piece(ctx, drops, Vector3.ZERO, box, box)
+
+
+## A lollipop tree: a striped stick with a big swirl disc on top (faces the board's long axis).
+static func _lollipop(h: float, col: Color) -> Node3D:
+	var t := Node3D.new()
+	t.add_child(SetPieces.cyl(h * 0.035, h * 0.035, h * 0.7, Color("#fff8f0"), Vector3.ZERO, 8))
+	var r: float = h * 0.3
+	var disc := SetPieces.mesh(Palette.cylinder(r, r, r * 0.28, 18), col, Vector3.ZERO)
+	disc.rotation.z = PI / 2.0
+	disc.position = Vector3(0, h * 0.7 + r * 0.85, 0)
+	t.add_child(disc)
+	var swirl := SetPieces.mesh(Palette.cylinder(r * 0.62, r * 0.62, r * 0.3, 16), Color.WHITE, Vector3.ZERO)
+	swirl.rotation.z = PI / 2.0
+	swirl.position = disc.position
+	t.add_child(swirl)
+	var core := SetPieces.mesh(Palette.cylinder(r * 0.32, r * 0.32, r * 0.32, 14), col, Vector3.ZERO)
+	core.rotation.z = PI / 2.0
+	core.position = disc.position
+	t.add_child(core)
+	return t
+
+
+## Lollipop trees in the back corner, a candy-cane fence along one side, soft frosting hills in the other corner.
+static func _lollipop_grove(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var grove := Node3D.new()
+	grove.name = "Lollipops"
+	for i: int in 3:
+		var hh: float = rng.randf_range(0.55, 0.85) * sc
+		var lp: Node3D = _lollipop(hh, CANDY[(i * 2 + rng.randi()) % CANDY.size()])
+		lp.position = Vector3(clampf(box.get_center().x + rng.randf_range(-0.06, 0.06), box.position.x + 0.05, box.end.x - 0.05), 0, lerpf(box.position.y + 0.2, box.end.y - 0.2, (i + 0.5) / 3.0))
+		lp.rotation.y = rng.randf_range(-0.4, 0.4)
+		grove.add_child(lp)
+	SetPieces.add_piece(ctx, grove, Vector3.ZERO, box, box)
+	var band: Rect2 = ctx["band"]
+	var fence := Node3D.new()
+	fence.name = "CaneFence"
+	var posts: int = maxi(3, int(band.size.y / 0.4))
+	var fx: float = band.get_center().x
+	for i: int in posts:
+		var z: float = lerpf(band.position.y + 0.05, band.end.y - 0.05, float(i) / (posts - 1))
+		for k: int in 4:
+			fence.add_child(SetPieces.cyl(0.022, 0.022, 0.06, Color("#e8303c") if k % 2 == 0 else Color.WHITE, Vector3(fx, k * 0.06, z), 8))
+		fence.add_child(SetPieces.sphere(0.026, Color("#e8303c"), Vector3(fx, 0.24, z), Vector3.ONE, 8))
+	var rail := SetPieces.mesh(Palette.cylinder(0.012, 0.012, band.size.y - 0.1, 6), Color.WHITE, Vector3.ZERO)
+	rail.rotation.x = PI / 2.0
+	rail.position = Vector3(fx, 0.17, band.get_center().y)
+	fence.add_child(rail)
+	SetPieces.add_piece(ctx, fence, Vector3.ZERO, band, band)
+	var other: Rect2 = ctx["other_box"]
+	var hills := Node3D.new()
+	hills.name = "FrostingHills"
+	for i: int in 2:
+		var hr: float = minf(other.size.x * 0.48, 0.3)
+		var p := Vector3(other.get_center().x, 0, lerpf(other.position.y + hr, other.end.y - hr, float(i)))
+		hills.add_child(SetPieces.sphere(hr, FROSTING if i == 0 else Color("#ffd0e6"), p, Vector3(1.0, 0.55 * sc, 1.0), 14))
+		hills.add_child(SetPieces.sphere(hr * 0.6, CREAM, p + Vector3(0, hr * 0.42 * sc, 0), Vector3(1.0, 0.45, 1.0), 12))
+		hills.add_child(SetPieces.sphere(hr * 0.16, Color("#e8303c"), p + Vector3(0, hr * 0.64 * sc, 0), Vector3.ONE, 8))
+	SetPieces.add_piece(ctx, hills, Vector3.ZERO, other, other)
+
+
+## A big drippy sundae mountain in the back corner and a ring of donuts in the other.
+static func _sundae_peak(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var peak := Node3D.new()
+	peak.name = "SundaePeak"
+	var r: float = minf(box.size.x * 0.5, 0.42)
+	var c: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.3))
+	# A cone-shaped wafer base with three scoops and a cherry.
+	peak.add_child(SetPieces.cyl(r * 0.95, r * 0.55, r * 0.7 * sc, WAFER, Vector3.ZERO, 14))
+	var scoops: Array[Color] = [Color("#fff1d6"), Color("#ff9ec4"), Color("#8a5a3a")]
+	var y: float = r * 0.7 * sc
+	for i: int in 3:
+		var sr: float = r * (0.88 - i * 0.16)
+		peak.add_child(SetPieces.sphere(sr, scoops[i], Vector3(rng.randf_range(-0.02, 0.02), y + sr * 0.55, 0), Vector3(1.0, 0.8, 1.0), 14))
+		y += sr * 1.05
+	peak.add_child(SetPieces.sphere(r * 0.6, Color("#5a3220"), Vector3(0, y - r * 0.3, 0), Vector3(1.05, 0.35, 1.05), 12))
+	peak.add_child(SetPieces.sphere(r * 0.16, Color("#e8303c"), Vector3(0, y + r * 0.05, 0), Vector3.ONE, 10))
+	peak.add_child(SetPieces.cyl(0.006, 0.01, r * 0.3, Color("#5a7a2a"), Vector3(0.02, y + r * 0.15, 0), 5))
+	SetPieces.add_piece(ctx, peak, c, Rect2(c.x - r, c.z - r, r * 2.0, r * 2.0), box)
+	var other: Rect2 = ctx["other_box"]
+	var donuts := Node3D.new()
+	donuts.name = "Donuts"
+	for i: int in 3:
+		var d: Node3D = SetPieces.model("candy/donut-sprinkles.glb", 0.12 * sc)
+		var dw: float = minf(other.size.x * 0.8, 0.36)
+		d.scale *= dw / 0.36
+		d.position = Vector3(other.get_center().x, 0.02 + (0.06 * sc if i == 2 else 0.0), lerpf(other.position.y + 0.2, other.end.y - 0.2, 0.5 if i == 2 else float(i)))
+		d.rotation = Vector3(0.25 if i == 2 else 0.0, rng.randf() * TAU, 0)
+		donuts.add_child(d)
+	SetPieces.add_piece(ctx, donuts, Vector3.ZERO, other, other)

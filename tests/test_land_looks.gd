@@ -47,3 +47,10 @@ func test_frost_looks() -> bool:
 	_expect(3, 1, ["FrozenLake", "Pines", "Watchtower"], false)
 	_expect(3, 2, ["Ridge", "Crystals", "IceBoulders"], false)
 	return true
+
+
+func test_candy_looks() -> bool:
+	_expect(2, 0, ["ChocolateRiver", "WaferBridge", "Gumdrops"], false)
+	_expect(2, 1, ["Lollipops", "CaneFence", "FrostingHills"], false)
+	_expect(2, 2, ["SundaePeak", "Donuts"], false)
+	return true
