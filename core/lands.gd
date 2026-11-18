@@ -24,12 +24,12 @@ const REACTION_NAMES: Dictionary = {
 	&"bloom": "Bloom", &"sprout": "Sprout",
 }
 const REACTION_RULES: Dictionary = {
-	&"melt": "Ember spell on Frostpeak: +1 damage, and the lane thaws into Meadow.",
-	&"wildfire": "Ember spell on Mushroom Forest: 1 damage to the creatures in the neighbouring lanes.",
-	&"caramel": "Ember spell on Candy Hills: the creature is stuck in caramel (frozen).",
-	&"quench": "Frost spell on Ember Flats: the lava cools and the lane turns into Meadow.",
-	&"bloom": "Mushroom spell on Mushroom Forest: heals 2 more.",
-	&"sprout": "Mushroom spell on Meadow: the lane grows into Mushroom Forest.",
+	&"melt": "Fire on Frostpeak: +1 damage, and the lane thaws",
+	&"wildfire": "Fire in the forest: 1 damage to the next lanes too",
+	&"caramel": "Fire on Candy Hills: stuck in caramel (frozen)",
+	&"quench": "Frost on Ember Flats: the lava cools to Meadow",
+	&"bloom": "Spores on Mushroom Forest: heals 2 more",
+	&"sprout": "Spores on Meadow: it grows into Mushroom Forest",
 }
 
 

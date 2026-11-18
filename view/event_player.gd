@@ -120,6 +120,20 @@ func _play_one(e: GameEvent) -> void:
 			m.refresh_ui()
 		&"land_changed":
 			await _land_changed(d)
+		&"land_reaction":
+			await _land_reaction(d)
+		&"xp_gained":
+			var v: CreatureView = _view(d["player"], d["lane"])
+			if v:
+				DamageNumber.spawn(m, v.global_position + Vector3(0.35, v.height + 0.35, 0), "+%d XP" % d["amount"], Palette.GOLD, 34)
+			m.overlay.refresh(m.state)
+		&"level_up":
+			await _level_up(d)
+		&"field_set":
+			await _field_set(d)
+		&"tribe_bonus":
+			var pos: Vector3 = FxDirector._hero_pos(m, d["player"])
+			DamageNumber.spawn(m, pos + Vector3(0, 0.5, 0), "%s!" % Tribes.BONUS[d["tribe"]].to_upper(), Color("#8fe07a"), 52)
 		_:
 			m.hud.refresh(m.state, MatchController.HUMAN)
 
@@ -169,8 +183,63 @@ func _land_changed(d: Dictionary) -> void:
 	var centre := Vector3(Board.LANE_X[l], Island.TOP_Y + 0.3, Board.STRIP_Z[p])
 	Burst.spawn(m, LAND_BURSTS[land], origin if origin.is_finite() else centre, Color.WHITE, 1.4)
 	Audio.sfx(LAND_SOUNDS[land])
-	DamageNumber.spawn(m, centre + Vector3(0, 0.6, 0), Lands.lane_name(land) + "!", Palette.LAND_CARD[land], 40)
+	DamageNumber.spawn(m, centre + Vector3(0, 0.6, 0), Lands.lane_name(land) + "!", Palette.LAND_CARD[land], 64)
 	await _wait(0.5)
+
+
+## A spell meets the land under its target: the reaction's name over the lane and its look.
+func _land_reaction(d: Dictionary) -> void:
+	var p: int = d["player"]
+	var l: int = d["lane"]
+	var r: StringName = d["reaction"]
+	var pos: Vector3 = FxDirector.spot(m, p, l) + Vector3(0, 0.3, 0)
+	var v: CreatureView = _view(p, l)
+	if v:
+		pos = v.global_position + Vector3(0, 0.2, 0)
+	match r:
+		&"melt", &"quench":
+			Burst.spawn(m, &"steam", pos, Color.WHITE, 1.6)
+			Burst.spawn(m, &"steam", pos + Vector3(0.4, 0, 0.3), Color.WHITE, 1.2)
+			Audio.sfx(&"fire_whoosh" if r == &"melt" else &"ice_shatter")
+		&"wildfire":
+			for n: int in [l - 1, l, l + 1]:
+				if n >= 0 and n < 4:
+					Burst.spawn(m, &"flames", FxDirector.spot(m, p, n) + Vector3(0, 0.2, 0), Color.WHITE, 1.3)
+			Audio.sfx(&"fire_whoosh")
+		&"caramel":
+			Burst.spawn(m, &"caramel", pos + Vector3(0, 0.5, 0), Color.WHITE, 1.4)
+			Audio.sfx(&"candy_pop")
+		&"bloom", &"sprout":
+			Burst.spawn(m, &"petals", pos + Vector3(0, 0.3, 0), Color.WHITE, 1.5)
+			Burst.spawn(m, &"heal", pos, Color.WHITE, 1.2)
+			Audio.sfx(&"heal")
+	DamageNumber.stamp(m, pos + Vector3(0, 0.9, 0.2), Lands.REACTION_NAMES[r].to_upper() + "!")
+	m.toast.show_message(Lands.REACTION_RULES[r], 1.6)
+	await _wait(0.45)
+
+
+## A creature levels up: light column, hop and spin, gold sparkles, LEVEL UP!
+func _level_up(d: Dictionary) -> void:
+	var v: CreatureView = _view(d["player"], d["lane"])
+	if v == null:
+		return
+	Audio.sfx(&"magic_gain")
+	Audio.sfx(&"candy_pop")
+	Burst.spawn(m, &"gold", v.global_position + Vector3(0, 0.4, 0), Color.WHITE, 1.3)
+	DamageNumber.stamp(m, v.global_position + Vector3(0, v.height + 0.8, 0.25), "LEVEL %d!" % d["level"])
+	await v.play_level_up(d["level"], speed)
+	m.overlay.refresh(m.state)
+
+
+## A field spell takes over the table: banner, weather over every lane, room light and prop.
+func _field_set(d: Dictionary) -> void:
+	var c: CardData = CardDB.card(d["card"])
+	Banner.show_turn(m.hud, c.display_name.to_upper() + "!", Palette.LAND_CARD[c.land])
+	m.board.set_field(c.land)
+	if m.field_fx:
+		m.field_fx.set_field(c.land)
+	m.hud.refresh(m.state, MatchController.HUMAN)
+	await _wait(0.9)
 
 
 func _view(p: int, l: int) -> CreatureView:

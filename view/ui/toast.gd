@@ -25,6 +25,10 @@ func _init() -> void:
 func show_message(text_: String, seconds: float = 1.5) -> void:
 	_label.text = text_
 	reset_size()
+	# Anchored at the top centre: keep it centred whatever the text length.
+	if is_equal_approx(anchor_left, 0.5) and is_equal_approx(anchor_right, 0.5):
+		offset_left = -size.x / 2.0
+		offset_right = size.x / 2.0
 	if _tw:
 		_tw.kill()
 	modulate.a = 1.0

@@ -152,7 +152,8 @@ func refresh(s: GameState) -> void:
 			else:
 				var max_hp: int = Rules.effective_max_hp(s, p, l)
 				var hp: int = max_hp - cr.damage
-				_entries[p][l] = {"visible": true, "atk": Rules.effective_attack(s, p, l), "hp": hp, "max": max_hp, "bar_color": bar_color(hp, max_hp)}
+				_entries[p][l] = {"visible": true, "atk": Rules.effective_attack(s, p, l), "hp": hp, "max": max_hp, "bar_color": bar_color(hp, max_hp),
+					"level": cr.level, "xp": cr.xp, "home": Lands.home(s, p, l)}
 			_update_bar(_bars[p][l], _entries[p][l])
 			var badge: Control = _badges[p][l]
 			badge.visible = lane.building != null
@@ -292,6 +293,43 @@ func _make_bar() -> Control:
 	txt.add_theme_color_override("font_outline_color", Palette.INK)
 	txt.add_theme_constant_override("outline_size", 5)
 	back.add_child(txt)
+	# Level pill (Lv 2 / Lv 3) over the ATK number, XP pips under the bar, home-land dot after it.
+	var lv := UiStyle.title(UiStyle.label("LV2", 11, Color("#3a2a00"))) as Label
+	lv.name = "Level"
+	lv.position = Vector2(2, -10)
+	lv.size = Vector2(34, 15)
+	lv.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lv.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var lsb := StyleBoxFlat.new()
+	lsb.bg_color = Palette.GOLD
+	lsb.border_color = Palette.INK
+	lsb.set_border_width_all(2)
+	lsb.set_corner_radius_all(7)
+	lv.add_theme_stylebox_override("normal", lsb)
+	lv.visible = false
+	root.add_child(lv)
+	var pips := HBoxContainer.new()
+	pips.name = "Pips"
+	pips.position = Vector2(42, 30)
+	pips.add_theme_constant_override("separation", 3)
+	pips.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for i: int in 2:
+		var pip := Panel.new()
+		pip.custom_minimum_size = Vector2(14, 5)
+		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var psb := StyleBoxFlat.new()
+		psb.bg_color = Color("#1f2a2a")
+		psb.set_corner_radius_all(2)
+		pip.add_theme_stylebox_override("panel", psb)
+		pips.add_child(pip)
+	root.add_child(pips)
+	var home := Panel.new()
+	home.name = "Home"
+	home.position = Vector2(112, 12)
+	home.size = Vector2(16, 16)
+	home.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	home.visible = false
+	root.add_child(home)
 	return root
 
 
@@ -299,6 +337,27 @@ func _update_bar(bar: Control, e: Dictionary) -> void:
 	if e.is_empty():
 		return
 	(bar.get_node("Atk") as Label).text = str(e["atk"])
+	var level: int = e.get("level", 1)
+	var lv := bar.get_node("Level") as Label
+	lv.visible = level > 1
+	lv.text = "LV%d" % level
+	var pips := bar.get_node("Pips") as Control
+	var xp: int = e.get("xp", 0)
+	pips.visible = level < Levels.MAX and xp > 0
+	var into: int = xp - Levels.XP_FOR[level] if level > 1 else xp
+	for i: int in pips.get_child_count():
+		var sb := (pips.get_child(i) as Panel).get_theme_stylebox("panel") as StyleBoxFlat
+		sb.bg_color = Palette.GOLD if i < into else Color("#1f2a2a")
+	var home := bar.get_node("Home") as Panel
+	var land: int = e.get("home", -1)
+	home.visible = land >= 0
+	if land >= 0:
+		var hsb := StyleBoxFlat.new()
+		hsb.bg_color = Palette.LAND_CARD[land]
+		hsb.border_color = Palette.INK
+		hsb.set_border_width_all(2)
+		hsb.set_corner_radius_all(8)
+		home.add_theme_stylebox_override("panel", hsb)
 	(bar.get_node("Back/Text") as Label).text = "%d/%d" % [e["hp"], e["max"]]
 	var fill := bar.get_node("Back/Fill") as ColorRect
 	var w: float = 68.0 * clampf(float(e["hp"]) / float(maxi(e["max"], 1)), 0.0, 1.0)

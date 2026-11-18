@@ -71,8 +71,9 @@ func _init() -> void:
 	_field_chip.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_field_chip.offset_left = -130
 	_field_chip.offset_right = 130
-	_field_chip.offset_top = 52
-	_field_chip.offset_bottom = 82
+	# Between the two health bars, clear of the rival's face.
+	_field_chip.offset_top = 14
+	_field_chip.offset_bottom = 44
 	_field_chip.mouse_filter = Control.MOUSE_FILTER_PASS
 	_field_chip.visible = false
 	add_child(_field_chip)

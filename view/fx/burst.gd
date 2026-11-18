@@ -15,6 +15,12 @@ const PRESETS: Dictionary = {
 	&"snow": ["circle_05", 14, 0.8, 1.0, 2.5, 0.14, -2.0, 180.0, "#ffffff", false, false],
 	&"smoke": ["smoke_07", 10, 0.9, 0.5, 1.2, 0.8, 0.6, 60.0, "#8a8a92", false, false],
 	&"heal": ["star_06", 14, 0.8, 1.0, 2.0, 0.24, 1.2, 40.0, "#6aff7a", true, false],
+	# Living board: land reactions and level-ups.
+	&"steam": ["smoke_07", 16, 1.2, 0.8, 1.8, 0.7, 1.4, 35.0, "#f4f8ff", false, false],
+	&"flames": ["flame_02", 16, 0.7, 1.2, 2.6, 0.4, 2.2, 40.0, "#ff7a1a", true, false],
+	&"caramel": ["circle_05", 14, 0.8, 1.0, 2.2, 0.16, -5.0, 120.0, "#c87a2a", false, false],
+	&"petals": ["dirt_01", 16, 1.0, 1.0, 2.4, 0.22, -1.5, 150.0, "#ffb3dd", false, false],
+	&"gold": ["star_04", 22, 0.9, 2.0, 4.0, 0.3, -2.0, 180.0, "#ffd84a", true, false],
 }
 
 

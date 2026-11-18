@@ -14,6 +14,8 @@ var board: Board
 var rig: CameraRig
 var room: Room
 var rival: RivalSeat
+## The field spell's weather, light and table prop.
+var field_fx: FieldFx
 ## Creatures placed so far (seeds each one's wandering).
 var _placed: int = 0
 var hud: Hud
@@ -32,6 +34,8 @@ const AI_PAUSE := 0.6
 var pace: float = 1.0
 var busy: bool = false
 var creature_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
+## Creature houses (decoration), kept in step with the creatures by _sync_houses.
+var house_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
 var building_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
 
 
@@ -49,6 +53,10 @@ func _ready() -> void:
 	room = Room.new()
 	add_child(room)
 	room.build(Settings.quality)
+	field_fx = FieldFx.new()
+	field_fx.name = "FieldFx"
+	add_child(field_fx)
+	field_fx.setup(room, Settings.quality)
 	rival = RivalSeat.new()
 	add_child(rival)
 	rival.setup(RIVAL_MODEL)
@@ -74,6 +82,13 @@ func _ready() -> void:
 		return
 	if "--full-board" in OS.get_cmdline_user_args():
 		_demo_full_board()
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--demo-living"):
+			_demo_living(arg.substr(14) if arg.length() > 14 else "volcano")
+			for act: String in OS.get_cmdline_user_args():
+				if act.begins_with("--demo-act="):
+					_demo_act(act.substr(11))
+			return
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--sweep-at="):
 			rig.hold_sweep(float(arg.substr(11)))
@@ -153,6 +168,57 @@ func _demo_full_board() -> void:
 		for l: int in 4:
 			_demo_put(p, l, ids[p * 4 + l])
 	sync_all()
+
+
+## Dev view of the living board (screenshots): claimed lands, a field (--demo-living=<field id>),
+## levelled creatures, buildings and armour.
+func _demo_living(field_id: String) -> void:
+	var lands: Array[Array] = [[0, 1, 4, 3], [2, 1, 1, 4]]
+	var ids: Array[StringName] = [&"sporeling", &"flarebeak", &"gumdrop", &"snowmite", &"taffy_snail", &"cinderpup", &"magmaw", &"iceling"]
+	var levels: Array[int] = [1, 3, 1, 2, 1, 2, 1, 1]
+	for p: int in 2:
+		state.players[p].armour = [5, 3][p]
+		for l: int in 4:
+			state.players[p].lanes[l].land = lands[p][l]
+			_demo_put(p, l, ids[p * 4 + l])
+			state.players[p].lanes[l].creature.level = levels[p * 4 + l]
+	state.players[0].lanes[1].building = CardDB.card(&"kiln_tower")
+	state.players[1].lanes[0].building = CardDB.card(&"sugar_shack")
+	if field_id != "none":
+		state.field = CardDB.card(StringName(field_id))
+		state.field_owner = 1
+	sync_all()
+	refresh_ui()
+
+
+## One scripted action in the living demo, for mid-animation screenshots: melt (fireball on
+## the rival's Frostpeak lane... made Frostpeak first), claim (a creature into Meadow), level
+## (an attack that levels up), field (Snowstorm replaces the field).
+func _demo_act(act: String) -> void:
+	busy = true
+	state.active = HUMAN
+	state.players[HUMAN].magic = 9
+	await get_tree().create_timer(0.8).timeout
+	match act:
+		"melt":
+			state.players[1].lanes[3].land = CardData.Land.FROST
+			board.change_land(1, 3, CardData.Land.FROST, Vector3.INF, false)
+			await perform(Action.play(HUMAN, Fx_give(&"fireball"), -1, [{"player": 1, "lane": 3}]))
+		"claim":
+			state.players[0].lanes[2].creature = null
+			sync_all()
+			await perform(Action.play(HUMAN, Fx_give(&"cinderpup"), 2))
+		"level":
+			state.players[0].lanes[3].creature.xp = 3
+			state.players[0].lanes[3].creature.attacks_used = 0
+			await perform(Action.attack(HUMAN, 3, 3, Action.Hit.NORMAL, false))
+		"field":
+			await perform(Action.play(HUMAN, Fx_give(&"snowstorm"), -1))
+
+
+func Fx_give(id: StringName) -> int:
+	state.players[HUMAN].hand.append(CardDB.card(id))
+	return state.players[HUMAN].hand.size() - 1
 
 
 func _demo_put(p: int, l: int, id: StringName) -> void:
@@ -357,6 +423,8 @@ func verify_views() -> void:
 ## fallback.
 func sync_all() -> void:
 	board.set_field(state.field.land if state.field else -1, false)
+	if field_fx:
+		field_fx.set_field(state.field.land if state.field else -1, false)
 	for p: int in 2:
 		for l: int in 4:
 			if board.island(p, l).land != state.players[p].lanes[l].land:
@@ -381,6 +449,9 @@ func place_creature(p: int, l: int, c: CardData, drop: Vector3 = Vector3.INF) ->
 	var v := CreatureView.create(c)
 	add_child(v)
 	var zone: Rect2 = board.roam_rect(p, l)
+	if CreatureHouse.wants_house(c.id):
+		# Keep clear of the house on the lane's right-hand side.
+		zone.size.x -= Board.HOUSE_CLEAR
 	var at: Vector3 = board.anchor(p, l)
 	if drop.is_finite():
 		at = Vector3(clampf(drop.x, zone.position.x, zone.end.x), Board.CREATURE_Y, clampf(drop.z, zone.position.y, zone.end.y))
@@ -443,4 +514,36 @@ func refresh_pieces() -> void:
 			if v and cr:
 				v.set_frozen(cr.is_frozen())
 				v.set_readiness(_readiness(p, l, cr))
+				if not v.busy:
+					v.set_level(cr.level)
+				v.set_home(Lands.home(state, p, l))
+				v.set_weather(state.field.land if state.field else -1)
+	_sync_houses()
 	overlay.refresh(state)
+
+
+## Every creature that brings a house has one in its lane; houses whose creature is gone (or
+## moved) sink away.
+func _sync_houses() -> void:
+	for p: int in 2:
+		for l: int in 4:
+			var cv: Variant = creature_views[p][l]
+			var v: CreatureView = cv as CreatureView if is_instance_valid(cv) else null
+			var hv: Variant = house_views[p][l]
+			var h: CreatureHouse = hv as CreatureHouse if is_instance_valid(hv) else null
+			var want: bool = v != null and CreatureHouse.wants_house(v.card.id)
+			if h and (not want or h.resident != v):
+				if is_instance_valid(h.resident) and (h.resident as CreatureView).house == h:
+					(h.resident as CreatureView).exit_house(true)
+					(h.resident as CreatureView).house = null
+				h.sink_away()
+				h = null
+			house_views[p][l] = h
+			if want and h == null:
+				h = CreatureHouse.create(v.card.land, 1.0)
+				add_child(h)
+				h.position = board.house_point(p, l)
+				h.resident = v
+				v.house = h
+				h.pop_in()
+				house_views[p][l] = h

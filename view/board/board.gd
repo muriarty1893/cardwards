@@ -18,6 +18,11 @@ const BUILDING_DEPTH := 0.25
 const ROAM_INSET := 0.25
 ## Boop button spot: this far left of the lane centre, level with the building.
 const BOOP_X := -0.95
+## A creature house sits this far right of the lane centre, a little seam-side of the tile
+## centre; creatures with a house roam a zone this much narrower on that side.
+const HOUSE_X := 0.88
+const HOUSE_Z := 2.2
+const HOUSE_CLEAR := 0.5
 ## Origin height of a creature view (its feet are on the tile surface, Island.TOP_Y).
 const CREATURE_Y := 0.58
 const FRAME := Color("#8a5a34")
@@ -121,6 +126,11 @@ func building_point(player: int, lane: int) -> Vector3:
 	var s: float = 1.0 if player == 0 else -1.0
 	var z: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH / 2.0)
 	return Vector3(LANE_X[lane], Island.TOP_Y, z * s)
+
+
+## Where a creature's house stands (tile surface).
+func house_point(player: int, lane: int) -> Vector3:
+	return Vector3(LANE_X[lane] + HOUSE_X, Island.TOP_Y, HOUSE_Z * (1.0 if player == 0 else -1.0))
 
 
 ## The human's boop button spot in `lane`, beside the building.

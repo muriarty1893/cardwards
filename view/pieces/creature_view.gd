@@ -16,7 +16,16 @@ const FIDGET_ANIMS: Array[StringName] = [&"Wave", &"Yes", &"Dance"]
 const MOVE_ANIMS: Array[StringName] = [&"Walk", &"Fast_Flying", &"Flying_Idle", &"Run"]
 
 var card: CardData
-var busy: bool = false
+## Held by the event player (attacks, deaths...). Taking it pops the creature out of its house.
+var busy: bool = false:
+	set(v):
+		busy = v
+		if v and inside_house:
+			exit_house(true)
+## Its house (CreatureHouse), if it brought one; inside_house while it is in there.
+var house: Node3D
+var inside_house: bool = false
+var _outside := Vector3.ZERO
 var body: Node3D
 var height: float = 1.0
 var _shell: IceShell
@@ -47,6 +56,21 @@ var readiness: Readiness = Readiness.NONE
 var _ring: Node3D
 var _ring_tw: Tween
 var _zzz_in: float = 0.0
+## Living board: level (1..3) grows the model 12% per level and adds a gold ring at Lv 2+;
+## at home on its own land it now and then puffs that land's particles.
+var level: int = 1
+var home_land: int = -1
+var base_height: float = 1.0
+var _base_k: float = 1.0
+var _box_y: float = 0.0
+var _level_ring: Node3D
+var _home_in: float = 0.0
+## The field's land (-1 none): creatures shiver in Snowstorm, puff steam in Volcano, sneeze
+## spores in Spore Bloom and hop for sprinkles in Sugar Rain, now and then.
+var weather: int = -1
+var _weather_in: float = 0.0
+const LEVEL_GROWTH := 0.12
+const HOME_PUFFS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow"]
 
 
 static func create(c: CardData, model_override: String = "") -> CreatureView:
@@ -62,6 +86,9 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 	if not BlobShadow.sun_shadows():
 		v._add_blob()
 	v._body_y = v.body.position.y
+	v.base_height = v.height
+	v._base_k = v.body.scale.x
+	v._home_in = randf_range(2.0, 5.0)
 	v._hops = v._anim == null or not (v._anim.has_animation(&"Walk") or v._anim.has_animation(&"Run") or v._anim.has_animation(&"Fast_Flying"))
 	v._t = randf() * TAU
 	v.wanderer = Wanderer.new()
@@ -85,6 +112,7 @@ func _build_model(scene: PackedScene, tint: Color) -> void:
 	var k: float = height / maxf(box.size.y, 0.01)
 	k = minf(k, MAX_WIDTH / maxf(maxf(box.size.x, box.size.z), 0.01))
 	body.scale = Vector3.ONE * k
+	_box_y = box.position.y
 	# Feet on the lane surface; the view's origin is BASE_Y above the board's zero.
 	body.position = Vector3(0, Island.TOP_Y - BASE_Y - box.position.y * k, 0)
 	_anim = body.find_child("AnimationPlayer", true, false) as AnimationPlayer
@@ -164,6 +192,7 @@ func is_moving() -> bool:
 func wave() -> void:
 	if busy or _dying or _anim == null:
 		return
+	heart()
 	for n: StringName in [&"Wave", &"Yes"]:
 		if _anim.has_animation(n):
 			_anim.play(n, 0.2)
@@ -276,6 +305,173 @@ func _puff_z() -> void:
 	tw.chain().tween_callback(z.queue_free)
 
 
+## Shows level `lv`: bigger model, gold ring under it (brighter at the max level).
+func set_level(lv: int, animate: bool = false) -> void:
+	lv = clampi(lv, 1, Levels.MAX)
+	if lv == level and is_instance_valid(_level_ring) == (lv > 1):
+		return
+	level = lv
+	var f: float = 1.0 + LEVEL_GROWTH * float(lv - 1)
+	var k: float = _base_k * f
+	height = base_height * f
+	_body_y = Island.TOP_Y - BASE_Y - _box_y * k
+	if body:
+		if animate:
+			var tw := body.create_tween()
+			tw.tween_property(body, "scale", Vector3.ONE * k, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+		else:
+			body.scale = Vector3.ONE * k
+	if is_instance_valid(_level_ring):
+		_level_ring.queue_free()
+		_level_ring = null
+	if lv > 1:
+		var w: float = clampf(height * 0.62, 0.3, 0.52)
+		_level_ring = Node3D.new()
+		_level_ring.name = "LevelRing"
+		_level_ring.position.y = Island.TOP_Y - BASE_Y + 0.03
+		_level_ring.scale = Vector3(1, 0.12, 1)
+		add_child(_level_ring)
+		var gold: StandardMaterial3D = _ring_material(Color(Palette.GOLD, 0.95 if lv >= Levels.MAX else 0.7), -92)
+		_level_ring.add_child(_torus(w, 0.035 if lv < Levels.MAX else 0.055, gold))
+		if lv >= Levels.MAX:
+			var spin := _level_ring.create_tween().set_loops()
+			spin.tween_property(gold, "albedo_color:a", 0.5, 0.8).set_trans(Tween.TRANS_SINE)
+			spin.tween_property(gold, "albedo_color:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE)
+
+
+## The level-up moment: a hop and spin inside a column of light, a sparkle burst, growing to
+## the new size. Awaitable.
+func play_level_up(lv: int, speed: float = 1.0) -> void:
+	busy = true
+	var col := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.32
+	cyl.bottom_radius = 0.42
+	cyl.height = 2.4
+	cyl.radial_segments = 16
+	cyl.rings = 1
+	cyl.cap_top = false
+	cyl.cap_bottom = false
+	col.mesh = cyl
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_color = Color(1.0, 0.85, 0.35, 0.0)
+	col.material_override = mat
+	col.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	col.position.y = Island.TOP_Y - BASE_Y + 1.2
+	add_child(col)
+	var d: float = 1.0 / maxf(speed, 0.01)
+	var light := col.create_tween()
+	light.tween_property(mat, "albedo_color:a", 0.75, 0.15 * d)
+	light.tween_property(mat, "albedo_color:a", 0.0, 0.6 * d).set_delay(0.25 * d)
+	light.parallel().tween_property(col, "scale", Vector3(1.6, 1.0, 1.6), 0.85 * d)
+	light.tween_callback(col.queue_free)
+	if body:
+		var start_y: float = body.rotation.y
+		var hop := create_tween()
+		hop.tween_property(body, "position:y", _body_y + height * 0.6, 0.22 * d).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		hop.parallel().tween_property(body, "rotation:y", start_y + TAU, 0.5 * d).set_trans(Tween.TRANS_SINE)
+		hop.tween_callback(func() -> void: set_level(lv, true))
+		hop.tween_property(body, "position:y", _body_y, 0.22 * d).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		await hop.finished
+		if is_instance_valid(body):
+			body.rotation.y = start_y
+	else:
+		set_level(lv, true)
+	busy = false
+
+
+## Walks in through the door: shrinks into the house, which lights up.
+func enter_house() -> void:
+	if not is_instance_valid(house) or inside_house:
+		return
+	inside_house = true
+	_outside = position
+	var into: Vector3 = house.global_position
+	var tw := create_tween().set_parallel()
+	tw.tween_property(self, "position", Vector3(into.x, position.y, into.z), 0.45).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(self, "scale", Vector3.ONE * 0.05, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(func() -> void:
+		if inside_house and is_instance_valid(house):
+			house.call(&"set_occupied", true))
+
+
+## Comes back out of the door (instant: pops straight out, for attacks and tests).
+func exit_house(instant: bool = false) -> void:
+	if not inside_house:
+		return
+	inside_house = false
+	if is_instance_valid(house):
+		house.call(&"set_occupied", false)
+	if instant:
+		scale = Vector3.ONE
+		position = _outside
+		return
+	var tw := create_tween().set_parallel()
+	tw.tween_property(self, "position", _outside, 0.4).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(self, "scale", Vector3.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func set_weather(land: int) -> void:
+	if land != weather:
+		weather = land
+		_weather_in = randf_range(1.5, 6.0)
+
+
+func _weather_moment() -> void:
+	if body == null:
+		return
+	var head: Vector3 = global_position + Vector3(0, Island.TOP_Y - BASE_Y + height + 0.1, 0)
+	match weather:
+		CardData.Land.FROST:  # shiver
+			var tw := body.create_tween()
+			for i: int in 6:
+				tw.tween_property(body, "rotation:z", 0.12 if i % 2 == 0 else -0.12, 0.05)
+			tw.tween_property(body, "rotation:z", 0.0, 0.05)
+			Burst.spawn(get_parent(), &"snow", head, Color.WHITE, 0.4)
+		CardData.Land.EMBER:  # too hot: a puff of steam
+			Burst.spawn(get_parent(), &"steam", head, Color.WHITE, 0.45)
+		CardData.Land.MUSHROOM:  # a spore sneeze
+			Burst.spawn(get_parent(), &"heal", head, Color("#b8ff8a"), 0.5)
+			var tw := body.create_tween()
+			tw.tween_property(body, "rotation:x", -0.25, 0.12)
+			tw.tween_property(body, "rotation:x", 0.0, 0.2).set_trans(Tween.TRANS_BACK)
+		_:  # catching sprinkles
+			var tw := body.create_tween()
+			tw.tween_property(body, "position:y", _body_y + height * 0.35, 0.15).set_ease(Tween.EASE_OUT)
+			tw.tween_property(body, "position:y", _body_y, 0.2).set_trans(Tween.TRANS_BOUNCE)
+			Burst.spawn(get_parent(), &"sprinkles", head, Color.WHITE, 0.35)
+
+
+## A pink heart floats up (greeting a neighbour).
+func heart() -> void:
+	var h := Label3D.new()
+	h.text = "♥"
+	h.font = load(UiStyle.TITLE_FONT) as FontFile
+	h.font_size = 110
+	h.pixel_size = 0.004
+	h.modulate = Color("#ff6aa8")
+	h.outline_size = 20
+	h.outline_modulate = Palette.INK
+	h.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	h.no_depth_test = true
+	h.position = Vector3(0, Island.TOP_Y - BASE_Y + height + 0.15, 0)
+	add_child(h)
+	var tw := h.create_tween().set_parallel(true)
+	tw.tween_property(h, "position", h.position + Vector3(0, 0.45, 0), 1.2)
+	tw.tween_property(h, "modulate:a", 0.0, 1.2).set_ease(Tween.EASE_IN)
+	tw.tween_property(h, "outline_modulate:a", 0.0, 1.2).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(h.queue_free)
+
+
+## Marks the creature at home on `land` (-1: away); home creatures puff their land now and then.
+func set_home(land: int) -> void:
+	home_land = land
+
+
 func set_dimmed(on: bool) -> void:
 	if on == dimmed:
 		return
@@ -317,3 +513,13 @@ func _process(delta: float) -> void:
 	if _fidget_in <= 0.0:
 		_fidget_in = randf_range(6.0, 12.0)
 		fidget()
+	if weather >= 0 and not _dying and not busy and not inside_house and is_inside_tree():
+		_weather_in -= delta
+		if _weather_in <= 0.0:
+			_weather_in = randf_range(7.0, 14.0)
+			_weather_moment()
+	if home_land >= 0 and not _dying and is_inside_tree():
+		_home_in -= delta
+		if _home_in <= 0.0:
+			_home_in = randf_range(3.5, 7.0)
+			Burst.spawn(get_parent(), HOME_PUFFS[home_land], global_position + Vector3(0, Island.TOP_Y - BASE_Y + 0.15, 0), Color.WHITE, 0.45)

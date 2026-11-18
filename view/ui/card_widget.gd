@@ -7,6 +7,16 @@ const SIZE := Vector2(140, 196)
 const ART := Rect2(8, 8, 124, 93)
 const KIND_NAMES: Array[String] = ["CREATURE", "BUILDING", "SPELL"]
 
+
+## "BEAST · L2" for creatures (the tribe says it's a creature), "FIELD SPELL", "BUILDING"...
+static func type_line(c: CardData) -> String:
+	if c.is_creature():
+		var tribe: String = Tribes.NAMES.get(c.tribe, "Creature")
+		return "%s  ·  L%d" % [tribe.to_upper(), c.level]
+	if c.field:
+		return "FIELD SPELL"
+	return KIND_NAMES[c.kind]
+
 var card: CardData
 var index: int = -1
 var _art: TextureRect
@@ -46,7 +56,7 @@ func setup(c: CardData, i: int) -> void:
 	name_l.add_theme_color_override("font_outline_color", Palette.INK)
 	name_l.add_theme_constant_override("outline_size", 6)
 	ribbon.add_child(name_l)
-	var kind := UiStyle.bold(UiStyle.label(KIND_NAMES[c.kind] + ("  ·  L%d" % c.level if c.is_creature() else ""), 10, Palette.INK))
+	var kind := UiStyle.bold(UiStyle.label(type_line(c), 10, Palette.INK))
 	kind.position = Vector2(4, 119)
 	kind.size = Vector2(SIZE.x - 8, 14)
 	kind.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
