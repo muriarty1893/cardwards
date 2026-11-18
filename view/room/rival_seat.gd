@@ -8,6 +8,11 @@ const SIT := &"Sit_Chair_Idle"
 ## Upper-body pose that holds the card fan up beside the face (chosen by screenshot); the head
 ## keeps the seated pose so the rival looks at the board.
 const HOLD := &"1H_Ranged_Aiming"
+## The aiming clip starts with the arm down and raises it; only this raised stretch (clip seconds)
+## is played, back and forth, so the fan never drops to the table and swings back up. Both ends
+## sit at the top of the arm's small breathing sway, so the turnarounds are smooth.
+const HOLD_FROM := 0.55
+const HOLD_TO := 1.0667
 const PLAY := &"Interact"
 const CHEER := &"Cheer"
 const FLINCH := &"Hit_A"
@@ -32,6 +37,7 @@ var _tree: AnimationTree
 var _react_node: AnimationNodeAnimation
 var _pose: Pose
 var _fan: Node3D
+var _cards: Array[Node3D] = []
 var _react: StringName = &""
 var _react_left: float = 0.0
 var _winning: bool = false
@@ -109,6 +115,18 @@ func _looping(anim: StringName) -> AnimationNodeAnimation:
 	return n
 
 
+## Plays clip seconds [from, to] back and forth forever.
+func _held(anim: StringName, from: float, to: float) -> AnimationNodeAnimation:
+	var n := AnimationNodeAnimation.new()
+	n.animation = anim
+	n.use_custom_timeline = true
+	n.start_offset = from
+	n.timeline_length = minf(to, _anim.get_animation(anim).length) - from
+	n.stretch_time_scale = false
+	n.loop_mode = Animation.LOOP_PINGPONG
+	return n
+
+
 func _build_tree() -> void:
 	var bt := AnimationNodeBlendTree.new()
 	var paths: Array[NodePath] = _upper_paths()
@@ -127,7 +145,7 @@ func _build_tree() -> void:
 	_react_node = AnimationNodeAnimation.new()
 	_react_node.animation = PLAY
 	bt.add_node(&"sit", _looping(SIT))
-	bt.add_node(&"hold_pose", _looping(HOLD))
+	bt.add_node(&"hold_pose", _held(HOLD, HOLD_FROM, HOLD_TO))
 	bt.add_node(&"hold", hold)
 	bt.add_node(&"react", _react_node)
 	bt.add_node(&"shot", shot)
@@ -150,7 +168,7 @@ func _build_tree() -> void:
 	_tree.set(&"parameters/win/blend_amount", 0.0)
 
 
-## Five card backs fanned in the right hand.
+## The fan of card backs in the right hand; set_hand_count keeps it matching the rival's hand.
 func _build_fan() -> void:
 	var attach := BoneAttachment3D.new()
 	attach.bone_name = "handslot.r"
@@ -158,18 +176,60 @@ func _build_fan() -> void:
 	_fan = Node3D.new()
 	_fan.name = "CardFan"
 	attach.add_child(_fan)
+	set_hand_count(5, false)
+
+
+func _make_card() -> Node3D:
 	var back := BoxMesh.new()
 	back.size = Vector3(0.27, 0.39, 0.004)
 	var rim := BoxMesh.new()
 	rim.size = Vector3(0.31, 0.43, 0.006)
-	for i: int in 5:
-		var card := Node3D.new()
-		card.rotation.z = deg_to_rad(32.0 - 16.0 * i)
-		card.position = Vector3(0, 0, 0.012 * i)
-		card.add_child(Palette.mesh(rim, Toon.plain(CARD_RIM), Vector3(0, 0.2, 0)))
-		for side: float in [-1.0, 1.0]:
-			card.add_child(Palette.mesh(back, Toon.plain(CARD_BACK), Vector3(0, 0.2, side * 0.004)))
+	var card := Node3D.new()
+	card.add_child(Palette.mesh(rim, Toon.plain(CARD_RIM), Vector3(0, 0.2, 0)))
+	for side: float in [-1.0, 1.0]:
+		card.add_child(Palette.mesh(back, Toon.plain(CARD_BACK), Vector3(0, 0.2, side * 0.004)))
+	return card
+
+
+## Cards held in the fan now.
+func hand_count() -> int:
+	return _cards.size()
+
+
+## Shows n card backs (0..hand limit). New cards slide up into the fan, played ones drop out,
+## and the fan re-spreads: 16° apart, closer together when the hand is big.
+func set_hand_count(n: int, animate: bool = true) -> void:
+	n = clampi(n, 0, GameState.HAND_LIMIT + 1)
+	while _cards.size() < n:
+		var card: Node3D = _make_card()
 		_fan.add_child(card)
+		_cards.append(card)
+		if animate:
+			card.position = Vector3(0, -0.35, 0.012 * (_cards.size() - 1))
+			card.scale = Vector3.ONE * 0.4
+	while _cards.size() > n:
+		var gone: Node3D = _cards.pop_back()
+		if animate and gone.is_inside_tree():
+			var tw := gone.create_tween().set_parallel()
+			tw.tween_property(gone, "position", gone.position + Vector3(0, 0.45, 0.05), 0.25)
+			tw.tween_property(gone, "scale", Vector3.ONE * 0.2, 0.25)
+			tw.chain().tween_callback(gone.queue_free)
+		else:
+			gone.free()
+	var step: float = 16.0 if _cards.size() <= 5 else 64.0 / (_cards.size() - 1)
+	for i: int in _cards.size():
+		var card: Node3D = _cards[i]
+		var rot: float = deg_to_rad(step * (_cards.size() - 1) * 0.5 - step * i)
+		var pos := Vector3(0, 0, 0.012 * i)
+		if animate and card.is_inside_tree():
+			var tw := card.create_tween().set_parallel().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(card, "rotation:z", rot, 0.3)
+			tw.tween_property(card, "position", pos, 0.3)
+			tw.tween_property(card, "scale", Vector3.ONE, 0.3)
+		else:
+			card.rotation.z = rot
+			card.position = pos
+			card.scale = Vector3.ONE
 
 
 func _process(delta: float) -> void:

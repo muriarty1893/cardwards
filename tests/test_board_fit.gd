@@ -51,7 +51,8 @@ func test_rival_head_visible() -> bool:
 		rig.set_zoom(0.0, true)
 		var rect: Rect2 = (r[3] as RivalSeat).hero_rect(rig.camera)
 		var h: float = size.y
-		assert_true(rect.position.y >= 0.04 * h and rect.position.y <= 0.30 * h, "rival head top in view at %s (%s)" % [size, rect])
+		# The user asked for a view that favours the board (2026-11-18): the head may touch the top edge.
+		assert_true(rect.position.y >= 0.0 and rect.position.y <= 0.30 * h, "rival head top in view at %s (%s)" % [size, rect])
 		assert_true(absf(rect.get_center().x - size.x / 2.0) <= 0.1 * size.x, "rival centred at %s (%s)" % [size, rect])
 		(r[0] as Node).free()
 	return true

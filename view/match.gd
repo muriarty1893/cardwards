@@ -52,6 +52,7 @@ func _ready() -> void:
 	rival = RivalSeat.new()
 	add_child(rival)
 	rival.setup(RIVAL_MODEL)
+	rival.set_hand_count(state.players[AI].hand.size(), false)
 	board = Board.new()
 	add_child(board)
 	var lands: Array[Array] = []
@@ -78,6 +79,13 @@ func _ready() -> void:
 			rig.hold_sweep(float(arg.substr(11)))
 			return
 	_begin(opening)
+
+
+## Where the rival's card fan is on screen: cards it draws fly there, cards it plays leave it.
+func rival_hand_screen() -> Vector2:
+	if rival and rig and rig.camera and rig.camera.is_inside_tree():
+		return rig.camera.unproject_position(rival.hand_point())
+	return hud.hero_screen_pos(false)
 
 
 func _begin(opening: Array[GameEvent]) -> void:

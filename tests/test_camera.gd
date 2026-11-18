@@ -124,3 +124,26 @@ func test_click_during_sweep_only_skips() -> bool:
 	m.queue_free()
 	await (Engine.get_main_loop() as SceneTree).process_frame
 	return true
+
+
+## Turning the view keeps the camera the same distance from the table centre, still looking at
+## the table, and R / reset_orbit brings it back to the seat.
+func test_orbit_turns_around_table() -> bool:
+	var rig: CameraRig = await _rig()
+	rig.set_zoom(0.0, true)
+	var seat: Transform3D = rig.pose_at(0.0)
+	rig.set_orbit(PI, 0.0, true)
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	var back: Transform3D = rig.camera.global_transform
+	assert_true(absf(back.origin.length() - seat.origin.length()) < 0.01, "same distance from the centre")
+	assert_true(back.origin.z < -5.0, "now on the rival's side (z %.2f)" % back.origin.z)
+	assert_true((-back.basis.z).dot(-back.origin.normalized()) > 0.8, "still looking at the table")
+	assert_true(rig.is_turned(), "turned")
+	rig.set_orbit(0.0, 10.0, true)
+	assert_true(absf(rig.tilt - CameraRig.TILT_MAX) < 0.001, "tilt clamps")
+	rig.reset_orbit()
+	await _wait(0.6)
+	assert_true(_same(rig.camera.global_transform, seat), "reset returns to the seat view")
+	assert_true(not rig.is_turned(), "not turned")
+	rig.free()
+	return true

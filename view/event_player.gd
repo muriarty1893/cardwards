@@ -15,6 +15,11 @@ const HIT_STOP := 0.07
 ## Landing / death burst preset per CardData.Land (NEUTRAL last).
 const LAND_BURSTS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow", &"stars"]
 const HIT_STOP_SCALE := 0.05
+## How each event changes the hand of the player it names (the rival's fan follows it live).
+const HAND_DELTA: Dictionary = {
+	&"card_drawn": 1, &"card_returned": 1, &"dream_up_chosen": 1,
+	&"creature_played": -1, &"building_played": -1, &"spell_cast": -1,
+}
 
 var m: MatchController
 var speed: float = 1.0
@@ -32,6 +37,8 @@ func play(events: Array[GameEvent]) -> void:
 	for e: GameEvent in events:
 		await _play_one(e)
 	_source = {}
+	if m.rival:
+		m.rival.set_hand_count(m.state.players[MatchController.AI].hand.size())
 	m.refresh_pieces()
 	m.refresh_ui()
 	m.verify_views()
@@ -119,6 +126,8 @@ func _rival_react(e: GameEvent) -> void:
 		return
 	var d: Dictionary = e.data
 	var ai: bool = int(d.get("player", -1)) == MatchController.AI
+	if ai and HAND_DELTA.has(e.type):
+		r.set_hand_count(r.hand_count() + int(HAND_DELTA[e.type]))
 	match e.type:
 		&"creature_played", &"building_played", &"spell_cast":
 			if ai:
@@ -152,7 +161,7 @@ func _play_creature(d: Dictionary) -> void:
 	var lane_screen: Vector2 = m.rig.camera.unproject_position(m.board.anchor(p, d["lane"]))
 	var human: bool = p == MatchController.HUMAN
 	Audio.sfx(&"card_play")
-	var from: Vector2 = m.hand.last_drop_pos if human and m.hand.last_drop_pos != Vector2.ZERO else m.hud.hero_screen_pos(human)
+	var from: Vector2 = m.hand.last_drop_pos if human and m.hand.last_drop_pos != Vector2.ZERO else (m.hud.hero_screen_pos(true) if human else m.rival_hand_screen())
 	FlyingCard.fly(m.hud, c, from, lane_screen, human, 0.22 / speed)
 	await _wait(0.22)
 	var drop := Vector3.INF

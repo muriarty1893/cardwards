@@ -3,13 +3,16 @@ extends Node3D
 ## The match camera. A seat view from the player's chair and a closer, steeper "lean in" view,
 ## with the mouse wheel / pinch sliding between them (`zoom` 0..1); an opening sweep around the
 ## room; a low close-up behind an attacker; ink outlines; shake and punch-zoom on top of
-## whatever the base pose is. While a cinematic plays, zoom input is ignored.
+## whatever the base pose is. While a cinematic plays, zoom input is ignored. The whole view
+## can be turned around the table (right- or middle-drag, Q/E or the arrow keys; R resets).
 
 signal sweep_finished
 
-const SEAT_POS := Vector3(0, 7.0, 14.0)
-const SEAT_LOOK := Vector3(0, 1.0, -2.0)
-const SEAT_FOV := 60.0
+## Looks down at the board a little more steeply than the first tabletop pass (20.6° → 25°), so
+## the board fills more of the view and the rival less; the rival's head still fits at the top.
+const SEAT_POS := Vector3(0, 8.0, 14.0)
+const SEAT_LOOK := Vector3(0, 0.5, -2.0)
+const SEAT_FOV := 58.0
 const LEAN_POS := Vector3(0, 10.0, 9.0)
 const LEAN_LOOK := Vector3(0, 0.0, 2.5)
 const LEAN_FOV := 46.0
@@ -32,7 +35,21 @@ const CLOSE_FOV := 50.0
 const CLOSE_IN := 0.22
 const CLOSE_OUT := 0.3
 
+## Turning the view: around the table centre (yaw, full circle) and up/down (tilt, radians;
+## positive looks more from above).
+const ORBIT_PIVOT := Vector3.ZERO
+const ORBIT_DRAG := 0.006
+const ORBIT_KEY_SPEED := 1.6
+const TILT_MIN := -0.12
+const TILT_MAX := 0.55
+
 var camera: Camera3D
+var yaw: float = 0.0
+var tilt: float = 0.0
+var _yaw_target: float = 0.0
+var _tilt_target: float = 0.0
+## Mouse button held for an orbit drag (0 = none).
+var _orbit_button: int = 0
 ## 0 = seat view, 1 = lean in.
 var zoom: float = 0.0
 var in_cinematic: bool = false
@@ -62,12 +79,40 @@ func _ready() -> void:
 	Outline.attach(camera)
 
 
-## Camera pose on the seat → lean-in path (eased so the middle of the wheel range moves most).
+## Camera pose on the seat → lean-in path (eased so the middle of the wheel range moves most),
+## turned by the current orbit.
 func pose_at(z: float) -> Transform3D:
 	var e: float = smoothstep(0.0, 1.0, clampf(z, 0.0, 1.0))
 	var pos: Vector3 = SEAT_POS.lerp(LEAN_POS, e)
 	var look: Vector3 = SEAT_LOOK.lerp(LEAN_LOOK, e)
-	return Transform3D(Basis.looking_at(look - pos, Vector3.UP), pos)
+	return orbit(Transform3D(Basis.looking_at(look - pos, Vector3.UP), pos), yaw, tilt)
+
+
+## `t` turned around the table centre: tilted up by `up` radians, then turned by `turn`.
+static func orbit(t: Transform3D, turn: float, up: float) -> Transform3D:
+	if turn == 0.0 and up == 0.0:
+		return t
+	var rot := Basis(Vector3.UP, turn) * Basis(Vector3.RIGHT, -up)
+	return Transform3D(rot * t.basis, ORBIT_PIVOT + rot * (t.origin - ORBIT_PIVOT))
+
+
+## Turns the view to (turn, up) radians; instant skips the easing.
+func set_orbit(turn: float, up: float, instant: bool = false) -> void:
+	_yaw_target = turn
+	_tilt_target = clampf(up, TILT_MIN, TILT_MAX)
+	if instant:
+		yaw = _yaw_target
+		tilt = _tilt_target
+
+
+## Back to the player's seat (the shorter way round).
+func reset_orbit() -> void:
+	set_orbit(0.0, 0.0)
+	yaw = wrapf(yaw, -PI, PI)
+
+
+func is_turned() -> bool:
+	return absf(wrapf(_yaw_target, -PI, PI)) > 0.01 or absf(_tilt_target) > 0.01
 
 
 func fov_at(z: float) -> float:
@@ -92,6 +137,10 @@ func zoom_by(steps: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key and key.pressed and not key.echo and key.keycode == KEY_R:
+		reset_orbit()
+		return
 	var mb := event as InputEventMouseButton
 	if mb and mb.pressed:
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -104,9 +153,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		zoom_by((mg.factor - 1.0) * 6.0)
 
 
-## During the opening sweep, any click or key press only skips it.
+## During the opening sweep, any click or key press only skips it. Otherwise a right- or
+## middle-button drag turns the view (a plain right click still cancels in InputController).
 func _input(event: InputEvent) -> void:
 	if not sweeping:
+		var mb := event as InputEventMouseButton
+		if mb and mb.button_index in [MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]:
+			_orbit_button = mb.button_index if mb.pressed else 0
+		var mm := event as InputEventMouseMotion
+		if mm and _orbit_button != 0 and not in_cinematic:
+			set_orbit(_yaw_target - mm.relative.x * ORBIT_DRAG, _tilt_target + mm.relative.y * ORBIT_DRAG * 0.6)
 		return
 	var press: bool = (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) or (event is InputEventKey and (event as InputEventKey).pressed)
 	if press:
@@ -240,6 +296,20 @@ func kick(strength: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var turn: float = 0.0
+	if Input.is_key_pressed(KEY_Q) or Input.is_key_pressed(KEY_LEFT):
+		turn += 1.0
+	if Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_RIGHT):
+		turn -= 1.0
+	if turn != 0.0 and not in_cinematic:
+		_yaw_target += turn * ORBIT_KEY_SPEED * delta
+	var k: float = 1.0 - exp(-delta / ZOOM_SMOOTH)
+	yaw = lerpf(yaw, _yaw_target, k)
+	tilt = lerpf(tilt, _tilt_target, k)
+	if absf(yaw - _yaw_target) < 0.0005:
+		yaw = _yaw_target
+	if absf(tilt - _tilt_target) < 0.0005:
+		tilt = _tilt_target
 	if not in_cinematic:
 		zoom = lerpf(zoom, _zoom_target, 1.0 - exp(-delta / ZOOM_SMOOTH))
 		if absf(zoom - _zoom_target) < 0.0005:
