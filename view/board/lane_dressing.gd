@@ -22,7 +22,6 @@ const HALF := Vector2(Island.WIDTH / 2.0 - 0.06, Island.LENGTH / 2.0 - 0.12)
 ## Cover and props keep this far in from the tile's side edges.
 const MARGIN := 0.06
 const BUILDING_R := 0.8
-const BOOP_R := 0.45
 ## Cover pieces per half-lane at High (Low passes density 0.5): Mushroom, Ember, Candy, Frost,
 ## Meadow.
 const DENSITY: Array[int] = [160, 90, 120, 110, 120]
@@ -156,8 +155,10 @@ static func is_clear(local: Vector3, player: int, shape: TileShape = null) -> bo
 	var bx: float = shape.centre(back_z)
 	if p.distance_to(Vector2(bx, back_z)) < BUILDING_R:
 		return false
-	if player == 0 and p.distance_to(Vector2(bx + Board.BOOP_X, back_z)) < BOOP_R:
-		return false
+	if player == 0:
+		var plate_z: float = Board.PLATE_Z - Board.STRIP_Z[0]
+		if absf(local.x - shape.centre(plate_z)) < BoopPlate.SIZE.x / 2.0 + 0.1 and absf(local.z - plate_z) < BoopPlate.SIZE.y / 2.0 + 0.1:
+			return false
 	return true
 
 

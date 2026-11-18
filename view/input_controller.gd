@@ -130,6 +130,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not (mb and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT):
 		return
+	if mode == Mode.IDLE and try_plate(match_ctl.board.ground_at_screen(match_ctl.rig.camera, mb.position)):
+		if is_inside_tree():
+			get_viewport().set_input_as_handled()
+		return
 	var hit: Dictionary = match_ctl.board.lane_at_screen(match_ctl.rig.camera, mb.position)
 	if hit.is_empty():
 		return
@@ -256,6 +260,18 @@ func _release(pos: Vector2) -> void:
 	match_ctl.request_attack(lane, t)
 
 
+## A click at world point `ground`: if it is on a lit boop plate, press it and boop that lane. True if taken.
+func try_plate(ground: Vector3) -> bool:
+	if not enabled or mode != Mode.IDLE:
+		return false
+	var lane: int = match_ctl.board.plate_at(ground)
+	if lane < 0 or match_ctl.board.boop_plate(lane).state != BoopPlate.State.LIT:
+		return false
+	match_ctl.board.boop_plate(lane).press()
+	request_boop(lane)
+	return true
+
+
 ## True when the human's creature in `lane` can boop right now (targets may still be needed).
 func can_boop(lane: int) -> bool:
 	if not enabled or mode != Mode.IDLE:
@@ -267,7 +283,7 @@ func can_boop(lane: int) -> bool:
 	return err == "" or err == "Invalid target"
 
 
-## Boop the human's creature in `lane` (from a creature click or its BOOP button).
+## Boop the human's creature in `lane` (from a creature click or its boop plate).
 func request_boop(lane: int) -> void:
 	if not enabled:
 		return

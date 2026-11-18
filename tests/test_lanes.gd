@@ -14,11 +14,11 @@ func test_props_clear_of_pieces() -> bool:
 	return true
 
 
-## Tile-local building and boop spots for `player` (the tile centre is LANE_X, STRIP_Z).
+## Tile-local building spot and boop plate centre for `player` (straight tiles: the tile centre is the lane centre).
 static func _spots(player: int) -> Array[Vector2]:
 	var s: float = 1.0 if player == 0 else -1.0
 	var back: float = (Board.SEAM / 2.0 + Island.LENGTH * (1.0 - Board.BUILDING_DEPTH / 2.0)) * s - Board.STRIP_Z[player]
-	return [Vector2(0.0, back), Vector2(Board.BOOP_X, back)]
+	return [Vector2(0.0, back), Vector2(0.0, Board.PLATE_Z - Board.STRIP_Z[0])]
 
 
 func test_dressing_avoids_spots() -> bool:
@@ -35,7 +35,8 @@ func test_dressing_avoids_spots() -> bool:
 					n += 1
 					assert_true(Vector2(o.x, o.z).distance_to(spots[0]) >= LaneDressing.BUILDING_R, "land %d p%d cover %d clear of building" % [land, p, i])
 					if p == 0:
-						assert_true(Vector2(o.x, o.z).distance_to(spots[1]) >= LaneDressing.BOOP_R, "land %d p%d cover %d clear of boop" % [land, p, i])
+						var off: Vector2 = (Vector2(o.x, o.z) - spots[1]).abs()
+						assert_true(off.x >= BoopPlate.SIZE.x / 2.0 or off.y >= BoopPlate.SIZE.y / 2.0, "land %d p%d cover %d clear of the boop plate" % [land, p, i])
 					assert_true(absf(o.x) <= Island.WIDTH / 2.0 and absf(o.z) <= Island.LENGTH / 2.0, "land %d cover %d on its tile" % [land, i])
 			assert_true(n >= LaneDressing.DENSITY[land] * 0.8, "land %d p%d dense (%d)" % [land, p, n])
 			root.free()
@@ -155,7 +156,8 @@ func test_zones_disjoint() -> bool:
 	for l: int in 4:
 		var bo: Vector3 = b.boop_point(l)
 		var bp: Vector3 = b.building_point(0, l)
-		assert_true(not _circle_hits_rect(Vector2(bo.x, bo.z), 0.35, b.roam_rect(0, l)), "boop clear of roam l%d" % l)
+		var plate := Rect2(bo.x - BoopPlate.SIZE.x / 2.0, bo.z - BoopPlate.SIZE.y / 2.0, BoopPlate.SIZE.x, BoopPlate.SIZE.y)
+		assert_true(not plate.intersects(b.roam_rect(0, l)), "boop plate clear of roam l%d" % l)
 		assert_true(Vector2(bo.x, bo.z).distance_to(Vector2(bp.x, bp.z)) >= 0.85, "boop clear of building l%d" % l)
 		assert_true(_tile_rect(0, l).has_point(Vector2(bo.x, bo.z)), "boop inside its tile l%d" % l)
 	b.free()

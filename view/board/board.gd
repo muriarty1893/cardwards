@@ -15,8 +15,10 @@ const TRAY_RECT := Rect2(-6.0, -6.1, 12.0, 12.2)
 const BUILDING_DEPTH := 0.25
 ## Roam zone inset from the lane edges and the seam.
 const ROAM_INSET := 0.25
-## Boop button spot: this far left of the lane centre, level with the building.
-const BOOP_X := -0.95
+## Boop plate: centred across your lane at this z (world), between the roam zone and the building row.
+const PLATE_Z := 4.0
+## The roam zone stops this much short of the building row, leaving room for the plate.
+const ROAM_BACK := 0.45
 ## A creature house sits this far right of the lane centre, a little seam-side of the tile
 ## centre; creatures with a house roam a zone this much narrower on that side.
 const HOUSE_X := 0.88
@@ -45,6 +47,7 @@ var split_revealed: bool = false
 var layout: BoardLayout = BoardLayout.straight()
 var _density: float = -1.0
 var _islands: Array[Array] = [[], []]
+var _plates: Array[BoopPlate] = []
 
 
 func build(lands: Array[Array], layout_: BoardLayout = null) -> void:
@@ -62,6 +65,13 @@ func build(lands: Array[Array], layout_: BoardLayout = null) -> void:
 	separators = Separators.new()
 	add_child(separators)
 	separators.build(layout)
+	for l: int in 4:
+		var plate := BoopPlate.new()
+		var bp: Vector3 = boop_point(l)
+		plate.position.x = bp.x
+		plate.position.z = bp.z
+		add_child(plate)
+		_plates.append(plate)
 	var xs: Array[float] = []
 	for l: int in 4:
 		xs.append(lane_x(l))
@@ -81,6 +91,8 @@ func reveal_split(animate: bool) -> void:
 		for p: int in 2:
 			for isl: Island in _islands[p]:
 				isl.position.y = 0.0
+		for plate: BoopPlate in _plates:
+			plate.rise(false)
 		split_done.emit()
 		return
 	separators.reveal = 0.0
@@ -96,6 +108,9 @@ func reveal_split(animate: bool) -> void:
 			settle.tween_property(isl, "position:y", -SETTLE_DROP, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			settle.tween_property(isl, "position:y", 0.0, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	await tw.finished
+	for plate: BoopPlate in _plates:
+		plate.rise(true)
+	await get_tree().create_timer(0.3).timeout
 	split_done.emit()
 
 
@@ -166,7 +181,7 @@ func anchor(player: int, lane: int) -> Vector3:
 func roam_rect(player: int, lane: int) -> Rect2:
 	var s: float = 1.0 if player == 0 else -1.0
 	var near: float = SEAM / 2.0 + ROAM_INSET
-	var far: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH) - 0.1
+	var far: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH) - 0.1 - ROAM_BACK
 	var z0: float = minf(near * s, far * s)
 	var span: Vector2 = layout.inner_span(lane, z0, z0 + far - near)
 	return Rect2(span.x + ROAM_INSET, z0, span.y - span.x - 2.0 * ROAM_INSET, far - near)
@@ -185,10 +200,23 @@ func house_point(player: int, lane: int) -> Vector3:
 	return Vector3(layout.right_x(lane, z) - (Island.WIDTH / 2.0 - HOUSE_X), Island.TOP_Y, z)
 
 
-## The human's boop button spot in `lane`, beside the building.
+## The centre of the human's boop plate in `lane`.
 func boop_point(lane: int) -> Vector3:
-	var b: Vector3 = building_point(0, lane)
-	return Vector3(layout.centre_x(lane, b.z) + BOOP_X, Island.TOP_Y, b.z)
+	return Vector3(layout.centre_x(lane, PLATE_Z), Island.TOP_Y, PLATE_Z)
+
+
+func boop_plate(lane: int) -> BoopPlate:
+	return _plates[lane]
+
+
+## The lane of the boop plate under world point `pos`, or -1.
+func plate_at(pos: Vector3) -> int:
+	if not pos.is_finite():
+		return -1
+	for l: int in _plates.size():
+		if _plates[l].contains(pos):
+			return l
+	return -1
 
 
 ## World point a creature lunges to when attacking the hero behind `player`'s lane: just past

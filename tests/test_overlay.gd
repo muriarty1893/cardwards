@@ -25,9 +25,9 @@ func test_boop_button_matches_rules() -> bool:
 	Fx.put_creature(m.state, 0, 1, &"cinderpup")  # no boop
 	m.sync_all(); m.refresh_ui()
 	await (Engine.get_main_loop() as SceneTree).process_frame
-	assert_true(m.overlay.boop_button(0).visible and not m.overlay.boop_button(0).disabled, "gumdrop boop ready")
-	assert_true(not m.overlay.boop_button(1).visible, "no button without boop")
-	m.overlay.boop_button(0).pressed.emit()
+	assert_eq(m.board.boop_plate(0).state, BoopPlate.State.LIT, "gumdrop boop ready")
+	assert_eq(m.board.boop_plate(1).state, BoopPlate.State.DIM, "no lit plate without boop")
+	m.input.try_plate(m.board.boop_point(0))
 	await (Engine.get_main_loop() as SceneTree).create_timer(1.0).timeout
 	assert_true(m.state.players[0].lanes[0].creature.booped, "boop resolved via button")
 	m.queue_free()
@@ -40,7 +40,7 @@ func test_boop_buttons_disabled_while_busy() -> bool:
 	m.busy = true
 	m.refresh_ui()
 	await (Engine.get_main_loop() as SceneTree).process_frame
-	assert_true(m.overlay.boop_button(0).disabled, "disabled while busy")
+	assert_eq(m.board.boop_plate(0).state, BoopPlate.State.DIM, "dim while busy")
 	m.queue_free()
 	return true
 
@@ -54,7 +54,7 @@ func test_overlay_follows_swap() -> bool:
 	await m.perform(Action.play(0, i, -1, [{"player": 0, "lane": 0}, {"player": 0, "lane": 3}]))
 	await (Engine.get_main_loop() as SceneTree).process_frame
 	assert_eq(m.overlay.entry(0, 0)["atk"], Rules.effective_attack(m.state, 0, 0), "lane 0 shows magmaw now")
-	assert_true(m.overlay.boop_button(3).visible, "gumdrop's button moved to lane 3")
+	assert_eq(m.board.boop_plate(3).state, BoopPlate.State.LIT, "gumdrop's plate lit in lane 3")
 	m.queue_free()
 	return true
 

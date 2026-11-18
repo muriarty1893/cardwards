@@ -1,18 +1,13 @@
 class_name UnitOverlay
 extends Control
 ## Screen-space info that follows the pieces on the board: an attack number and a health bar
-## above each creature, a badge on each building, a BOOP button on each of the human's lanes
-## and an enlarged card when the mouse hovers a piece. Values come from the game state.
+## above each creature, a badge on each building and an enlarged card when the mouse hovers a piece. It also sets
+## the human's boop plates (on the board) lit or dim. Values come from the game state.
 
 const BAR_SIZE := Vector2(110, 40)
 const GREEN := Color("#3ad16a")
 const YELLOW := Color("#ffcf3a")
 const RED := Color("#e5384f")
-const BOOP_SIZE := Vector2(96, 34)
-## Where a lane's BOOP button sits, relative to the human creature's anchor (left of the building).
-const BOOP_OFFSET := Vector3(-0.45, 0, 0.95)
-const BOOP_READY := Color("#ffcf3a")
-const BOOP_OFF := Color("#8a86a8")
 const DRAIN := 0.3
 const HOVER_SCALE := 1.6
 
@@ -20,7 +15,6 @@ var _m: MatchController
 var _entries: Array[Array] = []
 var _bars: Array[Array] = []
 var _badges: Array[Array] = []
-var _boops: Array[Button] = []
 var _hover: CardWidget
 var _hover_key: String = ""
 ## The enlarged card lives on its own layer above the HUD so nothing covers it.
@@ -48,20 +42,6 @@ func setup(m: MatchController) -> void:
 			var badge := _make_badge()
 			add_child(badge)
 			_badges[p].append(badge)
-	for l: int in 4:
-		var b := Button.new()
-		b.name = "Boop%d" % l
-		b.text = "BOOP"
-		b.size = BOOP_SIZE
-		b.custom_minimum_size = BOOP_SIZE
-		b.visible = false
-		b.focus_mode = Control.FOCUS_NONE
-		b.mouse_filter = Control.MOUSE_FILTER_STOP
-		_style_boop(b)
-		b.pressed.connect(func() -> void: _m.input.request_boop(l))
-		UiStyle.sound_button(b)
-		add_child(b)
-		_boops.append(b)
 
 
 func entry(p: int, l: int) -> Dictionary:
@@ -101,8 +81,13 @@ static func hover_rect(at: Vector2, vp: Vector2, avoid: Array[Rect2], floor_y: f
 	return r
 
 
-func boop_button(l: int) -> Button:
-	return _boops[l]
+## LIT when the human's creature in lane l can boop right now, else DIM (HIDDEN until the board has split).
+func plate_state(l: int) -> BoopPlate.State:
+	if not _m.board.split_revealed:
+		return BoopPlate.State.HIDDEN
+	var cr: GameState.CreatureState = _m.state.players[MatchController.HUMAN].lanes[l].creature
+	var lit: bool = cr != null and cr.card.has_effect(&"on_boop") and not cr.hushed and _m.input.can_boop(l) and not _m.busy
+	return BoopPlate.State.LIT if lit else BoopPlate.State.DIM
 
 
 static func bar_color(hp: int, max_hp: int) -> Color:
@@ -162,11 +147,9 @@ func refresh(s: GameState) -> void:
 				var path: String = VisualDB.badge_icon(lane.building.id)
 				icon.texture = load(path) as Texture2D if path != "" else null
 	for l: int in 4:
-		var cr: GameState.CreatureState = s.players[MatchController.HUMAN].lanes[l].creature
-		var b: Button = _boops[l]
-		b.visible = cr != null and cr.card.has_effect(&"on_boop") and not cr.hushed
-		b.disabled = not (b.visible and _m.input.can_boop(l) and not _m.busy)
-		_style_boop(b)
+		var st: BoopPlate.State = plate_state(l)
+		if st != BoopPlate.State.HIDDEN:
+			_m.board.boop_plate(l).set_state(st)
 
 
 ## The piece under a screen point: {"player", "lane", "kind"} or {}.
@@ -208,9 +191,7 @@ func _process(_delta: float) -> void:
 			var bv: Variant = _m.building_views[p][l]
 			if badge.visible and is_instance_valid(bv):
 				badge.position = cam.unproject_position((bv as Node3D).global_position + Vector3(0, BuildingView.HEIGHT + 0.25, 0)) - badge.size / 2.0
-	for l: int in 4:
-		if _boops[l].visible:
-			_boops[l].position = cam.unproject_position(_m.board.anchor(MatchController.HUMAN, l) + BOOP_OFFSET) - BOOP_SIZE / 2.0
+	_hover_plates(cam)
 	_update_hover()
 
 
@@ -388,26 +369,19 @@ func _make_badge() -> Control:
 	return badge
 
 
+## Brightens the lit boop plate under the mouse.
+func _hover_plates(cam: Camera3D) -> void:
+	if not _m.board.split_revealed:
+		return
+	var lane: int = _m.board.plate_at(_m.board.ground_at_screen(cam, get_viewport().get_mouse_position()))
+	for l: int in 4:
+		var plate: BoopPlate = _m.board.boop_plate(l)
+		var on: bool = l == lane and plate.state == BoopPlate.State.LIT
+		if plate.hovered != on:
+			plate.hovered = on
+
+
 func badge(p: int, l: int) -> Control:
 	return _badges[p][l]
 
 
-func _style_boop(b: Button) -> void:
-	var ready: bool = not b.disabled
-	b.add_theme_font_size_override("font_size", 16)
-	for st: String in ["normal", "hover", "pressed", "disabled", "focus"]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = BOOP_READY if ready else BOOP_OFF
-		if st == "hover" and ready:
-			sb.bg_color = BOOP_READY.lightened(0.2)
-		if st == "pressed":
-			sb.bg_color = BOOP_READY.darkened(0.15)
-		sb.border_color = Palette.INK
-		sb.set_border_width_all(3)
-		sb.set_corner_radius_all(12)
-		if ready:
-			sb.shadow_color = Color(BOOP_READY, 0.7)
-			sb.shadow_size = 6
-		b.add_theme_stylebox_override(st, sb)
-	for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_disabled_color"]:
-		b.add_theme_color_override(c, Palette.INK if ready else Color(1, 1, 1, 0.7))
