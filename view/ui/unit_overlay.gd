@@ -247,7 +247,7 @@ func _update_hover() -> void:
 	if not is_instance_valid(view):
 		return
 	var at: Vector2 = _m.rig.camera.unproject_position((view as Node3D).global_position + Vector3(0, 0.6, 0))
-	_hover.position = hover_rect(at, size, _m.hud.corner_rects(), size.y - Hud.TRAY_H).position
+	_hover.position = hover_rect(at, size, _m.hud.corner_rects(), size.y - Hud.HAND_STRIP_H).position
 
 
 # --- Widgets -----------------------------------------------------------------
@@ -372,8 +372,8 @@ func _make_badge() -> Control:
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.visible = false
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Palette.TRAY
-	sb.border_color = Palette.INK
+	sb.bg_color = UiStyle.WOOD_DARK
+	sb.border_color = UiStyle.WOOD_INK
 	sb.set_border_width_all(3)
 	sb.set_corner_radius_all(15)
 	badge.add_theme_stylebox_override("panel", sb)

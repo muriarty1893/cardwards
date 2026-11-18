@@ -1,25 +1,35 @@
 class_name Hand
 extends Control
-## Row of cards along the bottom. Hover lifts and enlarges a card so it can be read;
-## press-drag-release plays it.
+## The slim hand along the bottom edge (tabletop spec 7.2): cards in a slight fan, shown a bit
+## smaller and only their top part peeking up (cost, picture and name), so the board stays clear.
+## Hover: the card rises to full size above the edge and its neighbours slide apart. Press-drag-
+## release plays it; over the board the dragged card shrinks to a small token so the lanes show.
 
 signal card_drag_started(index: int)
 signal card_dropped(index: int, screen_pos: Vector2)
 
-## The hand is a straight row inside the HUD tray, between its left and right columns.
-const MAX_STEP := 148.0
-## A hovered card grows to this scale (replaces the old tooltip).
-const HOVER_SCALE := 1.6
-const RAISE := 34.0
-const REGION_LEFT := 240.0
-const REGION_RIGHT := 290.0
-const BOTTOM_PAD := 8.0
+## Space between the HUD's deck box (left) and the gems / END TURN column (right).
+const REGION_LEFT := 190.0
+const REGION_RIGHT := 244.0
+const MAX_STEP := 128.0
+## Resting cards are drawn at this scale with this many pixels showing above the screen edge.
+const REST_SCALE := 0.85
+const PEEK := 118.0
+## A hovered card: this scale, bottom this far above the screen edge.
+const HOVER_SCALE := 1.5
+const HOVER_BOTTOM := 8.0
+## Neighbours of the hovered card slide this far aside.
+const SPREAD := 40.0
+## Fan: degrees per card from the middle, and how much lower the outer cards sit (px per step²).
+const FAN_DEG := 2.5
+const ARC := 2.5
+## Dragged card over the board.
+const TOKEN_SCALE := 0.45
 
 var _cards: Array[CardWidget] = []
 var _shown: Array[CardData] = []
 var _hover: int = -1
 var _drag: int = -1
-var _drag_offset: Vector2
 var enabled: bool = true
 ## Where the last dragged card was released (playback flies the card from here).
 var last_drop_pos: Vector2 = Vector2.ZERO
@@ -45,6 +55,8 @@ func show_hand(cards: Array[CardData], playable: Array[bool]) -> void:
 		var w := CardWidget.new()
 		w.setup(cards[i], i)
 		w.set_playable(playable[i] if i < playable.size() else true)
+		# Scale and tilt around the bottom centre, like a card held from below.
+		w.pivot_offset = Vector2(CardWidget.SIZE.x / 2.0, CardWidget.SIZE.y)
 		w.mouse_entered.connect(_on_enter.bind(i))
 		w.mouse_exited.connect(_on_exit.bind(i))
 		w.gui_input.connect(_on_card_input.bind(i))
@@ -53,16 +65,46 @@ func show_hand(cards: Array[CardData], playable: Array[bool]) -> void:
 	_layout(false)
 
 
-func _home(i: int) -> Vector2:
+## Centre x of card i at rest (no hover spread).
+func _centre_x(i: int) -> float:
 	var n: int = _cards.size()
 	var left: float = REGION_LEFT
 	var right: float = size.x - REGION_RIGHT
+	var w: float = CardWidget.SIZE.x * REST_SCALE
 	var step: float = MAX_STEP
 	if n > 1:
-		step = minf(MAX_STEP, (right - left - CardWidget.SIZE.x) / float(n - 1))
-	var total: float = step * (n - 1) + CardWidget.SIZE.x
-	var x: float = (left + right) / 2.0 - total / 2.0 + i * step
-	return Vector2(x, size.y - CardWidget.SIZE.y - BOTTOM_PAD)
+		step = minf(MAX_STEP, (right - left - w) / float(n - 1))
+	var total: float = step * (n - 1) + w
+	return (left + right) / 2.0 - total / 2.0 + w / 2.0 + i * step
+
+
+func _offset_from_middle(i: int) -> float:
+	return float(i) - float(_cards.size() - 1) / 2.0
+
+
+## Resting card i on screen (local to the hand; rotation not included).
+func _rest_rect(i: int) -> Rect2:
+	var cx: float = _centre_x(i)
+	if _hover >= 0 and i != _hover and _drag < 0:
+		cx += SPREAD * signf(float(i - _hover))
+	var k: float = _offset_from_middle(i)
+	var top: float = size.y - PEEK + ARC * k * k
+	var sz: Vector2 = CardWidget.SIZE * REST_SCALE
+	return Rect2(Vector2(cx - sz.x / 2.0, top), sz)
+
+
+## Enlarged card i: full size above the bottom edge, kept inside the hand region.
+func _hover_rect(i: int) -> Rect2:
+	var big: Vector2 = CardWidget.SIZE * HOVER_SCALE
+	var x: float = _centre_x(i) - big.x / 2.0
+	x = clampf(x, 8.0, maxf(8.0, size.x - REGION_RIGHT - big.x))
+	return Rect2(Vector2(x, size.y - HOVER_BOTTOM - big.y), big)
+
+
+## Control position that draws the card (scaled `s` around its bottom-centre pivot) with its
+## scaled rect's bottom centre at `bottom_centre`.
+static func _position_for(bottom_centre: Vector2) -> Vector2:
+	return bottom_centre - Vector2(CardWidget.SIZE.x / 2.0, CardWidget.SIZE.y)
 
 
 func _layout(animated: bool = true) -> void:
@@ -72,31 +114,25 @@ func _layout(animated: bool = true) -> void:
 			continue
 		var w: CardWidget = _cards[i]
 		var hovered: bool = i == _hover and _drag < 0
-		var pos: Vector2 = _hover_rect(i).position if hovered else _home(i)
-		var sc: Vector2 = Vector2.ONE * (HOVER_SCALE if hovered else 1.0)
+		var r: Rect2 = _hover_rect(i) if hovered else _rest_rect(i)
+		var pos: Vector2 = _position_for(Vector2(r.get_center().x, r.end.y))
+		var sc: Vector2 = Vector2.ONE * (HOVER_SCALE if hovered else REST_SCALE)
+		var rot: float = 0.0 if hovered else deg_to_rad(FAN_DEG * _offset_from_middle(i))
 		w.z_index = 10 if hovered else i
 		if animated:
 			var tw := w.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			tw.tween_property(w, "position", pos, 0.15)
 			tw.tween_property(w, "scale", sc, 0.15)
+			tw.tween_property(w, "rotation", rot, 0.15)
 		else:
 			w.position = pos
 			w.scale = sc
+			w.rotation = rot
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_layout(false)
-
-
-## Enlarged card i: grown from its bottom centre, lifted, kept inside the hand region.
-func _hover_rect(i: int) -> Rect2:
-	var home := Rect2(_home(i), CardWidget.SIZE)
-	var big: Vector2 = CardWidget.SIZE * HOVER_SCALE
-	var x: float = home.get_center().x - big.x / 2.0
-	x = clampf(x, REGION_LEFT, maxf(REGION_LEFT, size.x - REGION_RIGHT - big.x))
-	var bottom: float = home.end.y - RAISE
-	return Rect2(Vector2(x, maxf(0.0, bottom - big.y)), big)
 
 
 ## Screen rect of the hovered card (empty if none).
@@ -113,12 +149,22 @@ func hover(i: int) -> void:
 	_layout(false)
 
 
+## The resting cards' on-screen area (the part above the bottom edge).
 func cards_rect() -> Rect2:
 	var r := Rect2()
+	var screen := Rect2(Vector2.ZERO, size)
 	for i: int in _cards.size():
-		var g := Rect2(global_position + _home(i), CardWidget.SIZE)
+		var g: Rect2 = _rest_rect(i).intersection(screen)
+		g.position += global_position
 		r = g if i == 0 else r.merge(g)
 	return r
+
+
+## Resting card i's on-screen rect (global), for tests.
+func card_rect(i: int) -> Rect2:
+	var g: Rect2 = _rest_rect(i)
+	g.position += global_position
+	return g
 
 
 func _on_enter(i: int) -> void:
@@ -132,6 +178,10 @@ func _on_enter(i: int) -> void:
 
 func _on_exit(i: int) -> void:
 	if _hover == i and _drag < 0:
+		# Leaving the risen card back down onto its own resting spot keeps it up.
+		var at: Vector2 = get_local_mouse_position()
+		if _hover_rect(i).has_point(at):
+			return
 		_hover = -1
 		_layout()
 
@@ -144,11 +194,22 @@ func _on_card_input(event: InputEvent, i: int) -> void:
 		_drag = i
 		_hover = -1
 		var w: CardWidget = _cards[i]
-		w.scale = Vector2.ONE
 		w.z_index = 20
-		_drag_offset = CardWidget.SIZE / 2.0
+		w.rotation = 0.0
+		_follow(w, mb.global_position)
 		card_drag_started.emit(i)
 		accept_event()
+		_layout()
+
+
+## Keeps the dragged card centred on the mouse: full card over the hand strip, a small token
+## once it is over the board.
+func _follow(w: CardWidget, mouse: Vector2) -> void:
+	var over_board: bool = mouse.y < global_position.y + size.y - Hud.HAND_STRIP_H - 20.0
+	var s: float = TOKEN_SCALE if over_board else REST_SCALE
+	w.scale = Vector2.ONE * s
+	# The pivot is the bottom centre: put the scaled card's centre on the mouse.
+	w.global_position = mouse - w.pivot_offset + Vector2(0, CardWidget.SIZE.y * s / 2.0)
 
 
 func _input(event: InputEvent) -> void:
@@ -156,13 +217,11 @@ func _input(event: InputEvent) -> void:
 		return
 	var mm := event as InputEventMouseMotion
 	if mm:
-		_cards[_drag].global_position = mm.position - _drag_offset
-		_cards[_drag].scale = Vector2.ONE * 0.8
+		_follow(_cards[_drag], mm.global_position)
 	var mb := event as InputEventMouseButton
 	if mb and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
 		var i: int = _drag
 		_drag = -1
-		_cards[i].scale = Vector2.ONE
 		last_drop_pos = mb.position
 		card_dropped.emit(i, mb.position)
 		_layout()
@@ -171,6 +230,4 @@ func _input(event: InputEvent) -> void:
 ## Return a dragged card to its place (drop rejected).
 func cancel_drag() -> void:
 	_drag = -1
-	for w: CardWidget in _cards:
-		w.scale = Vector2.ONE
 	_layout()

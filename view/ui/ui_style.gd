@@ -4,6 +4,13 @@ extends RefCounted
 
 ## Lilita One (OFL) for names, numbers and titles.
 const TITLE_FONT := "res://assets/fonts/LilitaOne-Regular.ttf"
+## Wood, parchment and brass for the table HUD (tabletop spec 7.1).
+const WOOD := Color("#8a5a34")
+const WOOD_DARK := Color("#5b3a22")
+const WOOD_INK := Color("#3b2a1a")
+const BRASS := Color("#e0b04a")
+const BRASS_DARK := Color("#9c6f22")
+const PARCHMENT := Color("#f6e7c4")
 
 static var _title_font: FontFile
 static var _bold_font: SystemFont

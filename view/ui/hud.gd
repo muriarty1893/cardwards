@@ -1,7 +1,8 @@
 class_name Hud
 extends Control
-## Screen layout: hero corners (portrait, health bar, magic), a bottom tray (deck and discard
-## counters, room for the hand, magic gems, END TURN button), and a pause button. Living board:
+## Screen layout: hero corners (portrait, health bar, magic), a small deck box bottom-left (deck
+## and discard counts), the magic gems and a brass END TURN button bottom-right, and a pause
+## button; the slim hand (Hand) peeks up between them, so nothing covers the board. Living board:
 ## an armour shield at the tip of each health bar, tribe-bonus chips under each corner and the
 ## field in play at the top centre.
 
@@ -9,8 +10,12 @@ signal end_turn_pressed
 signal menu_requested
 signal pause_changed(open: bool)
 
-const TRAY_H := 214.0
-const TRAY_MARGIN := 60.0
+## The strip along the bottom edge the hand peeks into; the board stays above it.
+const HAND_STRIP_H := 124.0
+const DECK_BOX := Vector2(156, 100)
+const END_TURN_SIZE := Vector2(200, 70)
+const GEMS_PLATE := Vector2(204, 46)
+const MARGIN := 12.0
 const CORNER := Vector2(236, 120)
 ## Hero health bar size (it sits on top of the corner and runs toward the centre).
 const BAR := Vector2(300, 30)
@@ -26,7 +31,8 @@ var _you: Control
 var _rival: Control
 var _you_bar: Control
 var _rival_bar: Control
-var _tray: Panel
+var _deck_box: Panel
+var _gems_plate: Panel
 var _refs: Dictionary = {}
 var _gems: MagicGems
 ## END TURN pulses when nothing else is left to do.
@@ -61,7 +67,7 @@ func _init() -> void:
 	add_child(_you_bar)
 	_rival_bar = _hero_bar(false, "Rival")
 	add_child(_rival_bar)
-	_build_tray()
+	_build_bottom()
 	_build_pause()
 	for who: String in ["You", "Rival"]:
 		_build_armour(who == "You", who)
@@ -80,7 +86,7 @@ func _init() -> void:
 
 
 func panels() -> Array[Control]:
-	return [_you, _rival, _you_bar, _rival_bar, _tray, end_turn_button, pause_button]
+	return [_you, _rival, _you_bar, _rival_bar, _deck_box, _gems_plate, end_turn_button, pause_button]
 
 
 func refresh(s: GameState, human: int) -> void:
@@ -92,6 +98,8 @@ func refresh(s: GameState, human: int) -> void:
 	_deck_label.text = "DECK  %d" % me.deck.size()
 	_discard_label.text = "DISCARD  %d" % me.discard.size()
 	var mine: bool = s.active == human and s.phase != GameState.Phase.OVER
+	end_turn_button.text = "END TURN" if mine or s.phase == GameState.Phase.OVER else "RIVAL'S TURN"
+	end_turn_button.add_theme_font_size_override("font_size", 28 if mine else 20)
 	_you.modulate = Color.WHITE if mine else Color(0.82, 0.82, 0.82)
 	_rival.modulate = Color.WHITE if not mine else Color(0.82, 0.82, 0.82)
 	_you_bar.modulate = _you.modulate
@@ -202,10 +210,12 @@ func _fill_tribes(who: String, s: GameState, p: int) -> void:
 	for w: Array in want:
 		var tribe: StringName = w[0]
 		var chip := UiStyle.title(UiStyle.label("%s %s" % [Tribes.BONUS[tribe].to_upper(), "I" if w[1] == 1 else "II"], 13, Color.WHITE)) as Label
+		chip.add_theme_color_override("font_outline_color", UiStyle.WOOD_INK)
+		chip.add_theme_constant_override("outline_size", 5)
 		chip.custom_minimum_size = Vector2(0, 24)
 		chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		chip.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		var sb := _frame(TRIBE_COLORS.get(tribe, Palette.TRAY_LIGHT), 10, 3)
+		var sb := _frame(TRIBE_COLORS.get(tribe, UiStyle.WOOD_DARK), 10, 3)
 		sb.content_margin_left = 8
 		sb.content_margin_right = 8
 		chip.add_theme_stylebox_override("normal", sb)
@@ -301,7 +311,7 @@ func hero_screen_pos(human_side: bool) -> Vector2:
 func _frame(bg: Color, radius: int = 16, border: int = 4) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
-	sb.border_color = Palette.TRAY_DARK
+	sb.border_color = UiStyle.WOOD_INK
 	sb.set_border_width_all(border)
 	sb.set_corner_radius_all(radius)
 	return sb
@@ -313,7 +323,7 @@ func _plate(text: String, size_: Vector2, font: int = 16) -> Label:
 	l.custom_minimum_size = size_
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	l.add_theme_stylebox_override("normal", _frame(Palette.TRAY_LIGHT, 10, 3))
+	l.add_theme_stylebox_override("normal", _frame(UiStyle.WOOD_DARK, 10, 3))
 	return l
 
 
@@ -322,7 +332,7 @@ func _orb(diameter: float, font: int) -> Label:
 	l.size = Vector2(diameter, diameter)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	l.add_theme_color_override("font_outline_color", Palette.TRAY_DARK)
+	l.add_theme_color_override("font_outline_color", UiStyle.WOOD_INK)
 	l.add_theme_constant_override("outline_size", 8)
 	var sb := _frame(Color("#7a4de0"), int(diameter / 2.0), 5)
 	sb.shadow_color = Color("#b48cff", 0.6)
@@ -340,7 +350,7 @@ func _corner(left: bool, who: String, portrait: String, bg: Color) -> Control:
 	var back := Panel.new()
 	back.size = CORNER
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	back.add_theme_stylebox_override("panel", _frame(Palette.TRAY, 18))
+	back.add_theme_stylebox_override("panel", _wood(18))
 	c.add_child(back)
 	# Framed portrait in the outer corner.
 	var frame := Panel.new()
@@ -366,7 +376,7 @@ func _corner(left: bool, who: String, portrait: String, bg: Color) -> Control:
 	var orb := _orb(44, 22)
 	orb.position = Vector2(112, 46) if left else Vector2(CORNER.x - 156, 46)
 	c.add_child(orb)
-	var nm := UiStyle.title(UiStyle.label(who.to_upper(), 18, Color("#d9d4ff"))) as Label
+	var nm := UiStyle.title(UiStyle.label(who.to_upper(), 18, UiStyle.PARCHMENT)) as Label
 	nm.position = Vector2(160, 54) if left else Vector2(8, 54)
 	nm.size = Vector2(68, 26)
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -387,7 +397,7 @@ func _hero_bar(left: bool, who: String) -> Control:
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bar.custom_minimum_size = BAR
 	bar.size = BAR
-	bar.add_theme_stylebox_override("background", _frame(Palette.TRAY_DARK, 10, 3))
+	bar.add_theme_stylebox_override("background", _frame(UiStyle.WOOD_INK, 10, 3))
 	bar.add_theme_stylebox_override("fill", _frame(Palette.HP, 10, 3))
 	bar.fill_mode = ProgressBar.FILL_BEGIN_TO_END if left else ProgressBar.FILL_END_TO_BEGIN
 	if left:
@@ -402,7 +412,7 @@ func _hero_bar(left: bool, who: String) -> Control:
 	hp.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hp.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hp.add_theme_color_override("font_outline_color", Palette.TRAY_DARK)
+	hp.add_theme_color_override("font_outline_color", UiStyle.WOOD_INK)
 	hp.add_theme_constant_override("outline_size", 7)
 	bar.add_child(hp)
 	_refs[who + "Bar"] = {"bar": bar, "hp": hp}
@@ -418,75 +428,80 @@ func _fill_corner(who: String, ps: GameState.PlayerState, plate_text: String) ->
 	(b["hp"] as Label).text = "♥ %d" % ps.hero_hp
 
 
-func _build_tray() -> void:
-	_tray = Panel.new()
-	_tray.name = "Tray"
-	_tray.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := _frame(Palette.TRAY, 22, 5)
-	sb.corner_radius_bottom_left = 0
-	sb.corner_radius_bottom_right = 0
-	sb.border_width_bottom = 0
-	_tray.add_theme_stylebox_override("panel", sb)
-	_tray.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_tray.offset_left = TRAY_MARGIN
-	_tray.offset_right = -TRAY_MARGIN
-	_tray.offset_top = -TRAY_H
-	_tray.offset_bottom = 0
-	add_child(_tray)
-	# Inner felt where the hand sits.
-	var felt := Panel.new()
-	felt.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	felt.add_theme_stylebox_override("panel", _frame(Color("#1f1c40"), 14, 3))
-	felt.set_anchors_preset(Control.PRESET_FULL_RECT)
-	felt.offset_left = 172
-	felt.offset_right = -222
-	felt.offset_top = 10
-	felt.offset_bottom = 6
-	_tray.add_child(felt)
-	_deck_label = _plate("DECK", Vector2(148, 44))
-	_deck_label.position = Vector2(14, 38)
-	_tray.add_child(_deck_label)
-	_discard_label = _plate("DISCARD", Vector2(148, 44))
-	_discard_label.position = Vector2(14, 96)
-	_tray.add_child(_discard_label)
-	# Magic gems on a dark plate above the END TURN button.
-	var plate := Panel.new()
-	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	plate.add_theme_stylebox_override("panel", _frame(Color("#1f1c40"), 12, 3))
-	plate.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	plate.offset_left = -214
-	plate.offset_right = -10
-	plate.offset_top = 8
-	plate.offset_bottom = 54
-	_tray.add_child(plate)
+## Wood with a lighter top edge, like a polished board.
+func _wood(radius: int = 16, col: Color = UiStyle.WOOD) -> StyleBoxFlat:
+	var sb := _frame(col, radius, 4)
+	sb.border_color = UiStyle.WOOD_INK
+	sb.shadow_color = Color(UiStyle.WOOD_INK, 0.45)
+	sb.shadow_offset = Vector2(0, 4)
+	sb.shadow_size = 2
+	return sb
+
+
+## Deck box bottom-left; magic gems on a brass plate over the END TURN button bottom-right.
+func _build_bottom() -> void:
+	_deck_box = Panel.new()
+	_deck_box.name = "DeckBox"
+	_deck_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_deck_box.add_theme_stylebox_override("panel", _wood(14))
+	_deck_box.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_deck_box.offset_left = MARGIN
+	_deck_box.offset_right = MARGIN + DECK_BOX.x
+	_deck_box.offset_top = -MARGIN - DECK_BOX.y
+	_deck_box.offset_bottom = -MARGIN
+	add_child(_deck_box)
+	_deck_label = _plate("DECK", Vector2(DECK_BOX.x - 20, 38), 16)
+	_deck_label.position = Vector2(10, 8)
+	_deck_box.add_child(_deck_label)
+	_discard_label = _plate("DISCARD", Vector2(DECK_BOX.x - 20, 38), 16)
+	_discard_label.position = Vector2(10, 54)
+	_deck_box.add_child(_discard_label)
+	_gems_plate = Panel.new()
+	_gems_plate.name = "GemsPlate"
+	_gems_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_gems_plate.add_theme_stylebox_override("panel", _wood(12, UiStyle.WOOD_DARK))
+	_gems_plate.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_gems_plate.offset_right = -MARGIN
+	_gems_plate.offset_left = -MARGIN - GEMS_PLATE.x
+	_gems_plate.offset_bottom = -MARGIN - END_TURN_SIZE.y - 8
+	_gems_plate.offset_top = _gems_plate.offset_bottom - GEMS_PLATE.y
+	add_child(_gems_plate)
 	_gems = MagicGems.new()
 	_gems.position = Vector2(-4, 0)
-	plate.add_child(_gems)
+	_gems_plate.add_child(_gems)
 	end_turn_button = Button.new()
 	end_turn_button.name = "EndTurn"
 	end_turn_button.text = "END TURN"
-	end_turn_button.add_theme_font_size_override("font_size", 30)
+	end_turn_button.add_theme_font_size_override("font_size", 28)
 	UiStyle.title(end_turn_button)
 	for st: String in ["normal", "hover", "pressed", "disabled", "focus"]:
-		var b := _frame(Palette.GREEN if st != "disabled" else Color("#6c6a8a"), 16, 5)
-		if st == "hover":
-			b.bg_color = Palette.GREEN.lightened(0.2)
-		if st == "pressed":
-			b.bg_color = Palette.GREEN.darkened(0.15)
+		var col: Color = UiStyle.BRASS
+		match st:
+			"hover":
+				col = UiStyle.BRASS.lightened(0.18)
+			"pressed":
+				col = UiStyle.BRASS_DARK
+			"disabled":
+				col = Color("#8f8478")
+		var b := _frame(col, 22, 5)
+		b.border_color = UiStyle.WOOD_INK
+		b.shadow_color = Color(UiStyle.WOOD_INK, 0.5)
+		b.shadow_offset = Vector2(0, 5) if st != "pressed" else Vector2(0, 2)
+		b.shadow_size = 2
 		end_turn_button.add_theme_stylebox_override(st, b)
 	for col: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		end_turn_button.add_theme_color_override(col, Color.WHITE)
-	end_turn_button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.45))
-	end_turn_button.add_theme_color_override("font_outline_color", Palette.TRAY_DARK)
+	end_turn_button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.7))
+	end_turn_button.add_theme_color_override("font_outline_color", UiStyle.WOOD_INK)
 	end_turn_button.add_theme_constant_override("outline_size", 10)
-	end_turn_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	end_turn_button.offset_left = -210
-	end_turn_button.offset_right = -14
-	end_turn_button.offset_top = 62
-	end_turn_button.offset_bottom = 170
+	end_turn_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	end_turn_button.offset_right = -MARGIN
+	end_turn_button.offset_left = -MARGIN - END_TURN_SIZE.x
+	end_turn_button.offset_bottom = -MARGIN
+	end_turn_button.offset_top = -MARGIN - END_TURN_SIZE.y
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
 	UiStyle.sound_button(end_turn_button)
-	_tray.add_child(end_turn_button)
+	add_child(end_turn_button)
 
 
 func _build_pause() -> void:

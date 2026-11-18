@@ -1,5 +1,6 @@
 extends TestCase
-## Headless layout check: HUD and hand fit on screen and don't overlap the END TURN button.
+## Headless layout check: HUD and hand fit on screen and don't overlap the END TURN button; the
+## board stays clear of the HUD and the resting hand.
 
 
 func _check(size: Vector2) -> void:
@@ -157,11 +158,12 @@ func test_eight_cards_fit() -> bool:
 		var ws: Array = hand.get_children().filter(func(n: Node) -> bool: return n is CardWidget and not n.is_queued_for_deletion())
 		assert_eq(ws.size(), 8, "8 cards at %s" % sz)
 		for i: int in ws.size():
-			var r := Rect2((ws[i] as CardWidget).position, CardWidget.SIZE)
-			assert_true(r.position.x >= Hand.REGION_LEFT - 1 and r.end.x <= sz.x - Hand.REGION_RIGHT + 1, "card %d inside the tray at %s" % [i, sz])
-			assert_true(r.end.y <= sz.y and r.position.y >= sz.y - Hud.TRAY_H, "card %d in the tray band at %s" % [i, sz])
+			var r: Rect2 = hand.card_rect(i)
+			assert_true(r.position.x >= Hand.REGION_LEFT - 1 and r.end.x <= sz.x - Hand.REGION_RIGHT + 1, "card %d between the deck box and END TURN at %s" % [i, sz])
+			# Slim hand: only the top of each card peeks into the strip along the bottom edge.
+			assert_true(r.position.y >= sz.y - Hud.HAND_STRIP_H and r.position.y <= sz.y - 60.0, "card %d peeks into the hand strip at %s (%s)" % [i, sz, r])
 			if i > 0:
-				assert_true(r.position.x - (ws[i - 1] as CardWidget).position.x >= 60.0, "cards %d/%d far enough apart at %s" % [i - 1, i, sz])
+				assert_true(r.position.x - hand.card_rect(i - 1).position.x >= 60.0, "cards %d/%d far enough apart at %s" % [i - 1, i, sz])
 	hand.queue_free()
 	return true
 
@@ -191,5 +193,28 @@ func test_end_turn_label_and_pulse() -> bool:
 	s.players[0].hand.append(CardDB.card(&"star_shard"))
 	m.refresh_ui()
 	assert_true(not m.hud.end_turn_pulsing, "a card to play: no pulse")
+	m.queue_free()
+	return true
+
+
+## Every board tile corner is above the hand strip and outside the HUD panels (the old purple
+## tray covered the near row).
+func test_board_clear_of_hud() -> bool:
+	var m: MatchController = await Fx.load_match()
+	var vp: Vector2 = m.get_viewport().get_visible_rect().size
+	var rects: Array[Rect2] = []
+	for p: Control in m.hud.panels():
+		rects.append(p.get_global_rect())
+	var hand: Rect2 = m.hand.cards_rect()
+	for p: int in 2:
+		for l: int in 4:
+			for sx: float in [-1.0, 1.0]:
+				for sz: float in [-1.0, 1.0]:
+					var c := Vector3(Board.LANE_X[l] + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0)
+					var s: Vector2 = m.rig.camera.unproject_position(c)
+					assert_true(s.y < vp.y - Hud.HAND_STRIP_H, "tile p%d l%d corner above the hand strip (%s)" % [p, l, s])
+					assert_true(not hand.has_point(s), "tile p%d l%d corner clear of the hand (%s)" % [p, l, s])
+					for r: Rect2 in rects:
+						assert_true(not r.has_point(s), "tile p%d l%d corner clear of HUD panel %s (%s)" % [p, l, r, s])
 	m.queue_free()
 	return true
