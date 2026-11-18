@@ -37,6 +37,8 @@ func _wait(seconds: float) -> void:
 
 func play(events: Array[GameEvent]) -> void:
 	_source = {}
+	if m.action_log:
+		m.action_log.add_action(events, m.state)
 	for e: GameEvent in events:
 		await _play_one(e)
 	_source = {}
@@ -51,10 +53,6 @@ func play(events: Array[GameEvent]) -> void:
 func _play_one(e: GameEvent) -> void:
 	var d: Dictionary = e.data
 	_rival_react(e)
-	if m.action_log:
-		var line: String = ActionLog.describe(e, m.state)
-		if line != "":
-			m.action_log.add(line, int(d.get("player", -1)))
 	if e.type in [&"creature_played", &"building_played", &"spell_cast"] and int(d.get("player", -1)) == MatchController.AI:
 		await _reveal(CardDB.card(d["card"]))
 	if e.type in EFFECT_EVENTS:

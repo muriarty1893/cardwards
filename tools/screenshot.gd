@@ -12,6 +12,8 @@ var _fps_secs: float = 0.0
 var _hover_card: int = -1
 ## --drag-card=<i>,<x>,<y>: drag hand card i to screen point (x, y) for the last 40 frames.
 var _drag_card: Array = []
+## --hover-log: fill the action log with a few sample actions and hover the newest tile.
+var _hover_log: bool = false
 var _fps_t: float = 0.0
 var _fps_frames: int = 0
 var _fps_worst: float = 0.0
@@ -32,6 +34,8 @@ func _ready() -> void:
 			_fps_secs = float(arg.substr(10))
 		elif arg.begins_with("--hover-card="):
 			_hover_card = int(arg.substr(13))
+		elif arg == "--hover-log":
+			_hover_log = true
 		elif arg.begins_with("--drag-card="):
 			var parts: PackedStringArray = arg.substr(12).split(",")
 			_drag_card = [int(parts[0]), Vector2(float(parts[1]), float(parts[2]))]
@@ -62,6 +66,18 @@ func _process(delta: float) -> void:
 					hand = n
 		if hand:
 			(hand as Hand).hover(_hover_card)
+	if _hover_log and (_frames == 30 or _frames == 8):
+		for n: Node in _vp.find_children("*", "", true, false):
+			if n is MatchController:
+				var mc := n as MatchController
+				if _frames == 30:
+					var st: GameState = mc.state
+					mc.action_log.add_action([GameEvent.make(&"creature_played", {"player": 1, "lane": 0, "card": &"cinderpup"})], st)
+					mc.action_log.add_action([GameEvent.make(&"building_played", {"player": 0, "lane": 1, "card": &"spore_hut"})], st)
+					mc.action_log.add_action([GameEvent.make(&"attack", {"player": 1, "lane": 0, "card": &"cinderpup", "target_lane": -1, "hit": 1}), GameEvent.make(&"hero_damaged", {"player": 0, "amount": 2, "armour": 0})], st)
+					mc.action_log.add_action([GameEvent.make(&"spell_cast", {"player": 0, "card": &"fireball"}), GameEvent.make(&"creature_damaged", {"player": 1, "lane": 0, "amount": 3}), GameEvent.make(&"creature_destroyed", {"player": 1, "lane": 0, "card": &"cinderpup"})], st)
+				else:
+					mc.action_log.hover_tile(0)
 	if not _drag_card.is_empty() and _frames <= 40:
 		var m := _vp.find_child("Match", true, false)
 		for n: Node in _vp.find_children("*", "", true, false):
