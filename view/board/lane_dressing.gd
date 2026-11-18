@@ -24,6 +24,8 @@ const MARGIN := 0.06
 const BUILDING_R := 0.8
 ## Looks per land (Meadow has one).
 const VARIANTS := 3
+## Ground cover share on tiles with set pieces.
+const LOOK_COVER := 0.65
 ## Cover pieces per half-lane at High (Low passes density 0.5): Mushroom, Ember, Candy, Frost,
 ## Meadow.
 const DENSITY: Array[int] = [160, 90, 120, 110, 120]
@@ -76,6 +78,9 @@ static func build(land: int, player: int, seed: int, density: float = 1.0, shape
 	var pieces: Node3D = SetPieces.build(land, variant, corner, player, shape, density, rng)
 	root.add_child(pieces)
 	var avoid: Array[Rect2] = set_piece_rects(root)
+	# A look with set pieces needs less ground clutter to read.
+	if not avoid.is_empty():
+		density *= LOOK_COVER * (0.75 if land == 1 else 1.0)
 	root.add_child(_accents(land, player, rng, shape, avoid))
 	var cover := Node3D.new()
 	cover.name = "Cover"

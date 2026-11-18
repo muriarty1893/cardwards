@@ -59,6 +59,7 @@ func setup(land_type: int, player: int = 0, lane: int = 0, density: float = 1.0,
 	_mat.set_shader_parameter("tile_origin", Vector2(shape.tile_x, shape.tile_z))
 	_mat.set_shader_parameter("outer_left", 1.0 if lane == 0 else 0.0)
 	_mat.set_shader_parameter("outer_right", 1.0 if lane == 3 else 0.0)
+	_apply_look_uniforms()
 	_mat.set_shader_parameter("fbm_tex", NoiseBank.fbm())
 	_mat.set_shader_parameter("cell_tex", NoiseBank.cells())
 	_mat.set_shader_parameter("edge_color", EDGE[player])
@@ -127,6 +128,18 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 		pop.tween_property(n, "scale", full, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
+## Shows `land_` with a chosen look right away (dev previews and tests).
+func set_look(land_: int, variant_: int, corner_: int) -> void:
+	land = land_
+	variant = variant_
+	corner = corner_
+	_mat.set_shader_parameter("land", land)
+	_mat.set_shader_parameter("prev_land", land)
+	_mat.set_shader_parameter("morph", 1.0)
+	_apply_look_uniforms()
+	set_density(_density)
+
+
 ## Variant (x) and corner (y) for player `p`'s tile in `lane` after `n` land changes, from the layout seed.
 static func roll_look(seed: int, p: int, lane: int, n: int) -> Vector2i:
 	var rng := RandomNumberGenerator.new()
@@ -138,6 +151,18 @@ func _roll() -> void:
 	var r: Vector2i = roll_look(shape.layout.seed, _player, _lane, changes)
 	variant = r.x
 	corner = r.y
+	if _mat:
+		_apply_look_uniforms()
+
+
+## The lane shader paints the look's flat features (lava trickles, streams, paths) from these.
+func _apply_look_uniforms() -> void:
+	_mat.set_shader_parameter("variant", variant)
+	_mat.set_shader_parameter("corner_side", -1.0 if corner == 0 else 1.0)
+	var box: Rect2 = SetPieces.corner_box(shape, _player, corner)
+	_mat.set_shader_parameter("corner_box", Vector4(box.position.x, box.position.y, box.end.x, box.end.y))
+	var band: Rect2 = SetPieces.edge_band(shape, _player, corner)
+	_mat.set_shader_parameter("side_band", Vector4(band.position.x, band.position.y, band.end.x, band.end.y))
 
 
 ## A field's weather over the tile (`field_land` -1 clears it), faded in or out.

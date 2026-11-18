@@ -8,8 +8,10 @@ extends RefCounted
 ## Corner boxes keep this far from the lane centre (building ±0.5, plate ±0.59).
 const CLEAR_X := 0.64
 const EDGE_IN := 0.05
+## Side pieces keep this far (z) from the creature house's centre.
+const HOUSE_CLEAR := 0.34
 ## Tall pieces on your side (near the camera) are scaled down so they never hide your creatures.
-const NEAR_SCALE := 0.8
+const NEAR_SCALE := 0.9
 
 
 ## The pieces for `land`'s look `variant`; empty for Meadow. `corner` 0 = left back corner, 1 = right.
@@ -76,7 +78,15 @@ static func edge_band(shape: TileShape, player: int, side: int) -> Rect2:
 		return Rect2(a, z0, maxf(b - a, 0.02), z1 - z0)
 	var c: float = roam.end.x - shape.tile_x + 0.02
 	var d: float = inner.y - shape.tile_x - 0.03
-	return Rect2(c, z0, maxf(d - c, 0.02), z1 - z0)
+	# The creature house stands on the right side: keep to the longer stretch beside it.
+	var hz: float = Board.house_point_for(lay, player, shape.lane).z - shape.tile_z
+	var a0: float = z0
+	var a1: float = hz - HOUSE_CLEAR
+	var b0: float = hz + HOUSE_CLEAR
+	var b1: float = z1
+	if a1 - a0 >= b1 - b0:
+		return Rect2(c, a0, maxf(d - c, 0.02), a1 - a0)
+	return Rect2(c, b0, maxf(d - c, 0.02), b1 - b0)
 
 
 ## The side the corner box is on (-1 left, +1 right), for pieces that face the lane centre.

@@ -29,6 +29,12 @@ uniform vec4 right_c1 = vec4(1.35, 0.0, 0.0, 0.0);
 uniform vec4 right_c2 = vec4(0.0);
 // World x/z of the tile centre.
 uniform vec2 tile_origin = vec2(0.0);
+// The land's look (LaneDressing variant), its set-piece corner side (-1 left, 1 right) and tile-local zones
+// (x0, z0, x1, z1): the back-corner box and the side band beside it, for painted features.
+uniform int variant = 0;
+uniform float corner_side = -1.0;
+uniform vec4 corner_box = vec4(0.0);
+uniform vec4 side_band = vec4(0.0);
 // Outer sides (against the tray frame) keep the painted rim and ink edge; inner sides meet the next lane.
 uniform float outer_left = 0.0;
 uniform float outer_right = 0.0;
@@ -61,10 +67,10 @@ vec3 paint_forest(vec2 p) {
 	return mix(col, vec3(0.651, 0.878, 0.478), clover);       // clover #a6e07a
 }
 
-vec3 paint_ember(vec2 p, out vec3 emi) {
+vec3 paint_ember(vec2 p, float crack_k, out vec3 emi) {
 	vec3 col = mix(vec3(0.290, 0.188, 0.188), vec3(0.380, 0.250, 0.230), fbm(p * 3.0));  // #4a3030
 	float e = voronoi_edge(p * 1.5);
-	float crack = 1.0 - smoothstep(0.04, 0.12, e);
+	float crack = (1.0 - smoothstep(0.04, 0.12, e)) * crack_k;
 	float pulse = 0.6 + 0.4 * sin(TIME * 2.4 + p.y * 2.0);
 	col = mix(col, vec3(1.0, 0.478, 0.102), crack);           // #ff7a1a
 	emi = pow(vec3(1.0, 0.478, 0.102), vec3(2.2)) * crack * 2.0 * pulse;
@@ -111,18 +117,56 @@ vec3 paint_meadow(vec2 p) {
 	return mix(col, petal, dot_);
 }
 
+// How strong the Ember base cracks are for a look: full around the volcano, faint under the rift and the ash.
+float ember_cracks(int v) {
+	return v == 0 ? 0.8 : (v == 1 ? 0.4 : 0.25);
+}
+
 vec3 paint(int l, vec2 p, out vec3 emi) {
 	emi = vec3(0.0);
 	if (l == 0) {
 		return paint_forest(p);
 	} else if (l == 1) {
-		return paint_ember(p, emi);
+		return paint_ember(p, ember_cracks(variant), emi);
 	} else if (l == 2) {
 		return paint_candy(p);
 	} else if (l == 3) {
 		return paint_frost(p, emi);
 	}
 	return paint_meadow(p);
+}
+
+// Flat features of the land's look, painted in tile-local p (side_d = distance to the nearest side edge).
+vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 emi) {
+	vec2 bc = (corner_box.xy + corner_box.zw) * 0.5;
+	vec2 bs = max(corner_box.zw - corner_box.xy, vec2(0.05));
+	if (l == 1) {
+		if (v == 0) {          // Volcano: scorched ground with glowing cracks around its foot
+			float d = length((p - bc) / (bs * vec2(1.1, 0.75)));
+			float scorch = 1.0 - smoothstep(0.55, 1.25, d);
+			col = mix(col, col * vec3(0.55, 0.45, 0.42), scorch * 0.8);
+			float crack = 1.0 - smoothstep(0.03, 0.08, voronoi_edge(pw * 2.6));
+			float pulse = 0.6 + 0.4 * sin(TIME * 2.0 + pw.y * 3.0);
+			col = mix(col, vec3(1.0, 0.45, 0.1), crack * scorch);
+			emi += vec3(1.0, 0.3, 0.05) * crack * scorch * 1.6 * pulse;
+		} else if (v == 1) {   // Lava Rift: a glowing crack along the side band
+			float cx = (side_band.x + side_band.z) * 0.5 + 0.03 * sin(p.y * 5.0 + 1.3) + 0.015 * sin(p.y * 13.0);
+			float z0 = side_band.y;
+			float z1 = side_band.w;
+			float taper = smoothstep(z0, z0 + 0.3, p.y) * smoothstep(z1, z1 - 0.3, p.y);
+			float dist = abs(p.x - cx);
+			float core = (1.0 - smoothstep(0.012, 0.03, dist)) * taper;
+			float crust = (1.0 - smoothstep(0.04, 0.09, dist)) * taper;
+			float pulse = 0.65 + 0.35 * sin(TIME * 2.6 + p.y * 4.0);
+			col = mix(col, vec3(0.16, 0.1, 0.1), crust * 0.85);
+			col = mix(col, vec3(1.0, 0.55, 0.12), core);
+			emi += vec3(1.0, 0.35, 0.06) * core * 2.4 * pulse + vec3(0.6, 0.15, 0.02) * crust * 0.4 * pulse;
+		} else {               // Ash Slopes: grey ash dusting near the sides
+			float ash = (1.0 - smoothstep(0.08, 0.55, side_d)) * smoothstep(0.35, 0.65, fbm(pw * 3.0));
+			col = mix(col, vec3(0.5, 0.47, 0.46), ash * 0.7);
+		}
+	}
+	return col;
 }
 
 // Weather a field spell lays over every lane.
@@ -176,6 +220,7 @@ void fragment() {
 	// Paint in world space so neighbouring tiles of one land continue into each other.
 	vec2 pw = tile_origin + p;
 	vec3 col = paint(land, pw, emi);
+	float feat_k = 1.0;
 	if (morph < 1.0) {
 		// Land change: the new land spreads from the origin with a wobbly, glowing front.
 		float reach = morph * (length(size) + 0.6);
@@ -183,11 +228,18 @@ void fragment() {
 		vec3 old_emi;
 		vec3 old_col = paint(prev_land, pw, old_emi);
 		float inside = smoothstep(reach, reach - 0.12, d);
+		feat_k = inside;
 		col = mix(old_col, col, inside);
 		emi = mix(old_emi, emi, inside);
 		float front = smoothstep(0.25, 0.0, abs(d - reach)) * (1.0 - morph);
 		col = mix(col, vec3(1.0, 0.97, 0.8), front * 0.7);
 		emi += vec3(1.0, 0.9, 0.6) * front * 0.8;
+	}
+	{
+		vec3 f_emi = vec3(0.0);
+		vec3 f_col = features(land, variant, p, pw, min(dl, dr), col, f_emi);
+		col = mix(col, f_col, feat_k);
+		emi += f_emi * feat_k;
 	}
 	if (field_land >= 0 && field_amount > 0.0) {
 		col = weather(pw, col, emi);
