@@ -18,6 +18,8 @@ var rival: RivalSeat
 var field_fx: FieldFx
 ## Both players' deck and discard piles on the table.
 var stacks: CardStacks
+## The 3D card shown while a hand card is dragged over the board.
+var drag_card: DragCard3D
 ## Each player's card back (CardBacks), from their deck's main land.
 var card_backs: Array[Texture2D] = [null, null]
 var _ui_root: Control
@@ -309,6 +311,10 @@ func _build_ui() -> void:
 	input = InputController.new()
 	input.match_ctl = self
 	add_child(input)
+	drag_card = DragCard3D.new()
+	add_child(drag_card)
+	hand.drag_card = drag_card
+	hand.camera = rig.camera
 	hand.card_drag_started.connect(input.on_drag_started)
 	hand.card_dropped.connect(input.on_dropped)
 	player = EventPlayer.new()

@@ -28,6 +28,9 @@ const ARC := 2.5
 const TOKEN_SCALE := 0.45
 
 var _cards: Array[CardWidget] = []
+## Set by MatchController: over the board the dragged card is shown as this 3D card (seen by `camera`).
+var drag_card: DragCard3D
+var camera: Camera3D
 var _shown: Array[CardData] = []
 var _hover: int = -1
 var _drag: int = -1
@@ -52,6 +55,7 @@ func show_hand(cards: Array[CardData], playable: Array[bool]) -> void:
 	_cards.clear()
 	_hover = -1
 	_drag = -1
+	_hide_3d()
 	for i: int in cards.size():
 		var w := CardWidget.new()
 		w.setup(cards[i], i)
@@ -203,14 +207,45 @@ func _on_card_input(event: InputEvent, i: int) -> void:
 		_layout()
 
 
-## Keeps the dragged card centred on the mouse: full card over the hand strip, a small token
-## once it is over the board.
+## Keeps the dragged card centred on the mouse: the full 2D card over the hand strip; once over the board, a 3D card
+## lying over the table (DragCard3D), or a small token when there is no 3D card.
 func _follow(w: CardWidget, mouse: Vector2) -> void:
 	var over_board: bool = mouse.y < global_position.y + size.y - Hud.HAND_STRIP_H - 20.0
-	var s: float = TOKEN_SCALE if over_board else REST_SCALE
+	var three_d: bool = over_board and drag_card != null and camera != null
+	var s: float = TOKEN_SCALE if over_board and not three_d else REST_SCALE
 	w.scale = Vector2.ONE * s
 	# The pivot is the bottom centre: put the scaled card's centre on the mouse.
 	w.global_position = mouse - w.pivot_offset + Vector2(0, CardWidget.SIZE.y * s / 2.0)
+	w.modulate.a = 0.0 if three_d else 1.0
+	if three_d:
+		drag_card.show_card(w.card)
+		drag_card.follow(camera, mouse)
+	else:
+		_hide_3d()
+
+
+func _hide_3d() -> void:
+	if drag_card:
+		drag_card.hide_card()
+
+
+## The 2D widget being dragged (tests), or null.
+func dragged_widget() -> CardWidget:
+	return _cards[_drag] if _drag >= 0 and _drag < _cards.size() else null
+
+
+## Starts dragging card i as a mouse press would (tests).
+func begin_drag_for_test(i: int) -> void:
+	_drag = i
+	_hover = -1
+	_cards[i].z_index = 20
+	_layout()
+
+
+## Moves the dragged card as the mouse would (tests).
+func drag_to_for_test(mouse: Vector2) -> void:
+	if _drag >= 0:
+		_follow(_cards[_drag], mouse)
 
 
 func _input(event: InputEvent) -> void:
@@ -223,6 +258,8 @@ func _input(event: InputEvent) -> void:
 	if mb and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
 		var i: int = _drag
 		_drag = -1
+		_cards[i].modulate.a = 1.0
+		_hide_3d()
 		last_drop_pos = mb.position
 		card_dropped.emit(i, mb.position)
 		_layout()
@@ -230,5 +267,8 @@ func _input(event: InputEvent) -> void:
 
 ## Return a dragged card to its place (drop rejected).
 func cancel_drag() -> void:
+	if _drag >= 0 and _drag < _cards.size():
+		_cards[_drag].modulate.a = 1.0
 	_drag = -1
+	_hide_3d()
 	_layout()

@@ -10,6 +10,8 @@ var _path: String = ""
 var _fps_secs: float = 0.0
 ## --hover-card=<i>: hover card i in the match hand before the shot.
 var _hover_card: int = -1
+## --drag-card=<i>,<x>,<y>: drag hand card i to screen point (x, y) for the last 40 frames.
+var _drag_card: Array = []
 var _fps_t: float = 0.0
 var _fps_frames: int = 0
 var _fps_worst: float = 0.0
@@ -30,6 +32,9 @@ func _ready() -> void:
 			_fps_secs = float(arg.substr(10))
 		elif arg.begins_with("--hover-card="):
 			_hover_card = int(arg.substr(13))
+		elif arg.begins_with("--drag-card="):
+			var parts: PackedStringArray = arg.substr(12).split(",")
+			_drag_card = [int(parts[0]), Vector2(float(parts[1]), float(parts[2]))]
 	set_process(_path != "" or _fps_secs > 0.0)
 
 
@@ -57,6 +62,18 @@ func _process(delta: float) -> void:
 					hand = n
 		if hand:
 			(hand as Hand).hover(_hover_card)
+	if not _drag_card.is_empty() and _frames <= 40:
+		var m := _vp.find_child("Match", true, false)
+		for n: Node in _vp.find_children("*", "", true, false):
+			if n is MatchController:
+				m = n
+		if m is MatchController:
+			var mc := m as MatchController
+			if _frames == 40:
+				mc.hand.begin_drag_for_test(_drag_card[0])
+			# Approach the target from below so the card sways a little.
+			var t: float = clampf(1.0 - (_frames - 10) / 30.0, 0.0, 1.0)
+			mc.hand.drag_to_for_test((_drag_card[1] as Vector2).lerp(Vector2(_drag_card[1].x - 120.0, 560.0), 1.0 - t))
 	if _frames > 0:
 		return
 	_vp.get_texture().get_image().save_png(_path)
