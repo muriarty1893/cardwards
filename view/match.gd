@@ -134,7 +134,9 @@ func _begin(opening: Array[GameEvent]) -> void:
 	refresh_ui()
 	if _wants_sweep():
 		await rig.play_sweep()
+		await board.reveal_split(true)
 	else:
+		board.reveal_split(false)
 		await get_tree().create_timer(0.4).timeout
 	await player.play(opening)
 	if state.active == AI:

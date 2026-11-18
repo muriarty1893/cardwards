@@ -28,9 +28,19 @@ const FRAME := Color("#8a5a34")
 const FRAME_DARK := Color("#5b3a22")
 const BRASS := Color("#e0b04a")
 const SEAM_COLOR := Color("#ffe9a8")
+## Split reveal: line draw time, tile settle drop and stagger.
+const SPLIT_TIME := 0.6
+const SETTLE_DROP := 0.03
+const SETTLE_STAGGER := 0.08
 ## Ground cover within this distance of a creature leans away from it.
 const BEND_R := 0.4
+## Emitted when the split reveal (lines drawn, tiles settled) has finished.
+signal split_done
+
 var ambient: Ambient
+var separators: Separators
+## True once the board has split into lanes after the opening sweep.
+var split_revealed: bool = false
 ## The lane shapes for this match (river curves; straight until build() gets one).
 var layout: BoardLayout = BoardLayout.straight()
 var _density: float = -1.0
@@ -49,6 +59,9 @@ func build(lands: Array[Array], layout_: BoardLayout = null) -> void:
 			add_child(isl)
 			isl.setup(lands[p][l], p, l, _density, TileShape.of(layout, l, STRIP_Z[p]))
 			_islands[p].append(isl)
+	separators = Separators.new()
+	add_child(separators)
+	separators.build(layout)
 	var xs: Array[float] = []
 	for l: int in 4:
 		xs.append(lane_x(l))
@@ -57,6 +70,33 @@ func build(lands: Array[Array], layout_: BoardLayout = null) -> void:
 	apply_quality(Settings.quality)
 	if not Settings.changed.is_connected(_on_settings_changed):
 		Settings.changed.connect(_on_settings_changed)
+
+
+## Splits each side's slab into its four lanes: the separator lines draw outward from the seam and the tiles do a
+## small staggered settle (spec 1.3). Instant when `animate` is false. Emits split_done when finished.
+func reveal_split(animate: bool) -> void:
+	split_revealed = true
+	if not animate or not is_inside_tree():
+		separators.reveal = 1.0
+		for p: int in 2:
+			for isl: Island in _islands[p]:
+				isl.position.y = 0.0
+		split_done.emit()
+		return
+	separators.reveal = 0.0
+	var tw := create_tween()
+	tw.tween_property(separators, "reveal", 1.0, SPLIT_TIME).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	for p: int in 2:
+		for l: int in 4:
+			var isl: Island = _islands[p][l]
+			# Middle lanes first, then the outer ones; your side a beat after the rival's.
+			var order: int = (0 if l == 1 or l == 2 else 1) + p
+			var settle := isl.create_tween()
+			settle.tween_interval(order * SETTLE_STAGGER)
+			settle.tween_property(isl, "position:y", -SETTLE_DROP, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			settle.tween_property(isl, "position:y", 0.0, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	split_done.emit()
 
 
 ## Low: half the ambient particles and ground cover. (Light, shadows and MSAA are Room's.)
