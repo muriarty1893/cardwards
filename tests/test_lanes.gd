@@ -40,7 +40,9 @@ func test_dressing_avoids_spots() -> bool:
 						var off: Vector2 = (Vector2(o.x, o.z) - spots[1]).abs()
 						assert_true(off.x >= BoopPlate.SIZE.x / 2.0 or off.y >= BoopPlate.SIZE.y / 2.0, "land %d p%d cover %d clear of the boop plate" % [land, p, i])
 					assert_true(absf(o.x) <= Island.WIDTH / 2.0 and absf(o.z) <= Island.LENGTH / 2.0, "land %d cover %d on its tile" % [land, i])
-			assert_true(n >= LaneDressing.DENSITY[land] * 0.8, "land %d p%d dense (%d)" % [land, p, n])
+			# Lands with set pieces carry less cover (LOOK_COVER; Ember a bit less again).
+			var share: float = 1.0 if LaneDressing.set_piece_rects(root).is_empty() else LaneDressing.LOOK_COVER * (0.75 if land == 1 else 1.0)
+			assert_true(n >= LaneDressing.DENSITY[land] * share * 0.8, "land %d p%d dense (%d)" % [land, p, n])
 			root.free()
 	return true
 

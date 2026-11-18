@@ -18,12 +18,15 @@ const EDGE := Color("#f6e7c4")
 
 ## [player][0 deck / 1 discard] -> {"root", "body", "top", "label", "count"}
 var _piles: Array[Array] = [[{}, {}], [{}, {}]]
+## Each player's card back art (CardBacks) for the deck pile's top face.
+var _backs: Array[Texture2D] = [null, null]
 
 
 func _ready() -> void:
 	for p: int in 2:
 		for k: int in 2:
 			_piles[p][k] = _make_pile(p, k)
+		_paint_deck_top(p)
 
 
 func _make_pile(p: int, k: int) -> Dictionary:
@@ -91,9 +94,32 @@ func _set_pile(pile: Dictionary, n: int, top_card: CardData, p: int) -> void:
 		if top_card:
 			mat.albedo_texture = load(VisualDB.art_path(top_card.id)) as Texture2D
 			mat.albedo_color = Color.WHITE
+		elif pile == _piles[p][0]:
+			_paint_deck_top(p)
 		else:
 			mat.albedo_texture = null
-			mat.albedo_color = BACKS[p] if pile == _piles[p][0] else EDGE.darkened(0.2)
+			mat.albedo_color = EDGE.darkened(0.2)
+
+
+## Shows each deck's card back on its deck pile.
+func set_backs(you: Texture2D, rival: Texture2D) -> void:
+	_backs = [you, rival]
+	for p: int in 2:
+		_paint_deck_top(p)
+
+
+func _paint_deck_top(p: int) -> void:
+	var pile: Dictionary = _piles[p][0]
+	if pile.is_empty():
+		return
+	var mat: StandardMaterial3D = pile["mat"]
+	mat.albedo_texture = _backs[p]
+	mat.albedo_color = Color.WHITE if _backs[p] else BACKS[p]
+
+
+## The texture on player p's deck pile top (tests).
+func deck_face_texture(p: int) -> Texture2D:
+	return (_piles[p][0]["mat"] as StandardMaterial3D).albedo_texture
 
 
 func count(p: int, kind: StringName) -> int:

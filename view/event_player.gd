@@ -273,11 +273,19 @@ func _field_set(d: Dictionary) -> void:
 
 ## The rival's card shows large at the right of the board for a moment before it lands (the
 ## action log has the left).
+## The rival's card slides in face down (their card back), flips over and lingers.
 func _reveal(c: CardData) -> void:
-	var w := CardWidget.new()
-	w.setup(c, 0)
+	var w := Control.new()
+	w.size = CardWidget.SIZE
 	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	w.pivot_offset = CardWidget.SIZE / 2.0
+	var face := CardWidget.new()
+	face.setup(c, 0)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.visible = false
+	w.add_child(face)
+	var back: Control = FlyingCard.back_rect(m.card_backs[MatchController.AI]) if m.card_backs[MatchController.AI] else Control.new()
+	w.add_child(back)
 	var vp: Vector2 = m.hud.get_viewport_rect().size
 	var at := Vector2(vp.x * 0.87, vp.y * 0.44) - CardWidget.SIZE / 2.0
 	m.hud.add_child(w)
@@ -288,7 +296,13 @@ func _reveal(c: CardData) -> void:
 	var tw := w.create_tween().set_parallel()
 	tw.tween_property(w, "position", at, 0.25 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(w, "modulate:a", 1.0, 0.15 / speed)
-	tw.chain().tween_interval(1.1 / speed)
+	# The flip: squash to an edge, swap back for face, open up again.
+	tw.chain().tween_property(w, "scale:x", 0.0, 0.12 / speed).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(func() -> void:
+		back.visible = false
+		face.visible = true)
+	tw.chain().tween_property(w, "scale:x", 1.25, 0.14 / speed).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_interval(1.0 / speed)
 	tw.chain().tween_property(w, "modulate:a", 0.0, 0.25 / speed)
 	tw.chain().tween_callback(w.queue_free)
 	await _wait(0.55)
@@ -308,7 +322,7 @@ func _play_creature(d: Dictionary) -> void:
 	var human: bool = p == MatchController.HUMAN
 	Audio.sfx(&"card_play")
 	var from: Vector2 = m.hand.last_drop_pos if human and m.hand.last_drop_pos != Vector2.ZERO else (m.hud.hero_screen_pos(true) if human else m.rival_hand_screen())
-	FlyingCard.fly(m.hud, c, from, lane_screen, human, 0.22 / speed)
+	FlyingCard.fly(m.hud, c, from, lane_screen, human, 0.22 / speed, m.card_backs[p])
 	await _wait(0.22)
 	var drop := Vector3.INF
 	if human and m.hand.last_drop_pos != Vector2.ZERO:

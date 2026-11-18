@@ -18,6 +18,8 @@ var rival: RivalSeat
 var field_fx: FieldFx
 ## Both players' deck and discard piles on the table.
 var stacks: CardStacks
+## Each player's card back (CardBacks), from their deck's main land.
+var card_backs: Array[Texture2D] = [null, null]
 var _ui_root: Control
 var action_log: ActionLog
 ## Creatures placed so far (seeds each one's wandering).
@@ -46,7 +48,10 @@ var building_views: Array[Array] = [[null, null, null, null], [null, null, null,
 func _ready() -> void:
 	var seed: int = Session.match_seed()
 	difficulty = Session.difficulty
-	state = Rules.setup(CardDB.deck(Session.player_deck), CardDB.deck(Session.resolve_ai_deck(seed)), seed)
+	var deck_a: DeckData = CardDB.deck(Session.player_deck)
+	var deck_b: DeckData = CardDB.deck(Session.resolve_ai_deck(seed))
+	card_backs = [CardBacks.texture_for(deck_a), CardBacks.texture_for(deck_b)]
+	state = Rules.setup(deck_a, deck_b, seed)
 	ai = AIPlayer.new(AI, difficulty, seed + 7919)
 	var opening: Array[GameEvent] = Rules.start_turn(state)
 	if "--demo-board" in OS.get_cmdline_user_args():
@@ -64,9 +69,11 @@ func _ready() -> void:
 	stacks = CardStacks.new()
 	stacks.name = "CardStacks"
 	add_child(stacks)
+	stacks.set_backs(card_backs[0], card_backs[1])
 	rival = RivalSeat.new()
 	add_child(rival)
 	rival.setup(RIVAL_MODEL)
+	rival.set_back(card_backs[1])
 	rival.set_hand_count(state.players[AI].hand.size(), false)
 	board = Board.new()
 	add_child(board)

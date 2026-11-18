@@ -21,6 +21,9 @@ var _grid: GridContainer
 var _list: VBoxContainer
 var _name_edit: LineEdit
 var _name_label: Label
+## The deck's card back (CardBacks), updated as its cards change.
+var _back: TextureRect
+var _lands: Array[int] = [0, 1, 2, 3]
 var _count: Label
 var _status: Label
 var _copy_b: Button
@@ -190,6 +193,13 @@ func _build_right() -> Control:
 	var col := VBoxContainer.new()
 	col.custom_minimum_size = Vector2(270, 0)
 	col.add_theme_constant_override("separation", 8)
+	_back = TextureRect.new()
+	_back.custom_minimum_size = Vector2(56, 78)
+	_back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_back.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_back.tooltip_text = "This deck's card back"
+	col.add_child(_back)
 	_name_edit = LineEdit.new()
 	_name_edit.max_length = 24
 	_name_edit.add_theme_font_size_override("font_size", 20)
@@ -239,6 +249,7 @@ func open_deck(id: StringName) -> void:
 	editable = DeckStore.is_custom(id)
 	var d: DeckData = DeckStore.find(id) if editable else CardDB.deck(id)
 	cards = d.cards.duplicate() if d else []
+	_lands = d.lands.duplicate() if d else [0, 1, 2, 3]
 	_name_edit.visible = editable
 	_name_label.visible = not editable
 	_name_edit.text = d.display_name if d else ""
@@ -377,6 +388,11 @@ func _deck_button(d: DeckData) -> Button:
 
 
 func _refresh() -> void:
+	if _back:
+		var tmp := DeckData.new()
+		tmp.lands = _lands
+		tmp.cards = cards
+		_back.texture = CardBacks.texture_for(tmp)
 	var err: String = DeckStore.validate(cards)
 	_count.text = "%d / %d cards" % [cards.size(), DeckStore.DECK_SIZE]
 	_count.add_theme_color_override("font_color", UiStyle.WOOD_INK if cards.size() == DeckStore.DECK_SIZE else Palette.HP.darkened(0.1))

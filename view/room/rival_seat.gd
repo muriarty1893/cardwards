@@ -28,6 +28,8 @@ const LIFT := 2.4
 const FORWARD := 2.6
 const CHAIR_K := Vector3(Room.SCALE, Room.SCALE + LIFT / 0.55, Room.SCALE)
 const CARD_BACK := Color("#6a46c8")
+## The deck's card back art (CardBacks), shown on the held fan.
+var back_texture: Texture2D
 const CARD_RIM := Color("#ffcf3a")
 
 var model: Node3D
@@ -180,15 +182,37 @@ func _build_fan() -> void:
 
 
 func _make_card() -> Node3D:
-	var back := BoxMesh.new()
-	back.size = Vector3(0.27, 0.39, 0.004)
 	var rim := BoxMesh.new()
-	rim.size = Vector3(0.31, 0.43, 0.006)
+	rim.size = Vector3(0.29, 0.41, 0.006)
 	var card := Node3D.new()
 	card.add_child(Palette.mesh(rim, Toon.plain(CARD_RIM), Vector3(0, 0.2, 0)))
+	var face := QuadMesh.new()
+	face.size = Vector2(0.27, 0.39)
 	for side: float in [-1.0, 1.0]:
-		card.add_child(Palette.mesh(back, Toon.plain(CARD_BACK), Vector3(0, 0.2, side * 0.004)))
+		var mi := Palette.mesh(face, _back_material(), Vector3(0, 0.2, side * 0.0035))
+		mi.name = "Back%d" % (0 if side < 0 else 1)
+		# The quad faces +z; turn the far one around so both faces show the back.
+		if side < 0:
+			mi.rotation.y = PI
+		card.add_child(mi)
 	return card
+
+
+## The held cards' back: the deck's card back art, or the plain colour until set_back() is called.
+func _back_material() -> Material:
+	if back_texture:
+		return Toon.material(back_texture, Color.WHITE)
+	return Toon.plain(CARD_BACK)
+
+
+## Shows `tex` (CardBacks) on every card in the fan, now and from now on.
+func set_back(tex: Texture2D) -> void:
+	back_texture = tex
+	var mat: Material = _back_material()
+	for card: Node3D in _cards:
+		for mi: Node in card.get_children():
+			if String(mi.name).begins_with("Back"):
+				(mi as MeshInstance3D).material_override = mat
 
 
 ## Cards held in the fan now.

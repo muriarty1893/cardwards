@@ -60,3 +60,8 @@ Change: the black background square was removed so the icons are white on transp
 
 - `fonts/`: "Lilita One" by Juan Montoreano, SIL Open Font License 1.1 (see `fonts/OFL.txt`),
   https://fonts.google.com/specimen/Lilita+One .
+
+## Project art
+
+- `card_backs/`: card back designs made for this game by the project owner (backs_v4 set: Ember Reign,
+  Frostbound, Verdant Bloom, Candy Realm), resized to 256x358.

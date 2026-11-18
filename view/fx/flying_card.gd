@@ -5,7 +5,8 @@ extends Control
 signal landed
 
 
-static func fly(parent: Control, card: CardData, from: Vector2, to: Vector2, face_up: bool, duration: float = 0.3) -> FlyingCard:
+## `back`: the owner's card back art (CardBacks) for a face-down card; a plain back when null.
+static func fly(parent: Control, card: CardData, from: Vector2, to: Vector2, face_up: bool, duration: float = 0.3, back_tex: Texture2D = null) -> FlyingCard:
 	var f := FlyingCard.new()
 	f.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	f.size = CardWidget.SIZE
@@ -14,6 +15,8 @@ static func fly(parent: Control, card: CardData, from: Vector2, to: Vector2, fac
 		w.setup(card, -1)
 		w.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		f.add_child(w)
+	elif back_tex:
+		f.add_child(back_rect(back_tex))
 	else:
 		var back := Panel.new()
 		back.size = CardWidget.SIZE
@@ -42,3 +45,14 @@ static func fly(parent: Control, card: CardData, from: Vector2, to: Vector2, fac
 		f.landed.emit()
 		f.queue_free())
 	return f
+
+
+## A card-sized picture of a card back.
+static func back_rect(tex: Texture2D) -> TextureRect:
+	var r := TextureRect.new()
+	r.texture = tex
+	r.size = CardWidget.SIZE
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_SCALE
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
