@@ -27,6 +27,12 @@ static func build(ctx: Dictionary) -> bool:
 			_shroom_grove(ctx)
 		Vector2i(0, 2):
 			_mossy_knoll(ctx)
+		Vector2i(3, 0):
+			_castle_corner(ctx)
+		Vector2i(3, 1):
+			_frozen_lake(ctx)
+		Vector2i(3, 2):
+			_glacier_ridge(ctx)
 		_:
 			return false
 	return true
@@ -398,4 +404,147 @@ static func _mossy_knoll(ctx: Dictionary) -> void:
 		var p := Vector3(clampf(other.get_center().x + rng.randf_range(-0.05, 0.05), other.position.x + br, other.end.x - br), 0.0, lerpf(other.position.y + br, other.end.y - br, (i + 0.5) / 3.0))
 		boulders.add_child(SetPieces.sphere(br, Color("#8f8a80"), p + Vector3(0, br * 0.35, 0), Vector3(1.0, 0.75, 1.0), 10))
 		boulders.add_child(SetPieces.sphere(br * 0.8, MOSS, p + Vector3(0, br * 0.85, 0), Vector3(1.0, 0.35, 1.0), 10))
+	SetPieces.add_piece(ctx, boulders, Vector3.ZERO, other, other)
+
+
+# --- Frostpeak --------------------------------------------------------------------------------------
+
+const STONE := Color("#c3cddb")
+const STONE_DARK := Color("#94a1b5")
+const ROOF := Color("#4a7ac8")
+const SNOW := Color("#f6fbff")
+const ICE := Color("#9fd8ff")
+
+
+## A round tower: stone body, snowy conical roof, base at y = 0.
+static func _tower(r: float, h: float, roof: Color) -> Node3D:
+	var t := Node3D.new()
+	t.add_child(SetPieces.cyl(r, r * 1.08, h, STONE, Vector3.ZERO, 14))
+	for i: int in 6:
+		var a: float = TAU * i / 6.0
+		t.add_child(SetPieces.box(Vector3(r * 0.42, r * 0.4, r * 0.42), STONE, Vector3(cos(a) * r * 0.86, h, sin(a) * r * 0.86)))
+	t.add_child(SetPieces.cone(r * 1.15, r * 2.2, roof, Vector3(0, h + r * 0.1, 0), 14))
+	t.add_child(SetPieces.sphere(r * 0.55, SNOW, Vector3(0, h + r * 0.55, 0), Vector3(1.6, 0.5, 1.6), 10))
+	t.add_child(SetPieces.box(Vector3(r * 0.3, r * 0.55, 0.01), Color("#2a3448"), Vector3(0, h * 0.62, r * 1.0)))
+	return t
+
+
+## A small toy castle in the back corner (keep, two turrets, a wall with a gate, a banner) and snow drifts.
+static func _castle_corner(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var castle := Node3D.new()
+	castle.name = "Castle"
+	var w: float = box.size.x
+	var tr: float = clampf(w * 0.17, 0.06, 0.1)
+	var len: float = minf(box.size.y * 0.8, 1.15)
+	var cx: float = box.get_center().x
+	var cz: float = lerpf(box.position.y + len / 2.0, box.end.y - len / 2.0, _back(ctx))
+	var kh: float = 0.42 * sc
+	# Keep in the middle.
+	var kw: float = minf(w * 0.62, 0.3)
+	castle.add_child(SetPieces.box(Vector3(kw, kh, kw * 1.15), STONE, Vector3(cx, 0, cz)))
+	for i: int in 4:
+		var sx: float = -1.0 if i % 2 == 0 else 1.0
+		var sz: float = -1.0 if i < 2 else 1.0
+		castle.add_child(SetPieces.box(Vector3(kw * 0.2, kw * 0.2, kw * 0.2), STONE, Vector3(cx + sx * kw * 0.4, kh, cz + sz * kw * 0.47)))
+	castle.add_child(SetPieces.cone(kw * 0.62, kh * 0.6, ROOF, Vector3(cx, kh, cz), 4))
+	castle.add_child(SetPieces.box(Vector3(kw * 0.34, kh * 0.42, 0.012), Color("#3a2a20"), Vector3(cx, 0, cz + kw * 0.58 * (-1.0 if _back(ctx) > 0.5 else 1.0))))
+	# Turrets at both ends, joined to the keep by walls.
+	for sz: float in [-1.0, 1.0]:
+		var tz: float = cz + sz * (len / 2.0 - tr)
+		var t: Node3D = _tower(tr, (0.5 + 0.08 * sz) * sc, ROOF)
+		t.position = Vector3(cx, 0, tz)
+		castle.add_child(t)
+		var wl: float = absf(tz - cz) - kw * 0.55
+		castle.add_child(SetPieces.box(Vector3(tr * 0.9, 0.2 * sc, wl), STONE_DARK, Vector3(cx, 0, (tz + cz) / 2.0 + sz * kw * 0.02)))
+	# Banner on the keep.
+	castle.add_child(SetPieces.cyl(0.006, 0.006, 0.22 * sc, Color("#5a4632"), Vector3(cx, kh + kh * 0.55, cz)))
+	var flag := SetPieces.box(Vector3(0.012, 0.06, 0.1), Color("#e8483c") if rng.randf() < 0.5 else Color("#ffcf3a"), Vector3(cx, kh + kh * 0.55 + 0.14 * sc, cz + 0.05))
+	castle.add_child(flag)
+	SetPieces.add_piece(ctx, castle, Vector3.ZERO, Rect2(cx - maxf(kw, tr * 2.16) / 2.0, cz - len / 2.0, maxf(kw, tr * 2.16), len), box)
+	for key: String in ["band", "other_band"]:
+		var band: Rect2 = ctx[key]
+		var drifts := Node3D.new()
+		drifts.name = "Drifts"
+		for i: int in 4:
+			var dr: float = clampf(band.size.x * 0.5, 0.07, 0.16)
+			var z: float = lerpf(band.position.y + dr, band.end.y - dr, rng.randf())
+			drifts.add_child(SetPieces.sphere(dr, SNOW, Vector3(band.get_center().x, 0.0, z), Vector3(band.size.x / (2.0 * dr), 0.45, 1.8), 10))
+		SetPieces.add_piece(ctx, drifts, Vector3.ZERO, band, band)
+
+
+## A cracked shiny ice pond in the back corner, snowy pines along one side and a lone watchtower in the other corner.
+static func _frozen_lake(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var rx: float = box.size.x * 0.5
+	var rz: float = minf(box.size.y * 0.45, rx * 2.0)
+	var c: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.25))
+	var lake := Node3D.new()
+	lake.name = "FrozenLake"
+	lake.add_child(SetPieces.pool(1, rx, rz))
+	lake.add_child(SetPieces.sphere(0.05, SNOW, Vector3(rx * 0.55, 0.0, -rz * 0.5), Vector3(1.4, 0.4, 1.0), 8))
+	SetPieces.add_piece(ctx, lake, c, Rect2(c.x - rx, c.z - rz, rx * 2.0, rz * 2.0), box)
+	var band: Rect2 = ctx["other_band"]
+	var pines := Node3D.new()
+	pines.name = "Pines"
+	for i: int in 3:
+		var pine: Node3D = SetPieces.model("nature/Pine_2", rng.randf_range(0.45, 0.7) * sc, Color("#e8f4ff", 0.45))
+		pine.position = Vector3(band.get_center().x, 0, lerpf(band.position.y + 0.15, band.end.y - 0.15, (i + 0.5) / 3.0))
+		pine.rotation.y = rng.randf() * TAU
+		pines.add_child(pine)
+	SetPieces.add_piece(ctx, pines, Vector3.ZERO, band, band)
+	var other: Rect2 = ctx["other_box"]
+	var tower := Node3D.new()
+	tower.name = "Watchtower"
+	var tr: float = clampf(other.size.x * 0.22, 0.06, 0.11)
+	var t: Node3D = _tower(tr, 0.62 * sc, ROOF)
+	var tp: Vector3 = _at(other, 0.5, lerpf(0.5, _back(ctx), 0.5))
+	t.position = tp
+	tower.add_child(t)
+	SetPieces.add_piece(ctx, tower, Vector3.ZERO, Rect2(tp.x - tr * 1.2, tp.z - tr * 1.2, tr * 2.4, tr * 2.4), other)
+
+
+## Raised ice ridges along both sides, a cluster of big crystal spikes in the back corner, icy boulders in the other.
+static func _glacier_ridge(ctx: Dictionary) -> void:
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	for key: String in ["band", "other_band"]:
+		var band: Rect2 = ctx[key]
+		var ridge := Node3D.new()
+		ridge.name = "Ridge"
+		var r: float = clampf(band.size.x * 0.55, 0.08, 0.2)
+		var count: int = int(band.size.y / (r * 1.2)) + 1
+		for i: int in count:
+			var z: float = lerpf(band.position.y + r, band.end.y - r, float(i) / maxf(count - 1, 1))
+			var col: Color = ICE if i % 3 else SNOW
+			ridge.add_child(SetPieces.sphere(r, col, Vector3(band.get_center().x, r * 0.15, z), Vector3(band.size.x / (2.0 * r), rng.randf_range(0.8, 1.4), 1.3), 7))
+			if i % 2 == 0:
+				ridge.add_child(SetPieces.cone(r * 0.35, rng.randf_range(0.15, 0.3) * sc, Color("#c6ecff"), Vector3(band.get_center().x, r * 0.3, z), 5))
+		SetPieces.add_piece(ctx, ridge, Vector3.ZERO, band, band)
+	var box: Rect2 = ctx["box"]
+	var crystals := Node3D.new()
+	crystals.name = "Crystals"
+	var cc: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.35))
+	var cw: float = box.size.x * 0.42
+	for i: int in 6:
+		var hh: float = rng.randf_range(0.3, 0.75) * sc * (1.0 if i < 2 else 0.7)
+		var cr: float = hh * 0.2
+		var off := Vector3(rng.randf_range(-cw + cr, cw - cr), 0.0, rng.randf_range(-cw * 1.4, cw * 1.4))
+		var spike := SetPieces.mesh(Palette.cylinder(0.0, cr, hh, 5), [Color("#7cc4f0"), Color("#9fd8ff"), Color("#c6ecff")][i % 3], Vector3.ZERO)
+		spike.position = cc + off + Vector3(0, hh * 0.45, 0)
+		spike.rotation = Vector3(rng.randf_range(-0.3, 0.3), rng.randf() * TAU, rng.randf_range(-0.3, 0.3))
+		crystals.add_child(spike)
+	SetPieces.add_piece(ctx, crystals, Vector3.ZERO, Rect2(cc.x - cw, cc.z - cw * 1.5, cw * 2.0, cw * 3.0), box)
+	var other: Rect2 = ctx["other_box"]
+	var boulders := Node3D.new()
+	boulders.name = "IceBoulders"
+	for i: int in 3:
+		var br: float = minf(other.size.x * 0.32, 0.15) * rng.randf_range(0.7, 1.0)
+		var p := Vector3(clampf(other.get_center().x, other.position.x + br, other.end.x - br), 0.0, lerpf(other.position.y + br, other.end.y - br, (i + 0.5) / 3.0))
+		boulders.add_child(SetPieces.sphere(br, Color("#b8cfe0"), p + Vector3(0, br * 0.4, 0), Vector3(1.0, 0.8, 1.0), 8))
+		boulders.add_child(SetPieces.sphere(br * 0.75, SNOW, p + Vector3(0, br * 0.95, 0), Vector3(1.0, 0.35, 1.0), 8))
 	SetPieces.add_piece(ctx, boulders, Vector3.ZERO, other, other)

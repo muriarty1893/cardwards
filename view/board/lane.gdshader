@@ -159,6 +159,17 @@ vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 
 			col = mix(col, vec3(0.78, 0.74, 0.66), stone);
 			col = mix(col, INK, edge * 0.7);
 		}
+	} else if (l == 3) {
+		if (v == 1) {          // Frozen Lake: a frosty halo around the ice
+			float d = length((p - bc) / (bs * vec2(0.7, 0.6)));
+			col = mix(col, vec3(0.86, 0.94, 1.0), (1.0 - smoothstep(0.8, 1.3, d)) * 0.6);
+		} else if (v == 2) {   // Glacier Ridge: blue ice streaks near the sides
+			float streak = (1.0 - smoothstep(0.1, 0.5, side_d)) * smoothstep(0.4, 0.7, fbm(vec2(pw.x * 6.0, pw.y * 1.2)));
+			col = mix(col, vec3(0.6, 0.8, 0.95), streak * 0.6);
+		} else {               // Castle Corner: packed snow by the castle
+			float d = length((p - bc) / (bs * vec2(0.9, 0.7)));
+			col = mix(col, vec3(0.97, 0.99, 1.0), (1.0 - smoothstep(0.7, 1.2, d)) * 0.5);
+		}
 	} else if (l == 1) {
 		if (v == 0) {          // Volcano: scorched ground with glowing cracks around its foot
 			float d = length((p - bc) / (bs * vec2(1.1, 0.75)));

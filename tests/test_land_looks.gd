@@ -40,3 +40,10 @@ func test_mushroom_looks() -> bool:
 	_expect(0, 1, ["GiantShrooms", "Log", "FairyRing"], false)
 	_expect(0, 2, ["Knoll", "Boulders"], false)
 	return true
+
+
+func test_frost_looks() -> bool:
+	_expect(3, 0, ["Castle", "Drifts"], false)
+	_expect(3, 1, ["FrozenLake", "Pines", "Watchtower"], false)
+	_expect(3, 2, ["Ridge", "Crystals", "IceBoulders"], false)
+	return true
