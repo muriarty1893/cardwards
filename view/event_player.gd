@@ -231,9 +231,42 @@ func _transformed(d: Dictionary, burst: StringName = &"smoke", stamp: String = "
 	m.refresh_pieces()
 
 
-## Two partners merge: the hand creature flies in and the pair becomes the merged form.
+## Two partners merge: the hand creature hops in over its partner, the two spin together in a burst of sparkles,
+## and the merged form pops up in their place.
 func _merged(d: Dictionary) -> void:
-	await _transformed({"player": d["player"], "lane": d["lane"], "card": d["into"]}, &"stars", "MERGE!")
+	var p: int = d["player"]
+	var l: int = d["lane"]
+	var old: CreatureView = _view(p, l)
+	var at: Vector3 = old.global_position if old else m.board.anchor(p, l)
+	if old:
+		old.busy = true
+		old.wanderer.set_process(false)
+	var hopper := CreatureView.create(CardDB.card(d["card"]))
+	hopper.wanderer.set_process(false)
+	m.add_child(hopper)
+	var side: float = 1.0 if p == MatchController.HUMAN else -1.0
+	var start: Vector3 = at + Vector3(0.0, 0.2, 1.4 * side)
+	var peak: Vector3 = at + Vector3(0.0, 1.5, 0.5 * side)
+	hopper.global_position = start
+	hopper.rotation.y = old.rotation.y if old else 0.0
+	Audio.sfx(&"card_play")
+	var hop := hopper.create_tween()
+	hop.tween_method(func(k: float) -> void:
+		hopper.global_position = start.lerp(peak, k).lerp(peak.lerp(at + Vector3(0, 0.25, 0), k), k), 0.0, 1.0, 0.4 / speed)
+	await hop.finished
+	# Spin together and shrink into one.
+	var spin := create_tween().set_parallel()
+	for v: CreatureView in [old, hopper]:
+		if is_instance_valid(v):
+			spin.tween_property(v, "rotation:y", v.rotation.y + TAU * 1.5, 0.45 / speed).set_trans(Tween.TRANS_SINE)
+			spin.tween_property(v, "scale", Vector3.ONE * 0.2, 0.45 / speed).set_ease(Tween.EASE_IN)
+			spin.tween_property(v, "global_position", at + Vector3(0, 0.3, 0), 0.45 / speed)
+	await spin.finished
+	Burst.spawn(m, &"stars", at + Vector3(0, 0.45, 0), Color.WHITE, 1.8)
+	Burst.spawn(m, &"sparks", at + Vector3(0, 0.45, 0), Color.WHITE, 1.4)
+	if is_instance_valid(hopper):
+		hopper.queue_free()
+	await _transformed({"player": p, "lane": l, "card": d["into"]}, &"sprinkles", "MERGE!")
 
 
 func _second_wind(d: Dictionary) -> void:

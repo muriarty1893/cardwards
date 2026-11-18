@@ -3,8 +3,9 @@ extends Node3D
 ## One land: a long painted lane strip with wavy outlined edges and land props.
 ## (Named Island for history; it is the tile a creature and building stand on.)
 
-## GUARD: an enemy Guard that must be attacked first (pulsing red-gold).
-enum Highlight { OFF, VALID, TARGET, GUARD }
+## GUARD: an enemy Guard that must be attacked first (pulsing red-gold). MERGE: the partner of the dragged card
+## (a swirling gold-and-pink band).
+enum Highlight { OFF, VALID, TARGET, GUARD, MERGE }
 
 const WIDTH := 2.6
 const LENGTH := 5.4

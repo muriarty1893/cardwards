@@ -45,7 +45,11 @@ func on_drag_started(i: int) -> void:
 	if _card.kind != CardData.Kind.SPELL:
 		for l: int in 4:
 			if Rules.validate(_state(), Action.play(_human(), i, l)) == "":
-				match_ctl.board.island(_human(), l).set_highlight(Island.Highlight.VALID)
+				var merge: bool = Rules.can_merge(_state(), _human(), l, _card)
+				match_ctl.board.island(_human(), l).set_highlight(Island.Highlight.MERGE if merge else Island.Highlight.VALID)
+				if merge:
+					var partner: CardData = _state().players[_human()].lanes[l].creature.card
+					match_ctl.toast.show_message("Drop on %s to MERGE" % partner.display_name, 2.0)
 
 
 func on_dropped(i: int, screen_pos: Vector2) -> void:
@@ -64,7 +68,7 @@ func on_dropped(i: int, screen_pos: Vector2) -> void:
 	if hit.is_empty() or int(hit["player"]) != _human():
 		match_ctl.hand.cancel_drag()
 		return
-	if Targeting.chosen_who(_card, &"on_play") != &"":
+	if Targeting.chosen_who(Rules.played_form(_state(), _human(), int(hit["lane"]), _card), &"on_play") != &"":
 		_begin_card_targets(i, int(hit["lane"]), false)
 		return
 	_request(Action.play(_human(), i, int(hit["lane"])))
@@ -76,7 +80,8 @@ func _begin_card_targets(hand_index: int, lane: int, boop: bool) -> void:
 	_lane = lane
 	_is_boop = boop
 	_targets = []
-	var who: StringName = Targeting.chosen_who(_card, &"on_boop" if boop else &"on_play")
+	var form: CardData = _card if boop or lane < 0 else Rules.played_form(_state(), _human(), lane, _card)
+	var who: StringName = Targeting.chosen_who(form, &"on_boop" if boop else &"on_play")
 	if who == &"":
 		_send()
 		return

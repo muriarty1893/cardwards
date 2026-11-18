@@ -10,9 +10,13 @@ func test_creature_heights_and_toon() -> bool:
 		var box: AABB = Palette.bounds(v.body)
 		var h: float = box.size.y * v.body.scale.y
 		var w: float = maxf(box.size.x, box.size.z) * v.body.scale.x
-		var full_height: bool = absf(h - CreatureView.HEIGHTS[c.level]) < 0.03
-		var width_capped: bool = h < CreatureView.HEIGHTS[c.level] and absf(w - CreatureView.MAX_WIDTH) < 0.03
-		assert_true(full_height or width_capped, "%s height %f width %f" % [c.id, h, w])
+		if not VisualDB.merge_pair(c.id).is_empty():
+			# Merged forms: a bigger partner with the other riding on top, still lane-sized.
+			assert_true(h > CreatureView.HEIGHTS[c.level] and w <= CreatureView.MAX_WIDTH * 1.2, "%s merged height %f width %f" % [c.id, h, w])
+		else:
+			var full_height: bool = absf(h - CreatureView.HEIGHTS[c.level]) < 0.03
+			var width_capped: bool = h < CreatureView.HEIGHTS[c.level] and absf(w - CreatureView.MAX_WIDTH) < 0.03
+			assert_true(full_height or width_capped, "%s height %f width %f" % [c.id, h, w])
 		for mi: Node in v.body.find_children("*", "MeshInstance3D", true, false):
 			var m := (mi as MeshInstance3D).get_active_material(0) as ShaderMaterial
 			assert_true(m != null and m.shader.resource_path in [Toon.FX_PATH, Toon.FX_CUTOUT_PATH], "%s fx toon" % c.id)

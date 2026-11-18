@@ -78,10 +78,15 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 	v.card = c
 	v.height = HEIGHTS[clampi(c.level, 0, 3)]
 	var path: String = model_override if model_override != "" else VisualDB.model_path(c.id)
+	var pair: Array = VisualDB.merge_pair(c.id) if model_override == "" else []
+	if not pair.is_empty():
+		v.height *= MERGE_SCALE
 	if path != "" and ResourceLoader.exists(path):
 		v._build_model(load(path) as PackedScene, VisualDB.tint(c.id))
 	else:
 		v._build_fallback(c)
+	if not pair.is_empty():
+		v._add_rider(pair[1])
 	v._fidget_in = randf_range(6.0, 12.0)
 	if not BlobShadow.sun_shadows():
 		v._add_blob()
@@ -95,6 +100,51 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 	v.wanderer.name = "Wanderer"
 	v.add_child(v.wanderer)
 	return v
+
+
+## Merged forms: the big partner is this much taller, and carries the other partner (RIDER of its height) on top.
+const MERGE_SCALE := 1.15
+const RIDER := 0.55
+
+
+## A merged form's second partner riding on the big one's back, with a soft aura ring in both partners' colours.
+func _add_rider(rider_id: StringName) -> void:
+	var path: String = VisualDB.model_path(rider_id)
+	if path == "" or not ResourceLoader.exists(path):
+		return
+	var rider := (load(path) as PackedScene).instantiate() as Node3D
+	rider.name = "Rider"
+	Toon.apply(rider, VisualDB.tint(rider_id), 0.0, true)
+	var big: AABB = Palette.bounds(body)
+	var rb: AABB = Palette.bounds(rider)
+	var k: float = (height * RIDER / body.scale.x) / maxf(rb.size.y, 0.01)
+	rider.scale = Vector3.ONE * k
+	# Sit a little into the big partner's top, a touch towards its back.
+	rider.position = Vector3(big.get_center().x - rb.get_center().x * k, big.end.y - big.size.y * 0.14 - rb.position.y * k, big.get_center().z - big.size.z * 0.12)
+	body.add_child(rider)
+	var anim := rider.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if anim:
+		for n: StringName in IDLE_ANIMS:
+			if anim.has_animation(n):
+				anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+				anim.play(n)
+				anim.seek(randf(), true)
+				break
+	height += height * RIDER * 0.8
+	var aura := Node3D.new()
+	aura.name = "MergeAura"
+	var cols: Array[Color] = [VisualDB.tint(card.id), VisualDB.tint(rider_id)]
+	for i: int in 2:
+		var c: Color = cols[i] if cols[i].a > 0.0 else Color("#ffd84a")
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.albedo_color = Color(c.r, c.g, c.b, 0.55)
+		var ring: MeshInstance3D = _torus(0.32 + 0.07 * i, 0.03, mat)
+		ring.position.y = Island.TOP_Y - BASE_Y + 0.03 + 0.01 * i
+		aura.add_child(ring)
+	add_child(aura)
 
 
 func _add_blob() -> void:

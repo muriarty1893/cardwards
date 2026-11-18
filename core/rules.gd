@@ -149,6 +149,10 @@ static func can_merge(s: GameState, p: int, lane: int, c: CardData) -> bool:
 
 
 ## The card whose on-play runs when `c` is played into `lane`: its merged form when it merges, else itself.
+static func played_form(s: GameState, p: int, lane: int, c: CardData) -> CardData:
+	return _played_form(s, p, lane, c)
+
+
 static func _played_form(s: GameState, p: int, lane: int, c: CardData) -> CardData:
 	return CardDB.card(c.merges_into) if can_merge(s, p, lane, c) else c
 

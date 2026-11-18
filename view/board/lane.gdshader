@@ -301,7 +301,14 @@ void fragment() {
 	// Bevel, side rim, ink edge (from inside out) on the outer sides and ends.
 	col = mix(col, col * 1.18, 1.0 - smoothstep(0.075, 0.1, m_ink));
 	col = mix(col, src_lin(edge_color), (1.0 - smoothstep(0.05, 0.07, m_ink)) * 0.6);
-	if (highlight > 0.5) {
+	if (highlight > 3.5) {
+		// Merge: a wide band swirling between gold and candy pink around the tile.
+		float band = 1.0 - smoothstep(0.14, 0.36, m);
+		float swirl = 0.5 + 0.5 * sin((p.x - p.y) * 5.0 - TIME * 5.0);
+		vec3 hc = mix(vec3(1.0, 0.86, 0.3), vec3(1.0, 0.45, 0.8), swirl);
+		col = mix(col, hc, band * 0.85);
+		emi += pow(hc, vec3(2.2)) * band * 1.1;
+	} else if (highlight > 0.5) {
 		bool target = highlight > 1.5;
 		bool guard = highlight > 2.5;
 		float beat = 0.5 + 0.5 * sin(TIME * 6.283 * 2.0);
