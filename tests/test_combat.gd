@@ -88,6 +88,7 @@ func test_ice_wall_reduces_hit_back() -> bool:
 	_hit(s, 2, 0)
 	assert_eq(a.damage, 2, "hit-back 3 - 1")
 	a.attacks_used = 0
+	a.xp = 0  # no level-up heal in between
 	_hit(s, 2, 1)
 	assert_eq(a.damage, 2, "0-attack defender: no hit-back even with min 1")
 	return true

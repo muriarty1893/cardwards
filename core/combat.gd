@@ -37,7 +37,7 @@ static func hit_back_damage(atk: int, reduction: int) -> int:
 	return maxi(1, atk - reduction) if reduction > 0 else atk
 
 
-## Resolves a validated ATTACK: reveal, count the attack, deal both damages, then deaths.
+## Resolves a validated ATTACK: reveal, count the attack, deal both damages, deaths, then XP.
 static func resolve(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	var p: int = a.player
 	var foe: int = s.opponent(p)
@@ -47,8 +47,9 @@ static func resolve(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "target_lane": a.target_lane, "hit": int(a.hit)}))
 	var atk: int = Rules.effective_attack(s, p, a.lane)
 	var src: Dictionary = {"player": p, "lane": a.lane, "kind": &"attack"}
+	var defender: GameState.CreatureState = s.players[foe].lanes[a.target_lane].creature if a.target_lane >= 0 else null
 	if a.target_lane < 0:
-		Rules.damage_hero(s, foe, hero_damage(atk, a.hit), ev, src)
+		Rules.damage_hero(s, foe, hero_damage(atk + Tribes.hero_attack_bonus(s, p, a.lane), a.hit), ev, src)
 	else:
 		# Both amounts are fixed before either lands: the hits are simultaneous.
 		var dealt: int = attack_damage(atk, a.hit, a.blocked, Rules.damage_reduction(s, foe, a.target_lane))
@@ -57,3 +58,8 @@ static func resolve(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 		if s.players[p].lanes[a.lane].creature == cr and s.players[foe].lanes[a.target_lane].creature:
 			Rules.damage_creature(s, p, a.lane, back, {"player": foe, "lane": a.target_lane, "kind": &"hit_back"}, ev)
 	Rules.resolve_deaths(s, ev)
+	# Level-up XP (living board spec 6): +1 for surviving the attack, +1 for destroying the defender.
+	if s.phase != GameState.Phase.OVER and s.players[p].lanes[a.lane].creature == cr:
+		var killed: bool = defender != null and s.players[foe].lanes[a.target_lane].creature != defender
+		Levels.gain_xp(s, p, a.lane, 2 if killed else 1, ev)
+		Rules.resolve_deaths(s, ev)

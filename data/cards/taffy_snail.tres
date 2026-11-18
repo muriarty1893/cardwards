@@ -9,6 +9,15 @@ when = &"on_play"
 op = &"gain_magic"
 amount = 1
 
+[sub_resource type="Resource" id="Resource_lb_taffy_snai_0"]
+script = ExtResource("1_hbvya")
+when = &"on_play"
+op = &"gain_magic"
+amount = 1
+who = &"own_hero"
+tribe = &"blob"
+need = 2
+
 [resource]
 script = ExtResource("1_card")
 id = &"taffy_snail"
@@ -18,4 +27,5 @@ level = 1
 cost = 2
 attack = 3
 health = 4
-effects = Array[ExtResource("1_hbvya")]([SubResource("Resource_aril3")])
+effects = Array[ExtResource("1_hbvya")]([SubResource("Resource_aril3"), SubResource("Resource_lb_taffy_snai_0")])
+tribe = &"blob"

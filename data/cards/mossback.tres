@@ -3,6 +3,13 @@
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
 [ext_resource type="Script" path="res://core/effect_data.gd" id="1_mwk3e"]
 
+[sub_resource type="Resource" id="Resource_lb_mossback_0"]
+script = ExtResource("1_mwk3e")
+when = &"on_play"
+op = &"armour"
+amount = 2
+who = &"own_hero"
+
 [resource]
 script = ExtResource("1_card")
 id = &"mossback"
@@ -11,4 +18,6 @@ level = 1
 cost = 2
 attack = 1
 health = 5
+tribe = &"blob"
 keywords = Array[StringName]([&"guard"])
+effects = Array[ExtResource("1_mwk3e")]([SubResource("Resource_lb_mossback_0")])

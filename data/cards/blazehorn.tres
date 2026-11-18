@@ -19,5 +19,6 @@ level = 2
 cost = 5
 attack = 5
 health = 4
+tribe = &"beast"
 keywords = Array[StringName]([&"dash"])
 effects = Array[ExtResource("1_lue2o")]([SubResource("Resource_un67l")])

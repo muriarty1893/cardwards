@@ -10,11 +10,14 @@ signal finished
 const EFFECT_EVENTS: Array[StringName] = [
 	&"creature_damaged", &"creature_healed", &"hero_damaged", &"hero_healed", &"frozen",
 	&"card_drawn", &"card_returned", &"creature_moved", &"building_returned", &"magic_changed",
+	&"armour_gained",
 ]
 const HIT_STOP := 0.07
 ## Landing / death burst preset per CardData.Land (NEUTRAL last).
 const LAND_BURSTS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow", &"stars"]
 const HIT_STOP_SCALE := 0.05
+## Sound when a lane turns into a land (CardData.Land order, Meadow last).
+const LAND_SOUNDS: Array[StringName] = [&"heal", &"fire_whoosh", &"candy_pop", &"freeze", &"card_draw"]
 ## How each event changes the hand of the player it names (the rival's fan follows it live).
 const HAND_DELTA: Dictionary = {
 	&"card_drawn": 1, &"card_returned": 1, &"dream_up_chosen": 1,
@@ -115,6 +118,8 @@ func _play_one(e: GameEvent) -> void:
 			await _wait(0.6)
 		&"game_over":
 			m.refresh_ui()
+		&"land_changed":
+			await _land_changed(d)
 		_:
 			m.hud.refresh(m.state, MatchController.HUMAN)
 
@@ -146,6 +151,26 @@ func _rival_react(e: GameEvent) -> void:
 				r.win()
 			else:
 				r.lose()
+
+
+## A lane turns into another land: the ground sweeps out from the creature or building that
+## caused it, the land's sparkle bursts and its name floats up.
+func _land_changed(d: Dictionary) -> void:
+	var p: int = d["player"]
+	var l: int = d["lane"]
+	var land: int = d["land"]
+	var origin := Vector3.INF
+	var v: CreatureView = _view(p, l)
+	if d.get("cause", &"") == &"building" or (v == null and is_instance_valid(m.building_views[p][l])):
+		origin = m.board.building_point(p, l)
+	elif v:
+		origin = v.global_position
+	m.board.change_land(p, l, land, origin)
+	var centre := Vector3(Board.LANE_X[l], Island.TOP_Y + 0.3, Board.STRIP_Z[p])
+	Burst.spawn(m, LAND_BURSTS[land], origin if origin.is_finite() else centre, Color.WHITE, 1.4)
+	Audio.sfx(LAND_SOUNDS[land])
+	DamageNumber.spawn(m, centre + Vector3(0, 0.6, 0), Lands.lane_name(land) + "!", Palette.LAND_CARD[land], 40)
+	await _wait(0.5)
 
 
 func _view(p: int, l: int) -> CreatureView:

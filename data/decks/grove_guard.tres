@@ -16,10 +16,12 @@
 [ext_resource type="Resource" path="res://data/cards/frostfang.tres" id="14_frostfang"]
 [ext_resource type="Resource" path="res://data/cards/ice_wall.tres" id="15_ice_wall"]
 [ext_resource type="Resource" path="res://data/cards/cold_snap.tres" id="16_cold_snap"]
+[ext_resource type="Resource" path="res://data/cards/spore_bloom.tres" id="lb_spore_bloom"]
+[ext_resource type="Resource" path="res://data/cards/bark_shield.tres" id="lb_bark_shield"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"grove_guard"
 display_name = "Grove Guard"
 lands = Array[int]([0, 0, 3, 0])
-cards = Array[Resource]([ExtResource("2_sporeling"), ExtResource("2_sporeling"), ExtResource("3_mossback"), ExtResource("3_mossback"), ExtResource("4_puffcap"), ExtResource("4_puffcap"), ExtResource("5_glimmer_morel"), ExtResource("5_glimmer_morel"), ExtResource("6_rootstalker"), ExtResource("6_rootstalker"), ExtResource("7_elder_shroomhulk"), ExtResource("7_elder_shroomhulk"), ExtResource("8_spore_hut"), ExtResource("8_spore_hut"), ExtResource("9_glowcap_lantern"), ExtResource("9_glowcap_lantern"), ExtResource("10_rain_of_spores"), ExtResource("10_rain_of_spores"), ExtResource("11_regrowth"), ExtResource("11_regrowth"), ExtResource("12_snowmite"), ExtResource("12_snowmite"), ExtResource("13_iceling"), ExtResource("13_iceling"), ExtResource("14_frostfang"), ExtResource("14_frostfang"), ExtResource("15_ice_wall"), ExtResource("15_ice_wall"), ExtResource("16_cold_snap"), ExtResource("16_cold_snap")])
+cards = Array[Resource]([ExtResource("2_sporeling"), ExtResource("2_sporeling"), ExtResource("3_mossback"), ExtResource("3_mossback"), ExtResource("4_puffcap"), ExtResource("4_puffcap"), ExtResource("5_glimmer_morel"), ExtResource("5_glimmer_morel"), ExtResource("6_rootstalker"), ExtResource("6_rootstalker"), ExtResource("7_elder_shroomhulk"), ExtResource("7_elder_shroomhulk"), ExtResource("8_spore_hut"), ExtResource("8_spore_hut"), ExtResource("9_glowcap_lantern"), ExtResource("9_glowcap_lantern"), ExtResource("10_rain_of_spores"), ExtResource("10_rain_of_spores"), ExtResource("12_snowmite"), ExtResource("12_snowmite"), ExtResource("13_iceling"), ExtResource("13_iceling"), ExtResource("14_frostfang"), ExtResource("14_frostfang"), ExtResource("15_ice_wall"), ExtResource("15_ice_wall"), ExtResource("16_cold_snap"), ExtResource("16_cold_snap"), ExtResource("lb_spore_bloom"), ExtResource("lb_bark_shield")])

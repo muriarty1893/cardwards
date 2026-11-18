@@ -1,15 +1,17 @@
 class_name Ambient
 extends Node3D
 ## Gentle per-land particles over each lane: fireflies (forest), rising embers (ember),
-## sparkles (candy), snowfall (frost). Low quality halves every emitter.
+## sparkles (candy), snowfall (frost), drifting pollen (meadow). Low quality halves every
+## emitter. A lane's emitter is swapped when its land changes.
 
 ## Particles per lane at High quality, by land.
-const AMOUNTS: Array[int] = [6, 10, 6, 12]
+const AMOUNTS: Array[int] = [6, 10, 6, 12, 4]
 const TEX := "res://assets/fx/particles/%s.png"
 const CANDY: Array[Color] = [Color("#ff5a5a"), Color("#ffd84a"), Color("#5ad1ff"), Color("#7aff7a"), Color("#ffffff")]
 
 var _emitters: Array[CPUParticles3D] = []
 var _base: Array[int] = []
+var _quality: int = 0
 
 
 static func build(lands: Array[Array], quality: int) -> Ambient:
@@ -27,7 +29,25 @@ static func build(lands: Array[Array], quality: int) -> Ambient:
 	return a
 
 
+## Swaps the particles over player p's lane for `land`'s.
+func set_land(p: int, l: int, land: int) -> void:
+	var i: int = p * 4 + l
+	var old: CPUParticles3D = _emitters[i]
+	var e: CPUParticles3D = _emitter(land)
+	e.position = Vector3(Board.LANE_X[l], e.position.y, Board.STRIP_Z[p])
+	add_child(e)
+	_emitters[i] = e
+	_base[i] = AMOUNTS[land]
+	old.emitting = false
+	if is_inside_tree():
+		get_tree().create_timer(old.lifetime).timeout.connect(old.queue_free)
+	else:
+		old.free()
+	set_quality(_quality)
+
+
 func set_quality(q: int) -> void:
+	_quality = q
 	for i: int in _emitters.size():
 		var n: int = _base[i] if q == GameSettings.Quality.HIGH else maxi(1, _base[i] / 2)
 		if _emitters[i].amount != n:
@@ -93,6 +113,17 @@ static func _emitter(land: int) -> CPUParticles3D:
 			e.spread = 180.0
 			e.initial_velocity_min = 0.02
 			e.initial_velocity_max = 0.1
+		4:  # pollen drifting over the meadow
+			quad.size = Vector2(0.06, 0.06)
+			mat.albedo_texture = load(TEX % "circle_05")
+			e.color = Color("#fff6c8")
+			e.position.y = 0.5
+			e.lifetime = 4.0
+			e.gravity = Vector3.ZERO
+			e.direction = Vector3(1, 0.2, 0)
+			e.spread = 60.0
+			e.initial_velocity_min = 0.05
+			e.initial_velocity_max = 0.15
 		_:  # snow
 			quad.size = Vector2(0.07, 0.07)
 			mat.albedo_texture = load(TEX % "circle_05")

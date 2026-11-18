@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_effect"]
+
+[sub_resource type="Resource" id="Resource_lb_bark_shiel_0"]
+script = ExtResource("1_effect")
+when = &"on_play"
+op = &"armour"
+amount = 4
+who = &"own_hero"
+
+[resource]
+script = ExtResource("1_card")
+id = &"bark_shield"
+display_name = "Bark Shield"
+kind = 2
+land = 0
+cost = 1
+effects = Array[ExtResource("1_effect")]([SubResource("Resource_lb_bark_shiel_0")])

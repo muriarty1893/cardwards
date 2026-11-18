@@ -25,3 +25,4 @@ cost = 6
 attack = 6
 health = 7
 effects = Array[ExtResource("1_wwfj6")]([SubResource("Resource_62chb"), SubResource("Resource_hr2ki")])
+tribe = &"beast"

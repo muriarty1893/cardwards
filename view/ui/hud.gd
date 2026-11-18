@@ -1,7 +1,9 @@
 class_name Hud
 extends Control
 ## Screen layout: hero corners (portrait, health bar, magic), a bottom tray (deck and discard
-## counters, room for the hand, magic gems, END TURN button), and a pause button.
+## counters, room for the hand, magic gems, END TURN button), and a pause button. Living board:
+## an armour shield at the tip of each health bar, tribe-bonus chips under each corner and the
+## field in play at the top centre.
 
 signal end_turn_pressed
 signal menu_requested
@@ -12,6 +14,11 @@ const TRAY_MARGIN := 60.0
 const CORNER := Vector2(236, 120)
 ## Hero health bar size (it sits on top of the corner and runs toward the centre).
 const BAR := Vector2(300, 30)
+## Tribe chip colours.
+const TRIBE_COLORS: Dictionary = {
+	&"beast": Color("#c2702e"), &"flyer": Color("#3a8ad6"), &"blob": Color("#d0479a"),
+	&"sprout": Color("#4a9a3a"), &"spirit": Color("#7a4de0"),
+}
 
 var end_turn_button: Button
 var pause_button: Button
@@ -29,6 +36,13 @@ var _deck_label: Label
 var _discard_label: Label
 ## Full-screen pause menu. The match moves it above the hand so it takes the mouse first.
 var pause_overlay: Control
+const ARMOUR_COLOR := Color("#7ac8ff")
+const SHIELD_ICON := "res://assets/icons/checked-shield.svg"
+## "You" / "Rival" -> {"root": Control, "label": Label}
+var _armour: Dictionary = {}
+## "You" / "Rival" -> HBoxContainer of tribe chips
+var _tribes: Dictionary = {}
+var _field_chip: Label
 
 
 func _init() -> void:
@@ -49,6 +63,19 @@ func _init() -> void:
 	add_child(_rival_bar)
 	_build_tray()
 	_build_pause()
+	for who: String in ["You", "Rival"]:
+		_build_armour(who == "You", who)
+		_build_tribe_row(who == "You", who)
+	_field_chip = _plate("", Vector2(260, 30), 16)
+	_field_chip.name = "FieldChip"
+	_field_chip.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_field_chip.offset_left = -130
+	_field_chip.offset_right = 130
+	_field_chip.offset_top = 52
+	_field_chip.offset_bottom = 82
+	_field_chip.mouse_filter = Control.MOUSE_FILTER_PASS
+	_field_chip.visible = false
+	add_child(_field_chip)
 
 
 func panels() -> Array[Control]:
@@ -68,6 +95,133 @@ func refresh(s: GameState, human: int) -> void:
 	_rival.modulate = Color.WHITE if not mine else Color(0.82, 0.82, 0.82)
 	_you_bar.modulate = _you.modulate
 	_rival_bar.modulate = _rival.modulate
+	for q: int in 2:
+		var who: String = "You" if q == human else "Rival"
+		_fill_armour(who, s.players[q].armour)
+		_fill_tribes(who, s, q)
+	_fill_field(s)
+
+
+## Pops the armour shield (gained armour).
+func flash_armour(human_side: bool) -> void:
+	var root: Control = _armour["You" if human_side else "Rival"]["root"]
+	root.pivot_offset = root.size / 2.0
+	var tw := root.create_tween()
+	tw.tween_property(root, "scale", Vector2.ONE * 1.4, 0.12).set_trans(Tween.TRANS_BACK)
+	tw.tween_property(root, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+func armour_visible(human_side: bool) -> bool:
+	return (_armour["You" if human_side else "Rival"]["root"] as Control).visible
+
+
+func tribe_chips(human_side: bool) -> Array[String]:
+	var out: Array[String] = []
+	for c: Node in (_tribes["You" if human_side else "Rival"] as Node).get_children():
+		out.append((c as Label).text)
+	return out
+
+
+func field_text() -> String:
+	return _field_chip.text if _field_chip.visible else ""
+
+
+func _build_armour(left: bool, who: String) -> void:
+	var root := Control.new()
+	root.name = who + "Armour"
+	root.size = Vector2(44, 44)
+	root.mouse_filter = Control.MOUSE_FILTER_PASS
+	root.tooltip_text = Keywords.RULES[&"armour"]
+	var icon := TextureRect.new()
+	icon.texture = load(SHIELD_ICON) as Texture2D
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size = root.size
+	icon.modulate = ARMOUR_COLOR
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(icon)
+	var n := UiStyle.title(UiStyle.label("0", 18, Color.WHITE)) as Label
+	n.size = root.size
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	n.add_theme_color_override("font_outline_color", Color("#1a3a66"))
+	n.add_theme_constant_override("outline_size", 8)
+	root.add_child(n)
+	# At the inner tip of the health bar.
+	if left:
+		root.position = Vector2(12 + 112 + BAR.x - 10, 7)
+	else:
+		root.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		root.offset_left = -(12 + 112 + BAR.x + 34)
+		root.offset_right = root.offset_left + 44
+		root.offset_top = 7
+		root.offset_bottom = 51
+	root.visible = false
+	add_child(root)
+	_armour[who] = {"root": root, "label": n}
+
+
+func _fill_armour(who: String, armour: int) -> void:
+	var a: Dictionary = _armour[who]
+	(a["root"] as Control).visible = armour > 0
+	(a["label"] as Label).text = str(armour)
+
+
+func _build_tribe_row(left: bool, who: String) -> void:
+	var row := HBoxContainer.new()
+	row.name = who + "Tribes"
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if left:
+		row.position = Vector2(14, 10 + CORNER.y + 6)
+	else:
+		row.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		row.alignment = BoxContainer.ALIGNMENT_END
+		row.offset_left = -CORNER.x - 12 - 200
+		row.offset_right = -14
+		row.offset_top = 10 + CORNER.y + 6
+	add_child(row)
+	_tribes[who] = row
+
+
+## One chip per tribe bonus that is on: "PACK +1 ATK" style, with the rule as tooltip.
+func _fill_tribes(who: String, s: GameState, p: int) -> void:
+	var row: HBoxContainer = _tribes[who]
+	var want: Array[Array] = []
+	for tribe: StringName in Tribes.ORDER:
+		var tier: int = Tribes.tier(s, p, tribe)
+		if tier > 0:
+			want.append([tribe, tier])
+	var key: String = str(want)
+	if row.get_meta(&"key", "") == key:
+		return
+	row.set_meta(&"key", key)
+	for c: Node in row.get_children():
+		c.free()
+	for w: Array in want:
+		var tribe: StringName = w[0]
+		var chip := UiStyle.title(UiStyle.label("%s %s" % [Tribes.BONUS[tribe].to_upper(), "I" if w[1] == 1 else "II"], 13, Color.WHITE)) as Label
+		chip.custom_minimum_size = Vector2(0, 24)
+		chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		chip.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var sb := _frame(TRIBE_COLORS.get(tribe, Palette.TRAY_LIGHT), 10, 3)
+		sb.content_margin_left = 8
+		sb.content_margin_right = 8
+		chip.add_theme_stylebox_override("normal", sb)
+		chip.mouse_filter = Control.MOUSE_FILTER_PASS
+		chip.tooltip_text = "%s (%d %s): %s" % [Tribes.BONUS[tribe], Tribes.count(s, p, tribe), Tribes.PLURALS[tribe], Tribes.bonus_text(tribe, w[1])]
+		row.add_child(chip)
+		chip.pivot_offset = Vector2(30, 12)
+		chip.scale = Vector2.ONE * 0.3
+		chip.create_tween().tween_property(chip, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _fill_field(s: GameState) -> void:
+	_field_chip.visible = s.field != null
+	if s.field:
+		_field_chip.text = "FIELD: %s" % s.field.display_name.to_upper()
+		_field_chip.tooltip_text = CardText.render(s.field)
+		_field_chip.add_theme_stylebox_override("normal", _frame(Palette.LAND_CARD[s.field.land].darkened(0.25), 12, 3))
 
 
 func set_end_turn_pulse(on: bool) -> void:

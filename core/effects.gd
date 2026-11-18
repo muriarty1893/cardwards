@@ -19,11 +19,13 @@ static func run(s: GameState, p: int, lane: int, card: CardData, when: StringNam
 			return
 		if e.combo and s.players[p].cards_played < 1:
 			continue
+		if e.need > 0 and Tribes.count_other(s, p, e.tribe, lane if card.kind == CardData.Kind.CREATURE else -1) < e.need:
+			continue
 		if not announced:
 			# Informational only: tells the view what caused the events that follow.
 			ev.append(GameEvent.make(&"ability_triggered", {"player": p, "lane": lane, "card": card.id}))
 			announced = true
-		var ts: Array[Dictionary] = Targeting.resolve(s, p, lane, e.who, targets, c)
+		var ts: Array[Dictionary] = Targeting.resolve(s, p, lane, e.who, targets, c, e.filter_land)
 		_apply(s, p, lane, card, e, ts, targets, ev)
 		if e.who != &"same_target":
 			c["last"] = ts
@@ -34,7 +36,7 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 	match e.op:
 		&"damage":
 			var amount: int = e.amount
-			if card.kind == CardData.Kind.SPELL:
+			if card.kind == CardData.Kind.SPELL and not card.field:
 				amount += Rules.spell_power(s, p)
 			# Only creatures can venom/leech; buildings and spells are plain sources.
 			var src: Dictionary = {"player": p, "lane": lane if card.kind == CardData.Kind.CREATURE else -1,
@@ -43,13 +45,17 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 				if t.has("hero"):
 					Rules.damage_hero(s, t["hero"], amount, ev, src)
 				elif _creature(s, t):
-					Rules.damage_creature(s, t["player"], t["lane"], amount, src, ev)
+					var r: Dictionary = Lands.react_before(s, card, e.op, t, ev)
+					Rules.damage_creature(s, t["player"], t["lane"], amount + int(r.get("extra", 0)), src, ev)
+					Lands.react_after(s, p, r, t, ev)
 		&"heal":
 			for t: Dictionary in ts:
 				if t.has("hero"):
 					Rules.heal_hero(s, t["hero"], e.amount, ev)
 				elif _creature(s, t):
-					Rules.heal_creature(s, t["player"], t["lane"], e.amount, ev)
+					var r: Dictionary = Lands.react_before(s, card, e.op, t, ev)
+					Rules.heal_creature(s, t["player"], t["lane"], e.amount + int(r.get("extra", 0)), ev)
+					Lands.react_after(s, p, r, t, ev)
 		&"draw":
 			for i: int in e.amount:
 				Rules.draw(s, p, ev)
@@ -59,7 +65,9 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 		&"freeze":
 			for t: Dictionary in ts:
 				if _creature(s, t):
+					var r: Dictionary = Lands.react_before(s, card, e.op, t, ev)
 					Rules.freeze(s, t["player"], t["lane"], ev)
+					Lands.react_after(s, p, r, t, ev)
 		&"hush":
 			for t: Dictionary in ts:
 				if _creature(s, t):
@@ -109,8 +117,26 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 				push_warning("Effects: discard target gone")
 		&"dream_up":
 			Rules.offer_dream_up(s, p, e.filter_kind, e.filter_land, ev)
-		&"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken", &"opposing_atk":
-			pass  # auras: read by Rules.effective_* / keywords_of / damage_reduction
+		&"armour":
+			for t: Dictionary in ts:
+				if t.has("hero"):
+					Rules.gain_armour(s, t["hero"], e.amount, ev)
+		&"sprout_meadow":
+			# Spore Bloom: the player's first Meadow lane grows into the field's land.
+			for l: int in GameState.LANES:
+				if ps.lanes[l].land == Lands.MEADOW:
+					Lands.set_land(s, p, l, card.land, &"field", ev)
+					break
+		&"land_draw":
+			# Sugar Rain: draw if the player has a creature on that land.
+			for l: int in GameState.LANES:
+				if ps.lanes[l].creature and ps.lanes[l].land == e.filter_land:
+					for i: int in e.amount:
+						Rules.draw(s, p, ev)
+					break
+		&"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken", &"opposing_atk", \
+				&"on_land_atk", &"off_land_atk", &"on_land_hp", &"no_quirk":
+			pass  # auras: read by Rules.effective_* / keywords_of / damage_reduction / Fields
 		_:
 			push_warning("Effects: unknown op '%s'" % e.op)
 

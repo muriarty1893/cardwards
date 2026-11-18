@@ -6,6 +6,7 @@ extends RefCounted
 enum Phase { MAIN, OVER, CHOOSING }
 
 const START_HP := 25
+const MAX_ARMOUR := 20
 const MAX_HP := 25
 const START_HAND := 5
 const HAND_LIMIT := 8
@@ -24,13 +25,20 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Dream Up: the cards on offer and who picks.
 var pending_choice: Array[CardData] = []
 var pending_player: int = -1
+## The field spell in play for both players (null: none) and who played it.
+var field: CardData = null
+var field_owner: int = -1
 
 
 class PlayerState:
 	extends RefCounted
 	var hero_hp: int = START_HP
+	## Soaks hero damage before HP (living board spec 7).
+	var armour: int = 0
 	var magic: int = 0
 	var max_magic: int = 0
+	## Draws from an empty deck so far; each one hurts 1 more (so healing can't stall a match).
+	var fatigue: int = 0
 	## Cards played this turn (for Combo).
 	var cards_played: int = 0
 	var deck: Array[CardData] = []
@@ -41,8 +49,10 @@ class PlayerState:
 	func clone() -> PlayerState:
 		var p := PlayerState.new()
 		p.hero_hp = hero_hp
+		p.armour = armour
 		p.magic = magic
 		p.max_magic = max_magic
+		p.fatigue = fatigue
 		p.cards_played = cards_played
 		p.deck = deck.duplicate()
 		p.hand = hand.duplicate()
@@ -88,6 +98,9 @@ class CreatureState:
 	var booped: bool = false
 	## On its owner's board since the start of their turn.
 	var ready: bool = false
+	## Level 1..Levels.MAX and experience toward the next (living board spec 6).
+	var level: int = 1
+	var xp: int = 0
 
 	func is_frozen() -> bool:
 		return freeze_turn >= 0
@@ -108,6 +121,8 @@ class CreatureState:
 		c.attacks_used = attacks_used
 		c.booped = booped
 		c.ready = ready
+		c.level = level
+		c.xp = xp
 		return c
 
 
@@ -122,6 +137,8 @@ func clone() -> GameState:
 	s.winner = winner
 	s.pending_choice = pending_choice.duplicate()
 	s.pending_player = pending_player
+	s.field = field
+	s.field_owner = field_owner
 	s.rng.seed = rng.seed
 	s.rng.state = rng.state
 	return s

@@ -3,6 +3,13 @@
 [ext_resource type="Script" path="res://core/effect_data.gd" id="1_3q2xb"]
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
 
+[sub_resource type="Resource" id="Resource_lb_iceling_0"]
+script = ExtResource("1_3q2xb")
+when = &"on_level_up"
+op = &"give_keyword"
+who = &"self"
+keyword = &"bubble"
+
 [resource]
 script = ExtResource("1_card")
 id = &"iceling"
@@ -12,4 +19,6 @@ level = 1
 cost = 2
 attack = 2
 health = 3
+tribe = &"spirit"
 keywords = Array[StringName]([&"bubble"])
+effects = Array[ExtResource("1_3q2xb")]([SubResource("Resource_lb_iceling_0")])

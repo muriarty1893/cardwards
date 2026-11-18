@@ -3,6 +3,23 @@
 [ext_resource type="Script" path="res://core/effect_data.gd" id="1_0rm4b"]
 [ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
 
+[sub_resource type="Resource" id="Resource_lb_cinderpup_0"]
+script = ExtResource("1_0rm4b")
+when = &"on_play"
+op = &"buff"
+amount = 1
+amount2 = 1
+who = &"self"
+tribe = &"beast"
+need = 1
+
+[sub_resource type="Resource" id="Resource_lb_cinderpup_1"]
+script = ExtResource("1_0rm4b")
+when = &"on_level_up"
+op = &"give_keyword"
+who = &"self"
+keyword = &"flurry"
+
 [resource]
 script = ExtResource("1_card")
 id = &"cinderpup"
@@ -12,4 +29,6 @@ level = 1
 cost = 1
 attack = 2
 health = 1
+tribe = &"beast"
 keywords = Array[StringName]([&"dash"])
+effects = Array[ExtResource("1_0rm4b")]([SubResource("Resource_lb_cinderpup_0"), SubResource("Resource_lb_cinderpup_1")])

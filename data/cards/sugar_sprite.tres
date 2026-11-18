@@ -10,6 +10,13 @@ op = &"return_building"
 who = &"opposing"
 combo = true
 
+[sub_resource type="Resource" id="Resource_lb_sugar_spri_0"]
+script = ExtResource("1_klbbi")
+when = &"on_level_up"
+op = &"draw"
+amount = 1
+who = &"own_hero"
+
 [resource]
 script = ExtResource("1_card")
 id = &"sugar_sprite"
@@ -19,5 +26,6 @@ level = 2
 cost = 3
 attack = 3
 health = 3
+tribe = &"spirit"
 keywords = Array[StringName]([&"hidden"])
-effects = Array[ExtResource("1_klbbi")]([SubResource("Resource_4e0mo")])
+effects = Array[ExtResource("1_klbbi")]([SubResource("Resource_4e0mo"), SubResource("Resource_lb_sugar_spri_0")])

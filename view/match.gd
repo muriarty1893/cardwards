@@ -344,16 +344,23 @@ func verify_views() -> void:
 			var bv: BuildingView = building_views[p][l]
 			var ok_c: bool = (lane.creature == null and cv == null) or (lane.creature != null and cv != null and cv.card == lane.creature.card)
 			var ok_b: bool = (lane.building == null and bv == null) or (lane.building != null and bv != null and bv.card == lane.building)
+			if board.island(p, l).land != lane.land:
+				push_warning("Land out of sync at p%d lane %d; resyncing" % [p, l])
+				board.change_land(p, l, lane.land, Vector3.INF, false)
 			if not ok_c or not ok_b:
 				push_warning("View out of sync at p%d lane %d; resyncing" % [p, l])
 				sync_all()
 				return
 
 
-## Rebuild every piece from the state. Used at match start and as a fallback.
+## Rebuild every piece (and the lands and field) from the state. Used at match start and as a
+## fallback.
 func sync_all() -> void:
+	board.set_field(state.field.land if state.field else -1, false)
 	for p: int in 2:
 		for l: int in 4:
+			if board.island(p, l).land != state.players[p].lanes[l].land:
+				board.change_land(p, l, state.players[p].lanes[l].land, Vector3.INF, false)
 			if creature_views[p][l]:
 				(creature_views[p][l] as Node).queue_free()
 				creature_views[p][l] = null

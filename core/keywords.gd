@@ -9,6 +9,7 @@ const NAMES: Dictionary = {
 	&"guard": "Guard", &"bubble": "Bubble", &"dash": "Dash", &"venom": "Venom",
 	&"leech": "Leech", &"flurry": "Flurry", &"hidden": "Hidden", &"second_wind": "Second Wind",
 	&"hush": "Hush", &"dream_up": "Dream Up", &"combo": "Combo", &"spell_power": "Spell Power",
+	&"field": "Field", &"armour": "Armour", &"level_up": "Level up",
 }
 
 const RULES: Dictionary = {
@@ -24,4 +25,7 @@ const RULES: Dictionary = {
 	&"dream_up": "Choose one of 3 random cards to add to your hand.",
 	&"combo": "Only happens if you already played another card this turn.",
 	&"spell_power": "Your spells deal that much extra damage.",
+	&"field": "Stays in play for both players until another field replaces it.",
+	&"armour": "Soaks damage to your hero before its HP does.",
+	&"level_up": "A creature gains XP for each attack it survives (+1 more for a kill): Lv 2 at 2 XP, Lv 3 at 4 XP, +1/+1 each.",
 }

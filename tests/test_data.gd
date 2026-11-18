@@ -1,16 +1,18 @@
 extends TestCase
-## Card data matches the Rules 2.0 spec (section 6): numbers, keywords and generated text.
+## Card data matches the Rules 2.0 spec (section 6) and the living board spec (section 10):
+## numbers, keywords and generated text.
 
-const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura"]
+const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura", &"on_level_up", &"field_aura", &"field_start", &"field_end"]
 const OPS: Array[StringName] = [
 	&"damage", &"heal", &"draw", &"freeze", &"gain_magic", &"hush", &"return_building", &"move", &"swap",
 	&"dream_up", &"return_from_discard", &"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken",
-	&"opposing_atk", &"buff", &"give_keyword", &"destroy",
+	&"opposing_atk", &"buff", &"give_keyword", &"destroy", &"armour", &"sprout_meadow", &"land_draw",
+	&"on_land_atk", &"off_land_atk", &"on_land_hp", &"no_quirk",
 ]
 const WHOS: Array[StringName] = [
 	&"chosen_creature", &"chosen_own_creature", &"chosen_own_empty_lane", &"chosen_two_own_creatures",
 	&"chosen_discard_creature", &"self", &"opposing", &"damaged_creature", &"lane_creature",
-	&"all_enemy_creatures", &"all_own_creatures", &"enemy_hero", &"own_hero", &"same_target",
+	&"all_enemy_creatures", &"all_own_creatures", &"enemy_hero", &"own_hero", &"same_target", &"own_on_land",
 ]
 
 ## id: [level, cost, atk, hp, keywords, spell_power] (spec section 6).
@@ -36,23 +38,26 @@ const SPEC: Dictionary = {
 	&"ice_wall": [0, 2, 0, 0, [], 0], &"frost_spire": [0, 2, 0, 0, [], 0],
 	&"cold_snap": [0, 1, 0, 0, [], 0], &"avalanche": [0, 3, 0, 0, [], 0],
 	&"star_shard": [0, 0, 0, 0, [], 0],
+	&"volcano": [0, 4, 0, 0, [], 0], &"snowstorm": [0, 4, 0, 0, [], 0],
+	&"spore_bloom": [0, 3, 0, 0, [], 0], &"sugar_rain": [0, 3, 0, 0, [], 0],
+	&"bark_shield": [0, 1, 0, 0, [], 0], &"candy_shell": [0, 2, 0, 0, [], 0],
 }
 
 ## Rules text, verbatim from spec section 6.
 const SPEC_TEXT: Dictionary = {
-	&"sporeling": "Venom. Boop: Heal this creature 2.",
-	&"mossback": "Guard.",
+	&"sporeling": "Venom. Boop: Heal this creature 2. Level up: Heal your hero 2.",
+	&"mossback": "Guard. On play: Gain 2 armour.",
 	&"puffcap": "Second Wind. Boop: Heal your hero 2.",
-	&"glimmer_morel": "Boop: Heal all your creatures 2.",
+	&"glimmer_morel": "Boop: Heal all your creatures 2. On play, if you control another Sprout: Gain 3 armour.",
 	&"rootstalker": "Leech. On play: Heal your hero 2.",
 	&"elder_shroomhulk": "Guard. Second Wind. Boop: Heal all your creatures 3.",
 	&"spore_hut": "Start of your turn: Heal the creature in this lane 2.",
 	&"glowcap_lantern": "The creature in this lane has +2 HP and Guard.",
 	&"rain_of_spores": "Heal one of your creatures 4.",
 	&"regrowth": "Return a creature from your discard pile to your hand.",
-	&"cinderpup": "Dash.",
+	&"cinderpup": "Dash. On play, if you control another Beast: Give this creature +1/+1. Level up: Give this creature Flurry.",
 	&"ashmite": "Spell Power +1. Boop: Deal 1 damage to the opposing creature.",
-	&"flarebeak": "Dash.",
+	&"flarebeak": "Dash. Level up: Deal 1 damage to the enemy hero.",
 	&"magmaw": "Boop: Deal 2 damage to the enemy hero.",
 	&"blazehorn": "Dash. On play: Deal 2 damage to the opposing creature.",
 	&"inferno_drake": "Spell Power +1. Boop: Deal 2 damage to all enemy creatures.",
@@ -61,34 +66,42 @@ const SPEC_TEXT: Dictionary = {
 	&"fireball": "Deal 3 damage to a creature.",
 	&"ember_rain": "Deal 2 damage to all enemy creatures.",
 	&"gumdrop": "Boop: Draw a card.",
-	&"taffy_snail": "On play: Gain 1 magic.",
+	&"taffy_snail": "On play: Gain 1 magic. On play, if you control 2 other Blobs: Gain 1 magic.",
 	&"lollibat": "Flurry. Boop: Move this creature to one of your empty lanes.",
-	&"sugar_sprite": "Hidden. On play, Combo: Return the opposing building to its owner's hand.",
+	&"sugar_sprite": "Hidden. On play, Combo: Return the opposing building to its owner's hand. Level up: Draw a card.",
 	&"jellywobble": "When destroyed: Draw 2 cards.",
 	&"bonbon_behemoth": "On play: Dream Up a Candy Hills card. Boop: Draw 2 cards.",
 	&"sugar_shack": "The creature in this lane has +1 ATK and +1 HP.",
 	&"candy_mill": "Start of your turn: Gain 1 magic.",
 	&"sugar_rush": "Draw 2 cards.",
 	&"swap_trick": "Swap two of your creatures between lanes. Combo: Draw a card.",
-	&"snowmite": "Boop: Freeze the opposing creature.",
-	&"iceling": "Bubble.",
+	&"snowmite": "Boop: Freeze the opposing creature. Level up: Freeze the opposing creature.",
+	&"iceling": "Bubble. Level up: Give this creature Bubble.",
 	&"frostfang": "After this damages a creature, freeze it.",
-	&"glacier_tortoise": "Bubble.",
-	&"rimewing": "On play: Hush the opposing creature.",
+	&"glacier_tortoise": "Bubble. On play: Gain 3 armour.",
+	&"rimewing": "On play: Hush the opposing creature. On play, if you control another Flyer: Draw a card.",
 	&"blizzard_titan": "Bubble. Boop: Freeze all enemy creatures.",
 	&"ice_wall": "The creature in this lane takes 1 less damage from attacks and hit-back (minimum 1).",
 	&"frost_spire": "The opposing creature has −1 ATK (minimum 0).",
 	&"cold_snap": "Freeze a creature. Draw a card.",
 	&"avalanche": "Deal 3 damage to a creature and freeze it.",
 	&"star_shard": "Gain 1 magic.",
+	&"volcano": "Field. Creatures on Ember Flats have +1 ATK. End of each turn: Deal 1 damage to that player's creatures on Frostpeak.",
+	&"snowstorm": "Field. Creatures not on Frostpeak have −1 ATK. Ember Flats give no home bonus.",
+	&"spore_bloom": "Field. Start of each turn: That player's first Meadow lane grows into Mushroom Forest. Creatures on Mushroom Forest have +1 HP.",
+	&"sugar_rain": "Field. Start of each turn: If that player has a creature on Candy Hills, they draw a card.",
+	&"bark_shield": "Gain 4 armour.",
+	&"candy_shell": "Gain 3 armour. Draw a card.",
 }
 
 
 func test_card_count() -> bool:
 	var cards: Array[CardData] = CardDB.all_cards()
-	assert_eq(cards.size(), 41, "41 cards")
+	assert_eq(cards.size(), 47, "47 cards")
+	# 10 per land from Rules 2.0, plus each land's field spell and the two armour spells.
+	var per_land: Array[int] = [12, 11, 12, 11]
 	for land: int in 4:
-		assert_eq(cards.filter(func(c: CardData) -> bool: return c.land == land).size(), 10, "10 cards for land %d" % land)
+		assert_eq(cards.filter(func(c: CardData) -> bool: return c.land == land).size(), per_land[land], "%d cards for land %d" % [per_land[land], land])
 	var neutral: Array = cards.filter(func(c: CardData) -> bool: return c.land == CardData.Land.NEUTRAL)
 	assert_eq(neutral.size(), 1, "one neutral card")
 	assert_eq((neutral[0] as CardData).id, &"star_shard", "star shard")

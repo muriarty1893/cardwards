@@ -19,3 +19,4 @@ cost = 2
 attack = 2
 health = 4
 effects = Array[ExtResource("1_gcsmx")]([SubResource("Resource_6acrf")])
+tribe = &"blob"

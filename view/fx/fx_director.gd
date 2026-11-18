@@ -7,7 +7,7 @@ extends RefCounted
 const KINDS: Array[StringName] = [
 	&"fireball", &"ember_rain", &"rain_of_spores", &"regrowth", &"sugar_rush", &"swap_trick", &"cold_snap", &"avalanche",
 	&"damage", &"heal", &"draw", &"magic", &"move", &"return_building", &"freeze", &"smoke_puff", &"spore_puff", &"gem_pop", &"none",
-	&"attack_hit", &"plain",
+	&"attack_hit", &"plain", &"armour", &"field",
 ]
 ## Indexed by CardData.Land (NEUTRAL last).
 const ELEMENT_BY_LAND: Array[StringName] = [&"spore", &"fire", &"candy", &"ice", &"magic"]
@@ -32,7 +32,10 @@ const OWNS: Dictionary = {
 	&"spore_puff": [&"creature_healed"],
 	&"gem_pop": [&"magic_changed"],
 	&"attack_hit": [&"creature_damaged", &"hero_damaged"],
+	&"armour": [&"armour_gained"],
+	&"field": [&"creature_damaged", &"card_drawn"],
 }
+const ARMOUR := Color("#7ac8ff")
 const HEAL := Color("#6aff7a")
 
 
@@ -216,6 +219,16 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				await m.player.hit_stop()
 				if not is_instance_valid(m):
 					return
+			var soaked: int = int(d.get("armour", 0))
+			if soaked > 0:
+				# Armour takes the hit first: a blue shield flash and its own number.
+				Burst.spawn(m, &"stars", pos, ARMOUR, 1.4)
+				Audio.sfx(&"ice_shatter")
+				DamageNumber.spawn(m, pos + Vector3(-0.6, 0.3, 0), "-%d ARMOUR" % soaked, ARMOUR, 72)
+			if int(d["amount"]) <= 0 and soaked > 0:
+				m.hud.refresh(m.state, MatchController.HUMAN)
+				await _wait(m, 0.3 / sp)
+				return
 			Burst.spawn(m, &"sparks", pos, Color.WHITE, 1.3)
 			Audio.sfx(&"hero_hit")
 			DamageNumber.spawn(m, pos, "-%d" % d["amount"], Palette.HP, 96)
@@ -271,6 +284,17 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				return
 		&"magic_changed":
 			m.hud.refresh(m.state, MatchController.HUMAN)
+		&"armour_gained":
+			var pos: Vector3 = _hero_pos(m, d["player"])
+			Burst.spawn(m, &"stars", pos, ARMOUR, 1.6)
+			Burst.spawn(m, &"sparks", pos, ARMOUR, 1.0)
+			Audio.sfx(&"building_rise")
+			DamageNumber.spawn(m, pos, "+%d ARMOUR" % d["amount"], ARMOUR, 80)
+			m.hud.refresh(m.state, MatchController.HUMAN)
+			m.hud.flash_armour(d["player"] == MatchController.HUMAN)
+			await _wait(m, 0.35 / sp)
+			if not is_instance_valid(m):
+				return
 
 
 # --- Helpers -------------------------------------------------------------------

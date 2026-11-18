@@ -21,3 +21,4 @@ attack = 6
 health = 6
 spell_power = 1
 effects = Array[ExtResource("1_fpbnt")]([SubResource("Resource_mtg5e")])
+tribe = &"flyer"

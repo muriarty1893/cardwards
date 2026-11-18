@@ -14,6 +14,11 @@ const WIN_SCORE := 1000.0
 const EASY_RANDOM := 0.25
 const HAND_CARD := 0.6
 const ENEMY_LETHAL_PENALTY := 4.0
+## Armour is worth a little less than HP (fatigue goes around it).
+const ARMOUR_VALUE := 0.9
+## A claimed lane of a land the AI still has creatures of (they need those lanes to be played).
+const LAND_VALUE := 0.35
+const XP_VALUE := 0.25
 ## Hard's turn planner: states kept per step, and the most states simulated per decision.
 const BEAM := 6
 const MAX_STATES := 1500
@@ -101,6 +106,8 @@ func evaluate(s: GameState) -> float:
 	var me: int = player
 	var foe: int = s.opponent(me)
 	var score: float = float(s.players[me].hero_hp - s.players[foe].hero_hp)
+	score += ARMOUR_VALUE * float(s.players[me].armour - s.players[foe].armour)
+	score += LAND_VALUE * float(_useful_lanes(s, me))
 	for q: int in 2:
 		var sign: float = 0.5 if q == me else -0.5
 		for l: int in GameState.LANES:
@@ -128,7 +135,23 @@ func _creature_value(s: GameState, p: int, lane: int) -> float:
 		v -= KEYWORD_VALUE[&"hidden"]  # already revealed
 	if not cr.hushed:
 		v += 0.8 * cr.card.spell_power
-	return v
+	return v + XP_VALUE * float(cr.xp)
+
+
+## My claimed lanes whose land matches a creature I still hold (hand or deck).
+func _useful_lanes(s: GameState, p: int) -> int:
+	var want: Dictionary = {}
+	for c: CardData in s.players[p].hand:
+		if c.is_creature():
+			want[c.land] = true
+	for c: CardData in s.players[p].deck:
+		if c.is_creature():
+			want[c.land] = true
+	var n: int = 0
+	for l: GameState.LaneState in s.players[p].lanes:
+		if l.land != Lands.MEADOW and want.has(l.land):
+			n += 1
+	return n
 
 
 ## A card's rough worth in hand (Dream Up tie-break).

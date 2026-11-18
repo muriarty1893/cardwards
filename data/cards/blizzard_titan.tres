@@ -18,5 +18,6 @@ level = 3
 cost = 7
 attack = 6
 health = 8
+tribe = &"beast"
 keywords = Array[StringName]([&"bubble"])
 effects = Array[ExtResource("1_w3pek")]([SubResource("Resource_2f83h")])

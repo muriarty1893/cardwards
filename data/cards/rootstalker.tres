@@ -17,5 +17,6 @@ level = 2
 cost = 4
 attack = 3
 health = 5
+tribe = &"sprout"
 keywords = Array[StringName]([&"leech"])
 effects = Array[ExtResource("1_x1h73")]([SubResource("Resource_6rimp")])

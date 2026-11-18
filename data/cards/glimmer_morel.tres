@@ -10,6 +10,15 @@ op = &"heal"
 amount = 2
 who = &"all_own_creatures"
 
+[sub_resource type="Resource" id="Resource_lb_glimmer_mo_0"]
+script = ExtResource("1_j3oiv")
+when = &"on_play"
+op = &"armour"
+amount = 3
+who = &"own_hero"
+tribe = &"sprout"
+need = 1
+
 [resource]
 script = ExtResource("1_card")
 id = &"glimmer_morel"
@@ -18,4 +27,5 @@ level = 2
 cost = 3
 attack = 3
 health = 4
-effects = Array[ExtResource("1_j3oiv")]([SubResource("Resource_4uj8g")])
+effects = Array[ExtResource("1_j3oiv")]([SubResource("Resource_4uj8g"), SubResource("Resource_lb_glimmer_mo_0")])
+tribe = &"sprout"

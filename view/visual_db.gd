@@ -72,6 +72,9 @@ const ENTRIES: Dictionary = {
 	&"avalanche": {},
 	# Neutral
 	&"star_shard": {},
+	# Living board: field spells and armour spells
+	&"volcano": {}, &"snowstorm": {}, &"spore_bloom": {}, &"sugar_rain": {},
+	&"bark_shield": {}, &"candy_shell": {},
 }
 
 
@@ -86,6 +89,12 @@ const SPELL_ICONS: Dictionary = {
 	&"cold_snap": "res://assets/icons/snowflake-2.svg",
 	&"avalanche": "res://assets/icons/falling-rocks.svg",
 	&"star_shard": "res://assets/icons/star-swirl.svg",
+	&"volcano": "res://assets/icons/volcano.svg",
+	&"snowstorm": "res://assets/icons/snowing.svg",
+	&"spore_bloom": "res://assets/icons/mushrooms-cluster.svg",
+	&"sugar_rain": "res://assets/icons/spiral-lollipop.svg",
+	&"bark_shield": "res://assets/icons/round-shield.svg",
+	&"candy_shell": "res://assets/icons/spiral-shell.svg",
 }
 ## Glow behind spell icons, by land.
 const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff"), Color("#ffe07a")]
@@ -104,6 +113,8 @@ const EFFECTS: Dictionary = {
 	&"rain_of_spores": &"rain_of_spores", &"regrowth": &"regrowth", &"fireball": &"fireball", &"ember_rain": &"ember_rain",
 	&"sugar_rush": &"sugar_rush", &"swap_trick": &"swap_trick", &"cold_snap": &"cold_snap", &"avalanche": &"avalanche",
 	&"star_shard": &"magic",
+	&"bark_shield": &"armour", &"candy_shell": &"armour",
+	&"volcano": &"field", &"snowstorm": &"field", &"spore_bloom": &"field", &"sugar_rain": &"field",
 }
 
 
@@ -112,6 +123,8 @@ const SOUNDS: Dictionary = {
 	&"fireball": &"fire_whoosh", &"ember_rain": &"fire_whoosh", &"rain_of_spores": &"heal", &"regrowth": &"card_draw",
 	&"sugar_rush": &"candy_pop", &"swap_trick": &"candy_pop", &"cold_snap": &"freeze", &"avalanche": &"explosion",
 	&"star_shard": &"candy_pop",
+	&"bark_shield": &"building_rise", &"candy_shell": &"candy_pop",
+	&"volcano": &"explosion", &"snowstorm": &"freeze", &"spore_bloom": &"heal", &"sugar_rain": &"candy_pop",
 }
 
 

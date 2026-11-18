@@ -49,8 +49,10 @@ Change: the black background square was removed so the icons are white on transp
 
 - `icons/`, by **Lorc** (https://lorcblog.blogspot.com): fireball, burning-meteor, pollen-dust,
   sprout, wrapped-sweet, snowflake-2, crossed-swords, cut-diamond, checked-shield, sword-break,
-  star-swirl.
-- `icons/`, by **Delapouite** (https://delapouite.com): card-exchange, falling-rocks, chimney.
+  star-swirl, snowing, spiral-shell, volcano.
+- `icons/`, by **Delapouite** (https://delapouite.com): card-exchange, falling-rocks, chimney,
+  mushrooms-cluster, spiral-lollipop.
+- `icons/`, by **Willdabeast** (https://wjbstories.blogspot.com): round-shield.
 - `icons/`, by **Sbed** (https://opengameart.org/content/95-game-icons): health-increase.
 - `icons/`, by **Zeromancer**: heart-plus.
 

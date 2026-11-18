@@ -79,9 +79,9 @@ static func _ensure_loaded() -> void:
 
 ## Display order inside each land (matches the spec tables).
 const _ORDER: Array[StringName] = [
-	&"sporeling", &"mossback", &"puffcap", &"glimmer_morel", &"rootstalker", &"elder_shroomhulk", &"spore_hut", &"glowcap_lantern", &"rain_of_spores", &"regrowth",
-	&"cinderpup", &"ashmite", &"flarebeak", &"magmaw", &"blazehorn", &"inferno_drake", &"kiln_tower", &"smokestack", &"fireball", &"ember_rain",
-	&"gumdrop", &"taffy_snail", &"lollibat", &"sugar_sprite", &"jellywobble", &"bonbon_behemoth", &"sugar_shack", &"candy_mill", &"sugar_rush", &"swap_trick",
-	&"snowmite", &"iceling", &"frostfang", &"glacier_tortoise", &"rimewing", &"blizzard_titan", &"ice_wall", &"frost_spire", &"cold_snap", &"avalanche",
+	&"sporeling", &"mossback", &"puffcap", &"glimmer_morel", &"rootstalker", &"elder_shroomhulk", &"spore_hut", &"glowcap_lantern", &"rain_of_spores", &"regrowth", &"bark_shield", &"spore_bloom",
+	&"cinderpup", &"ashmite", &"flarebeak", &"magmaw", &"blazehorn", &"inferno_drake", &"kiln_tower", &"smokestack", &"fireball", &"ember_rain", &"volcano",
+	&"gumdrop", &"taffy_snail", &"lollibat", &"sugar_sprite", &"jellywobble", &"bonbon_behemoth", &"sugar_shack", &"candy_mill", &"sugar_rush", &"swap_trick", &"candy_shell", &"sugar_rain",
+	&"snowmite", &"iceling", &"frostfang", &"glacier_tortoise", &"rimewing", &"blizzard_titan", &"ice_wall", &"frost_spire", &"cold_snap", &"avalanche", &"snowstorm",
 	&"star_shard",
 ]

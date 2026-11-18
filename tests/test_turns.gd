@@ -16,9 +16,10 @@ func test_setup() -> bool:
 		assert_eq(s.players[p].hand.size(), 5 if p == s.first_player else 6, "hand 5, or 6 with Star Shard, p%d" % p)
 		assert_eq(s.players[p].deck.size(), 25, "deck 25 p%d" % p)
 		assert_eq(s.players[p].hero_hp, 25, "hero 25 p%d" % p)
+	# Every lane starts bare (living board spec 2), whatever the deck.
 	for i: int in 4:
-		assert_eq(s.players[0].lanes[i].land, a.lands[i], "p0 land %d" % i)
-		assert_eq(s.players[1].lanes[i].land, b.lands[i], "p1 land %d" % i)
+		assert_eq(s.players[0].lanes[i].land, Lands.MEADOW, "p0 lane %d is Meadow" % i)
+		assert_eq(s.players[1].lanes[i].land, Lands.MEADOW, "p1 lane %d is Meadow" % i)
 	var s2: GameState = Rules.setup(a, b, 42)
 	assert_eq(_hand_ids(s2.players[0]), _hand_ids(s.players[0]), "same seed same hand p0")
 	assert_eq(_hand_ids(s2.players[1]), _hand_ids(s.players[1]), "same seed same hand p1")

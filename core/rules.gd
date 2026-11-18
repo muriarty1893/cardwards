@@ -12,7 +12,8 @@ static func setup(deck_a: DeckData, deck_b: DeckData, seed: int) -> GameState:
 		var ps := GameState.PlayerState.new()
 		for i: int in GameState.LANES:
 			var lane := GameState.LaneState.new()
-			lane.land = deck.lands[i]
+			# Every lane starts bare; cards claim them (living board spec 2).
+			lane.land = Lands.MEADOW
 			ps.lanes.append(lane)
 		ps.deck = deck.cards.duplicate()
 		_shuffle(s, ps.deck)
@@ -52,6 +53,8 @@ static func start_turn(s: GameState) -> Array[GameEvent]:
 			lane.creature.attacks_used = 0
 			lane.creature.booped = false
 	_run_lane_triggers(s, p, &"start_of_turn", ev)
+	_start_of_turn_lands(s, p, ev)
+	Fields.run(s, p, &"field_start", ev)
 	ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic, "max": ps.max_magic}))
 	if s.turn != 1:
 		draw(s, p, ev)
@@ -62,8 +65,11 @@ static func start_turn(s: GameState) -> Array[GameEvent]:
 static func draw(s: GameState, p: int, ev: Array[GameEvent]) -> void:
 	var ps: GameState.PlayerState = s.players[p]
 	if ps.deck.is_empty():
-		ps.hero_hp -= GameState.FATIGUE_DAMAGE
-		ev.append(GameEvent.make(&"fatigue", {"player": p, "amount": GameState.FATIGUE_DAMAGE}))
+		# 2, then 3, 4, ...: Grove and Rooted heals can't hold off an empty deck forever.
+		var dmg: int = GameState.FATIGUE_DAMAGE + ps.fatigue
+		ps.fatigue += 1
+		ps.hero_hp -= dmg
+		ev.append(GameEvent.make(&"fatigue", {"player": p, "amount": dmg}))
 		return
 	var c: CardData = ps.deck.pop_back()
 	if ps.hand.size() >= GameState.HAND_LIMIT:
@@ -121,8 +127,6 @@ static func _validate_play(s: GameState, a: Action) -> String:
 	var c: CardData = ps.hand[a.hand_index]
 	if c.cost > ps.magic:
 		return "Not enough magic"
-	if c.kind == CardData.Kind.CREATURE and matching_lands(s, a.player, c.land) < c.level:
-		return "Needs %d %s lands" % [c.level, CardData.LAND_NAMES[c.land]]
 	if c.kind != CardData.Kind.SPELL:
 		if a.lane < 0 or a.lane >= GameState.LANES:
 			return "Invalid target"
@@ -131,6 +135,8 @@ static func _validate_play(s: GameState, a: Action) -> String:
 			return "Lane already has a creature"
 		if c.kind == CardData.Kind.BUILDING and lane.building != null:
 			return "Lane already has a building"
+	if c.kind == CardData.Kind.CREATURE and Lands.count_after_play(s, a.player, a.lane, c.land) < c.level:
+		return "Needs %d %s lane%s" % [c.level, CardData.LAND_NAMES[c.land], "" if c.level == 1 else "s"]
 	return _validate_targets(s, a.player, c, &"on_play", a.lane if c.kind != CardData.Kind.SPELL else -1, a.targets)
 
 
@@ -332,15 +338,20 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 		CardData.Kind.CREATURE:
 			enter_creature(s, p, a.lane, c, ev)
 			ev.append(GameEvent.make(&"creature_played", {"player": p, "lane": a.lane, "card": c.id}))
+			Lands.claim(s, p, a.lane, c, ev)
 			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.BUILDING:
 			ps.lanes[a.lane].building = c
 			ev.append(GameEvent.make(&"building_played", {"player": p, "lane": a.lane, "card": c.id}))
+			Lands.claim(s, p, a.lane, c, ev)
 			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.SPELL:
 			ev.append(GameEvent.make(&"spell_cast", {"player": p, "card": c.id}))
+			if c.field:
+				Fields.set_field(s, p, c, ev)
 			Effects.run(s, p, -1, c, &"on_play", a.targets, ev)
-			ps.discard.append(c)
+			if not c.field:
+				ps.discard.append(c)
 	ps.cards_played += 1
 	if ps.cards_played == 1:
 		ev.append(GameEvent.make(&"combo_active", {"player": p}))
@@ -350,6 +361,7 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 	var p: int = s.active
 	_run_lane_triggers(s, p, &"end_of_turn", ev)
+	Fields.run(s, p, &"field_end", ev)
 	resolve_deaths(s, ev)
 	if s.phase == GameState.Phase.OVER:
 		return
@@ -367,6 +379,18 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 
 # --- Triggers, stats, damage and deaths --------------------------------------
 
+## Start of p's turn: creatures at home on Mushroom Forest heal 1 (Rooted); Grove heals the hero.
+static func _start_of_turn_lands(s: GameState, p: int, ev: Array[GameEvent]) -> void:
+	for l: int in GameState.LANES:
+		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+		if cr and cr.damage > 0 and Lands.home(s, p, l) == CardData.Land.MUSHROOM:
+			heal_creature(s, p, l, 1, ev)
+	var grove: int = Tribes.grove_heal(s, p)
+	if grove > 0 and s.players[p].hero_hp < GameState.MAX_HP:
+		ev.append(GameEvent.make(&"tribe_bonus", {"player": p, "tribe": &"sprout"}))
+		heal_hero(s, p, grove, ev)
+
+
 static func _run_lane_triggers(s: GameState, p: int, trigger: StringName, ev: Array[GameEvent]) -> void:
 	for l: int in GameState.LANES:
 		var b: CardData = s.players[p].lanes[l].building
@@ -374,19 +398,27 @@ static func _run_lane_triggers(s: GameState, p: int, trigger: StringName, ev: Ar
 			Effects.run(s, p, l, b, trigger, [], ev)
 
 
+## Printed ATK plus buffs, building auras, home (Fired up), tribe (Pack), level and field.
 static func effective_attack(s: GameState, p: int, lane: int) -> int:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
 		return 0
 	var atk: int = cr.card.attack + cr.atk_bonus + _aura(s, p, lane, &"lane_atk") - _aura(s, s.opponent(p), lane, &"opposing_atk")
+	if Lands.home(s, p, lane) == CardData.Land.EMBER:
+		atk += 1
+	atk += Tribes.atk_bonus(s, p, lane) + Levels.bonus(cr) + Fields.atk_bonus(s, p, lane)
 	return maxi(atk, 0)
 
 
+## Printed HP plus buffs, building auras, home (Plump), tribe (Squish), level and field.
 static func effective_max_hp(s: GameState, p: int, lane: int) -> int:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
 		return 0
-	return cr.card.health + cr.hp_bonus + _aura(s, p, lane, &"lane_hp")
+	var hp: int = cr.card.health + cr.hp_bonus + _aura(s, p, lane, &"lane_hp")
+	if Lands.home(s, p, lane) == CardData.Land.CANDY:
+		hp += 1
+	return hp + Tribes.hp_bonus(s, p, lane) + Levels.bonus(cr) + Fields.hp_bonus(s, p, lane)
 
 
 ## Sum of a building aura's amounts in player p's lane.
@@ -401,8 +433,12 @@ static func _aura(s: GameState, p: int, lane: int, op: StringName) -> int:
 
 
 ## Damage taken from attacks and hit-back is reduced by this (Ice Wall), to a minimum of 1.
+## Ice Wall's aura plus the Ice skin home quirk.
 static func damage_reduction(s: GameState, p: int, lane: int) -> int:
-	return _aura(s, p, lane, &"lane_damage_taken")
+	var n: int = _aura(s, p, lane, &"lane_damage_taken")
+	if Lands.home(s, p, lane) == CardData.Land.FROST:
+		n += 1
+	return n
 
 
 static func keywords_of(s: GameState, p: int, lane: int) -> Array[StringName]:
@@ -435,7 +471,7 @@ static func spell_power(s: GameState, p: int) -> int:
 	for lane: GameState.LaneState in s.players[p].lanes:
 		if lane.creature and not lane.creature.hushed:
 			n += lane.creature.card.spell_power
-	return n
+	return n + Tribes.spell_power(s, p)
 
 
 ## Puts a fresh creature into a lane (played, or back from Second Wind). Not ready yet.
@@ -559,13 +595,24 @@ static func heal_creature(s: GameState, p: int, lane: int, amount: int, ev: Arra
 	ev.append(GameEvent.make(&"creature_healed", {"player": p, "lane": lane, "amount": healed}))
 
 
+## Armour soaks the damage first; "amount" in the event is the HP lost, "armour" what armour took.
 static func damage_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent], src: Dictionary = {}) -> void:
-	s.players[p].hero_hp -= amount
-	ev.append(GameEvent.make(&"hero_damaged", {"player": p, "amount": amount}))
+	var ps: GameState.PlayerState = s.players[p]
+	var soaked: int = mini(ps.armour, maxi(amount, 0))
+	ps.armour -= soaked
+	ps.hero_hp -= amount - soaked
+	ev.append(GameEvent.make(&"hero_damaged", {"player": p, "amount": amount - soaked, "armour": soaked}))
 	var sp: int = int(src.get("player", -1))
 	var sl: int = int(src.get("lane", -1))
 	if amount > 0 and sp >= 0 and sl >= 0 and s.players[sp].lanes[sl].creature:
 		_leech(s, sp, sl, amount, ev)
+
+
+static func gain_armour(s: GameState, p: int, amount: int, ev: Array[GameEvent]) -> void:
+	var ps: GameState.PlayerState = s.players[p]
+	var before: int = ps.armour
+	ps.armour = mini(GameState.MAX_ARMOUR, ps.armour + maxi(amount, 0))
+	ev.append(GameEvent.make(&"armour_gained", {"player": p, "amount": ps.armour - before, "total": ps.armour}))
 
 
 static func heal_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent]) -> void:

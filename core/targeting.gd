@@ -51,8 +51,8 @@ static func valid(s: GameState, p: int, who: StringName, source_lane: int = -1) 
 
 ## The targets an effect reaches. `chosen` holds the player's picks for chosen_* whos.
 ## ctx: "last" = the previous effect's targets (same_target), "damaged" = the creature just
-## damaged (after_damage).
-static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Array[Dictionary], ctx: Dictionary) -> Array[Dictionary]:
+## damaged (after_damage). own_on_land: your creatures on `filter_land`.
+static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Array[Dictionary], ctx: Dictionary, filter_land: int = -1) -> Array[Dictionary]:
 	var foe: int = s.opponent(p)
 	var out: Array[Dictionary] = []
 	match who:
@@ -65,6 +65,10 @@ static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Ar
 			for l: int in GameState.LANES:
 				if s.players[q].lanes[l].creature:
 					out.append({"player": q, "lane": l})
+		&"own_on_land":
+			for l: int in GameState.LANES:
+				if s.players[p].lanes[l].creature and s.players[p].lanes[l].land == filter_land:
+					out.append({"player": p, "lane": l})
 		&"enemy_hero":
 			out.append({"hero": foe})
 		&"own_hero":

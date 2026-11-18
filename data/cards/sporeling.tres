@@ -10,6 +10,13 @@ op = &"heal"
 amount = 2
 who = &"self"
 
+[sub_resource type="Resource" id="Resource_lb_sporeling_0"]
+script = ExtResource("1_4ryty")
+when = &"on_level_up"
+op = &"heal"
+amount = 2
+who = &"own_hero"
+
 [resource]
 script = ExtResource("1_card")
 id = &"sporeling"
@@ -18,5 +25,6 @@ level = 1
 cost = 2
 attack = 1
 health = 2
+tribe = &"sprout"
 keywords = Array[StringName]([&"venom"])
-effects = Array[ExtResource("1_4ryty")]([SubResource("Resource_cl5ay")])
+effects = Array[ExtResource("1_4ryty")]([SubResource("Resource_cl5ay"), SubResource("Resource_lb_sporeling_0")])

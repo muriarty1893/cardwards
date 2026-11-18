@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="1_effect"]
+
+[sub_resource type="Resource" id="Resource_lb_snowstorm_0"]
+script = ExtResource("1_effect")
+when = &"field_aura"
+op = &"off_land_atk"
+amount = -1
+who = &"own_hero"
+filter_land = 3
+
+[sub_resource type="Resource" id="Resource_lb_snowstorm_1"]
+script = ExtResource("1_effect")
+when = &"field_aura"
+op = &"no_quirk"
+who = &"own_hero"
+filter_land = 1
+
+[resource]
+script = ExtResource("1_card")
+id = &"snowstorm"
+display_name = "Snowstorm"
+kind = 2
+land = 3
+cost = 4
+field = true
+effects = Array[ExtResource("1_effect")]([SubResource("Resource_lb_snowstorm_0"), SubResource("Resource_lb_snowstorm_1")])

@@ -9,6 +9,15 @@ when = &"on_play"
 op = &"hush"
 who = &"opposing"
 
+[sub_resource type="Resource" id="Resource_lb_rimewing_0"]
+script = ExtResource("1_iveao")
+when = &"on_play"
+op = &"draw"
+amount = 1
+who = &"own_hero"
+tribe = &"flyer"
+need = 1
+
 [resource]
 script = ExtResource("1_card")
 id = &"rimewing"
@@ -18,4 +27,5 @@ level = 2
 cost = 4
 attack = 4
 health = 4
-effects = Array[ExtResource("1_iveao")]([SubResource("Resource_7133j")])
+effects = Array[ExtResource("1_iveao")]([SubResource("Resource_7133j"), SubResource("Resource_lb_rimewing_0")])
+tribe = &"flyer"

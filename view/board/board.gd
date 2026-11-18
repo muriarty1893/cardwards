@@ -78,6 +78,23 @@ func _on_settings_changed() -> void:
 	apply_quality(Settings.quality)
 
 
+## Animates player p's lane into `land`, spreading from `origin` (a world point on the tile; the
+## tile centre when not finite), and swaps its ambient particles.
+func change_land(p: int, l: int, land: int, origin: Vector3 = Vector3.INF, animate: bool = true) -> void:
+	var o := Vector2.ZERO
+	if origin.is_finite():
+		o = Vector2(origin.x - LANE_X[l], origin.z - STRIP_Z[p])
+	island(p, l).change_land(land, o, animate)
+	ambient.set_land(p, l, land)
+
+
+## Lays a field's weather over every tile (-1 clears it).
+func set_field(land: int, animate: bool = true) -> void:
+	for p: int in 2:
+		for isl: Island in _islands[p]:
+			isl.set_field(land, animate)
+
+
 func island(player: int, lane: int) -> Island:
 	return _islands[player][lane]
 

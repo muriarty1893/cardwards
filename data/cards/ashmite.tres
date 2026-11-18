@@ -21,3 +21,4 @@ attack = 2
 health = 2
 spell_power = 1
 effects = Array[ExtResource("1_8nobm")]([SubResource("Resource_lbyid")])
+tribe = &"flyer"

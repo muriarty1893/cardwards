@@ -9,6 +9,12 @@ when = &"on_boop"
 op = &"freeze"
 who = &"opposing"
 
+[sub_resource type="Resource" id="Resource_lb_snowmite_0"]
+script = ExtResource("1_yw6ar")
+when = &"on_level_up"
+op = &"freeze"
+who = &"opposing"
+
 [resource]
 script = ExtResource("1_card")
 id = &"snowmite"
@@ -18,4 +24,5 @@ level = 1
 cost = 2
 attack = 1
 health = 3
-effects = Array[ExtResource("1_yw6ar")]([SubResource("Resource_8oach")])
+effects = Array[ExtResource("1_yw6ar")]([SubResource("Resource_8oach"), SubResource("Resource_lb_snowmite_0")])
+tribe = &"beast"

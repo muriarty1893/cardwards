@@ -3,7 +3,8 @@ extends RefCounted
 ## Test helpers for building game states directly.
 
 
-static func blank(lands_a: Array[int] = [0, 1, 2, 3], lands_b: Array[int] = [0, 1, 2, 3]) -> GameState:
+## Lanes default to Meadow (no home quirks), like the start of a real match.
+static func blank(lands_a: Array[int] = [4, 4, 4, 4], lands_b: Array[int] = [4, 4, 4, 4]) -> GameState:
 	var s := GameState.new()
 	s.rng.seed = 1
 	for p: int in 2:

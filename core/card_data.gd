@@ -3,7 +3,8 @@ extends Resource
 ## Static definition of one card. Immutable at runtime: game state references it, never edits it.
 
 enum Kind { CREATURE, BUILDING, SPELL }
-## NEUTRAL: cards of no land (Star Shard); never a land on the board.
+## NEUTRAL: cards of no land (Star Shard). On the board it is Meadow, the bare land every lane
+## starts as (Lands.MEADOW).
 enum Land { MUSHROOM, EMBER, CANDY, FROST, NEUTRAL }
 
 const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hills", "Frostpeak", "Neutral"]
@@ -19,6 +20,10 @@ const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hill
 ## Printed keywords (Keywords.ORDER ids).
 @export var keywords: Array[StringName] = []
 @export var spell_power: int = 0
+## Creature tribe (Tribes.ORDER id), &"" for none.
+@export var tribe: StringName = &""
+## Field spell: stays in play for both players until another field replaces it.
+@export var field: bool = false
 @export var effects: Array[EffectData] = []
 
 

@@ -7,6 +7,7 @@ const _PREFIX: Dictionary = {
 	&"on_boop": "Boop: ", &"on_destroyed": "When destroyed: ",
 	&"start_of_turn": "Start of your turn: ", &"end_of_turn": "End of your turn: ",
 	&"after_damage": "After this damages a creature, ",
+	&"on_level_up": "Level up: ", &"field_start": "Start of each turn: ", &"field_end": "End of each turn: ",
 }
 ## How each `who` reads as the object of a sentence.
 const _WHO: Dictionary = {
@@ -47,14 +48,24 @@ static func tooltip(c: CardData) -> String:
 			used.append(k)
 		if e.combo and not &"combo" in used:
 			used.append(&"combo")
+		if e.op == &"armour" and not &"armour" in used:
+			used.append(&"armour")
+		if e.when == &"on_level_up" and not &"level_up" in used:
+			used.append(&"level_up")
+	if c.field:
+		used.push_front(&"field")
 	var lines: Array[String] = []
 	for k: StringName in used:
 		lines.append("%s: %s" % [Keywords.NAMES[k], Keywords.RULES[k]])
+	if c.tribe != &"":
+		lines.append("%s: %s" % [Tribes.NAMES[c.tribe], Tribes.rules_text(c.tribe)])
 	return "\n".join(lines)
 
 
 static func _render(c: CardData, bold: bool) -> String:
 	var parts: Array[String] = []
+	if c.field:
+		parts.append(_b("Field", bold) + ".")
 	for k: StringName in Keywords.ORDER:
 		if k in c.keywords:
 			parts.append(_b(Keywords.NAMES[k], bold) + ".")
@@ -73,7 +84,7 @@ static func _render(c: CardData, bold: bool) -> String:
 			parts.append("The creature in this lane has %s." % " and ".join(bits))
 			run_key = ""
 			continue
-		var key: String = "%s|%s" % [e.when, e.combo]
+		var key: String = "%s|%s|%s%d" % [e.when, e.combo, e.tribe, e.need]
 		var prefix: String = "" if key == run_key else _prefix(c, e, bold)
 		run_key = key
 		var sentence: String = _phrase(e, bold)
@@ -95,6 +106,10 @@ static func _prefix(c: CardData, e: EffectData, bold: bool) -> String:
 		base = "" if c.kind == CardData.Kind.SPELL else "On play: "
 	else:
 		base = _PREFIX.get(e.when, "")
+	if e.need > 0:
+		var other: String = "another %s" % Tribes.NAMES[e.tribe] if e.need == 1 else "%d other %s" % [e.need, Tribes.PLURALS[e.tribe]]
+		var cond: String = "if you control %s" % other
+		base = cond.capitalize().left(1) + cond.substr(1) + ": " if base == "" else "%s, %s: " % [base.trim_suffix(": "), cond]
 	if not e.combo:
 		return base
 	var combo: String = _b("Combo", bold)
@@ -112,6 +127,8 @@ static func _aura_part(e: EffectData, bold: bool) -> String:
 
 static func _phrase(e: EffectData, bold: bool) -> String:
 	var x: String = _WHO.get(e.who, String(e.who))
+	if e.who == &"own_on_land":
+		x = "that player's creatures on %s" % CardData.LAND_NAMES[e.filter_land]
 	var s: String = ""
 	match e.op:
 		&"damage":
@@ -150,6 +167,20 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			s = "Give %s %s" % [x, _b(Keywords.NAMES.get(e.keyword, String(e.keyword)), bold)]
 		&"destroy":
 			s = "Destroy %s" % x
+		&"armour":
+			s = "Gain %d %s" % [e.amount, _b("armour", bold)]
+		&"sprout_meadow":
+			s = "That player's first Meadow lane grows into Mushroom Forest"
+		&"land_draw":
+			s = "If that player has a creature on %s, they draw a card" % CardData.LAND_NAMES[e.filter_land]
+		&"on_land_atk":
+			s = "Creatures on %s have %+d ATK" % [CardData.LAND_NAMES[e.filter_land], e.amount]
+		&"off_land_atk":
+			s = "Creatures not on %s have %s ATK" % [CardData.LAND_NAMES[e.filter_land], ("−%d" % -e.amount) if e.amount < 0 else "+%d" % e.amount]
+		&"on_land_hp":
+			s = "Creatures on %s have %+d HP" % [CardData.LAND_NAMES[e.filter_land], e.amount]
+		&"no_quirk":
+			s = "%s give no home bonus" % CardData.LAND_NAMES[e.filter_land]
 		_:
 			s = String(e.op)
 	# "it" sentences continue an earlier clause, so they start lower-case.

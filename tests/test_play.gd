@@ -32,7 +32,7 @@ func test_level_requirement() -> bool:
 	var s: GameState = Fx.blank([E, M, K, F])
 	s.players[0].magic = 9
 	var i: int = Fx.give(s, 0, &"magmaw")
-	assert_eq(Rules.validate(s, Action.play(0, i, 0)), "Needs 2 Ember Flats lands", "needs 2 ember")
+	assert_eq(Rules.validate(s, Action.play(0, i, 0)), "Needs 2 Ember Flats lanes", "needs 2 ember")
 	var s2: GameState = Fx.blank([E, E, K, F])
 	s2.players[0].magic = 9
 	var j: int = Fx.give(s2, 0, &"magmaw")

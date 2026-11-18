@@ -19,3 +19,4 @@ cost = 3
 attack = 3
 health = 3
 effects = Array[ExtResource("1_nggxj")]([SubResource("Resource_vgksa")])
+tribe = &"beast"

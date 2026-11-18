@@ -13,15 +13,17 @@ const PROPS: Array[Array] = [
 	[["nature/Rock_Medium_1", 0.3], ["nature/Rock_Medium_2", 0.26], ["nature/Rock_Medium_3", 0.22]],
 	[["candy/lollypop.glb", 0.44], ["candy/cupcake.glb", 0.26], ["candy/donut-sprinkles.glb", 0.14], ["candy/ice-cream.glb", 0.36], ["candy/popsicle.glb", 0.36], ["candy/candy-bar.glb", 0.1], ["candy/sundae.glb", 0.3]],
 	[["crystal", 0.42], ["nature/Rock_Medium_2", 0.24], ["crystal", 0.32], ["nature/Rock_Medium_3", 0.2]],
+	[["nature/Flower_3_Group", 0.24], ["nature/Flower_4_Group", 0.22], ["nature/Grass_Common_Tall", 0.3], ["nature/Clover_1", 0.18]],
 ]
 ## Rock and crystal tints per land (alpha = strength).
-const TINTS: Array[Color] = [Color(1, 1, 1, 0), Color("#3a2626", 0.75), Color(1, 1, 1, 0), Color("#e4f3ff", 0.65)]
-const SWAY: Array[float] = [0.05, 0.0, 0.0, 0.0]
+const TINTS: Array[Color] = [Color(1, 1, 1, 0), Color("#3a2626", 0.75), Color(1, 1, 1, 0), Color("#e4f3ff", 0.65), Color(1, 1, 1, 0)]
+const SWAY: Array[float] = [0.05, 0.0, 0.0, 0.0, 0.06]
 const HALF := Vector2(Island.WIDTH / 2.0 - 0.06, Island.LENGTH / 2.0 - 0.12)
 const BUILDING_R := 0.8
 const BOOP_R := 0.45
-## Cover pieces per half-lane at High (Low passes density 0.5): Mushroom, Ember, Candy, Frost.
-const DENSITY: Array[int] = [160, 90, 120, 110]
+## Cover pieces per half-lane at High (Low passes density 0.5): Mushroom, Ember, Candy, Frost,
+## Meadow.
+const DENSITY: Array[int] = [160, 90, 120, 110, 120]
 ## Tall cover keeps within this distance of the lane's long edges.
 const EDGE_BAND := 0.35
 ## Per land: [mesh kind, share of DENSITY, min size, max size, flexibility, edge only, colours].
@@ -38,6 +40,8 @@ const KINDS: Array = [
 	[[&"drift", 0.2, 0.1, 0.22, 0.0, false, ["#ffffff", "#eef6ff"]],
 		[&"crystal", 0.36, 0.12, 0.3, 0.25, false, ["#9fd8ff", "#c6ecff", "#7cc4f0"]],
 		[&"tuft", 0.44, 0.12, 0.2, 0.9, false, ["#cfe8f2", "#e6f4fa", "#b7dbe8"]]],
+	[[&"tuft", 0.72, 0.13, 0.24, 1.0, false, ["#9ad66a", "#aee27a", "#86c95a"]],
+		[&"flower", 0.28, 0.12, 0.2, 0.7, false, ["#ffffff", "#fff2a0", "#e6d4ff", "#ffd0e0"]]],
 ]
 
 static var _material: ShaderMaterial
@@ -234,6 +238,22 @@ static func _mesh(kind: StringName) -> Mesh:
 			for r: int in 3:
 				var col: Color = Color("#ff5a9a").srgb_to_linear() if r % 2 == 0 else Color(1, 1, 1)
 				_append(st, Palette.cylinder(0.32 - 0.1 * r, 0.32 - 0.1 * r, 0.07 + 0.01 * r, 14), Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, 0.95, 0.005 * r)), col)
+		&"flower":
+			_append(st, Palette.cylinder(0.03, 0.04, 0.6, 5), Transform3D(Basis(), Vector3(0, 0.3, 0)), Color(0.32, 0.62, 0.24))
+			for i: int in 5:
+				var a: float = float(i) / 5.0 * TAU
+				var petal := SphereMesh.new()
+				petal.radius = 0.11
+				petal.height = 0.12
+				petal.radial_segments = 6
+				petal.rings = 2
+				_append(st, petal, Transform3D(Basis(), Vector3(cos(a) * 0.12, 0.64, sin(a) * 0.12)), Color(1, 1, 1))
+			var eye := SphereMesh.new()
+			eye.radius = 0.08
+			eye.height = 0.12
+			eye.radial_segments = 6
+			eye.rings = 2
+			_append(st, eye, Transform3D(Basis(), Vector3(0, 0.67, 0)), Color(1.0, 0.75, 0.15))
 		&"crystal":
 			for i: int in 3:
 				var h: float = [1.0, 0.7, 0.55][i]
