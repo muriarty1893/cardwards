@@ -9,7 +9,7 @@ const SOURCE := "res://assets/CREDITS.md"
 
 static func make() -> CreditsPanel:
 	var p := CreditsPanel.new()
-	p.add_theme_stylebox_override("panel", UiStyle.panel(Color(1, 1, 1, 0.97), 22))
+	p.add_theme_stylebox_override("panel", UiStyle.parchment_panel(22))
 	p.custom_minimum_size = Vector2(760, 520)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 12)

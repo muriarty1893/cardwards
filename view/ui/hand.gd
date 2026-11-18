@@ -8,8 +8,9 @@ extends Control
 signal card_drag_started(index: int)
 signal card_dropped(index: int, screen_pos: Vector2)
 
-## Space between the HUD's deck box (left) and the gems / END TURN column (right).
-const REGION_LEFT := 190.0
+## Kept clear on both sides (the gems / END TURN column on the right), so the hand sits centred
+## under the board.
+const REGION_LEFT := 244.0
 const REGION_RIGHT := 244.0
 const MAX_STEP := 128.0
 ## Resting cards are drawn at this scale with this many pixels showing above the screen edge.

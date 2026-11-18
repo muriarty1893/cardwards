@@ -16,6 +16,10 @@ var room: Room
 var rival: RivalSeat
 ## The field spell's weather, light and table prop.
 var field_fx: FieldFx
+## Both players' deck and discard piles on the table.
+var stacks: CardStacks
+var _ui_root: Control
+var action_log: ActionLog
 ## Creatures placed so far (seeds each one's wandering).
 var _placed: int = 0
 var hud: Hud
@@ -57,6 +61,9 @@ func _ready() -> void:
 	field_fx.name = "FieldFx"
 	add_child(field_fx)
 	field_fx.setup(room, Settings.quality)
+	stacks = CardStacks.new()
+	stacks.name = "CardStacks"
+	add_child(stacks)
 	rival = RivalSeat.new()
 	add_child(rival)
 	rival.setup(RIVAL_MODEL)
@@ -94,6 +101,25 @@ func _ready() -> void:
 			rig.hold_sweep(float(arg.substr(11)))
 			return
 	_begin(opening)
+
+
+## Clicking a discard pile on the table shows its cards.
+func _unhandled_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT or stacks == null or rig.in_cinematic:
+		return
+	var hit: Dictionary = stacks.stack_at(rig.camera, mb.position)
+	if hit.get("kind", &"") == &"discard":
+		open_discard(hit["player"])
+		get_viewport().set_input_as_handled()
+
+
+func open_discard(p: int) -> DiscardViewer:
+	var v := DiscardViewer.new()
+	_ui_root.add_child(v)
+	v.show_cards(state.players[p].discard, "Your discard pile" if p == HUMAN else "Rival's discard pile")
+	Audio.sfx(&"card_flip")
+	return v
 
 
 ## Where the rival's card fan is on screen: cards it draws fly there, cards it plays leave it.
@@ -246,6 +272,12 @@ func _build_ui() -> void:
 	hud = Hud.new()
 	root.add_child(hud)
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ui_root = root
+	action_log = ActionLog.new()
+	action_log.position = Vector2(12, 196)
+	root.add_child(action_log)
+	hud.pile_screen = func(p: int, kind: StringName) -> Vector2:
+		return rig.camera.unproject_position(stacks.point(p, kind)) if stacks and rig else Vector2.ZERO
 	hand = Hand.new()
 	root.add_child(hand)
 	hand.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -282,6 +314,12 @@ func _build_ui() -> void:
 ## Refresh HUD, hand and input availability from the state.
 func refresh_ui() -> void:
 	hud.refresh(state, HUMAN)
+	if stacks:
+		var tops: Array = []
+		for p: int in 2:
+			var d: Array[CardData] = state.players[p].discard
+			tops.append(d[d.size() - 1] if not d.is_empty() else null)
+		stacks.set_counts([state.players[0].deck.size(), state.players[1].deck.size()], [state.players[0].discard.size(), state.players[1].discard.size()], tops)
 	var cards: Array[CardData] = state.players[HUMAN].hand
 	var playable: Array[bool] = []
 	for i: int in cards.size():

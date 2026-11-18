@@ -51,6 +51,12 @@ func play(events: Array[GameEvent]) -> void:
 func _play_one(e: GameEvent) -> void:
 	var d: Dictionary = e.data
 	_rival_react(e)
+	if m.action_log:
+		var line: String = ActionLog.describe(e, m.state)
+		if line != "":
+			m.action_log.add(line, int(d.get("player", -1)))
+	if e.type in [&"creature_played", &"building_played", &"spell_cast"] and int(d.get("player", -1)) == MatchController.AI:
+		await _reveal(CardDB.card(d["card"]))
 	if e.type in EFFECT_EVENTS:
 		var kind: StringName = FxDirector.choose(_source, e)
 		await FxDirector.play(kind, _source, e, m)
@@ -118,6 +124,8 @@ func _play_one(e: GameEvent) -> void:
 			await _wait(0.6)
 		&"game_over":
 			m.refresh_ui()
+		&"second_wind":
+			await _second_wind(d)
 		&"land_changed":
 			await _land_changed(d)
 		&"land_reaction":
@@ -165,6 +173,27 @@ func _rival_react(e: GameEvent) -> void:
 				r.win()
 			else:
 				r.lose()
+
+
+## Second Wind: the creature that just fell springs back up in its lane with 1 HP.
+func _second_wind(d: Dictionary) -> void:
+	var p: int = d["player"]
+	var l: int = d["lane"]
+	if _view(p, l) != null:
+		return
+	var v: CreatureView = m.place_creature(p, l, CardDB.card(d["card"]))
+	var full: Vector3 = v.scale
+	v.scale = Vector3.ONE * 0.05
+	v.busy = true
+	Burst.spawn(m, &"heal", v.global_position + Vector3(0, 0.3, 0), Color.WHITE, 1.4)
+	Audio.sfx(&"heal")
+	DamageNumber.stamp(m, v.global_position + Vector3(0, v.height + 0.7, 0.2), "SECOND WIND!")
+	var tw := v.create_tween()
+	tw.tween_property(v, "scale", full, 0.45 / speed).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	if is_instance_valid(v):
+		v.busy = false
+	m.refresh_pieces()
 
 
 ## A lane turns into another land: the ground sweeps out from the creature or building that
@@ -240,6 +269,29 @@ func _field_set(d: Dictionary) -> void:
 		m.field_fx.set_field(c.land)
 	m.hud.refresh(m.state, MatchController.HUMAN)
 	await _wait(0.9)
+
+
+## The rival's card shows large at the right of the board for a moment before it lands (the
+## action log has the left).
+func _reveal(c: CardData) -> void:
+	var w := CardWidget.new()
+	w.setup(c, 0)
+	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	w.pivot_offset = CardWidget.SIZE / 2.0
+	var vp: Vector2 = m.hud.get_viewport_rect().size
+	var at := Vector2(vp.x * 0.87, vp.y * 0.44) - CardWidget.SIZE / 2.0
+	m.hud.add_child(w)
+	w.position = at + Vector2(220, 0)
+	w.scale = Vector2.ONE * 1.25
+	w.rotation = 0.08
+	w.modulate.a = 0.0
+	var tw := w.create_tween().set_parallel()
+	tw.tween_property(w, "position", at, 0.25 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(w, "modulate:a", 1.0, 0.15 / speed)
+	tw.chain().tween_interval(1.1 / speed)
+	tw.chain().tween_property(w, "modulate:a", 0.0, 0.25 / speed)
+	tw.chain().tween_callback(w.queue_free)
+	await _wait(0.55)
 
 
 func _view(p: int, l: int) -> CreatureView:

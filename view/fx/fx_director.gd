@@ -367,7 +367,7 @@ static func _element(m: MatchController, source: Dictionary) -> StringName:
 static func _fly_card(m: MatchController, d: Dictionary, from: Vector2, to: Vector2, face_up: bool) -> void:
 	var human: bool = int(d.get("player", 0)) == MatchController.HUMAN
 	var target: Vector2 = to if human else m.rival_hand_screen()
-	var start: Vector2 = from if human else m.rival_hand_screen() + Vector2(0, 60)
+	var start: Vector2 = from if human else m.hud.deck_screen_pos(false)
 	var c: CardData = CardDB.card(d.get("card", &"")) if d.has("card") else null
 	FlyingCard.fly(m.hud, c, start, target, face_up and human, 0.3 / m.player.speed)
 	await _wait(m, 0.3 / m.player.speed)

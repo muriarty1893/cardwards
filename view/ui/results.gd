@@ -20,7 +20,7 @@ func show_result(won: bool, turns: int) -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UiStyle.panel(Color(1, 1, 1, 0.97), 22))
+	panel.add_theme_stylebox_override("panel", UiStyle.parchment_panel(22))
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH

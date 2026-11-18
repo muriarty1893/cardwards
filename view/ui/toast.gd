@@ -9,7 +9,7 @@ var _tw: Tween
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.07, 0.06, 0.16, 0.78)
+	sb.bg_color = Color(0.17, 0.11, 0.07, 0.82)
 	sb.set_corner_radius_all(12)
 	sb.content_margin_left = 26
 	sb.content_margin_right = 26

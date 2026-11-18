@@ -1,8 +1,9 @@
 class_name Hud
 extends Control
-## Screen layout: hero corners (portrait, health bar, magic), a small deck box bottom-left (deck
-## and discard counts), the magic gems and a brass END TURN button bottom-right, and a pause
-## button; the slim hand (Hand) peeks up between them, so nothing covers the board. Living board:
+## Screen layout: hero corners (portrait, health bar, magic), the magic gems and a brass END TURN
+## button bottom-right (it says how many creatures can still act), and a pause button; the slim
+## hand (Hand) peeks up along the bottom, so nothing covers the board. Deck and discard are
+## card piles on the table (CardStacks); pile_screen tells the HUD where they are on screen. Living board:
 ## an armour shield at the tip of each health bar, tribe-bonus chips under each corner and the
 ## field in play at the top centre.
 
@@ -12,7 +13,6 @@ signal pause_changed(open: bool)
 
 ## The strip along the bottom edge the hand peeks into; the board stays above it.
 const HAND_STRIP_H := 124.0
-const DECK_BOX := Vector2(156, 100)
 const END_TURN_SIZE := Vector2(200, 70)
 const GEMS_PLATE := Vector2(204, 46)
 const MARGIN := 12.0
@@ -31,15 +31,15 @@ var _you: Control
 var _rival: Control
 var _you_bar: Control
 var _rival_bar: Control
-var _deck_box: Panel
 var _gems_plate: Panel
+## Callable(player: int, kind: StringName) -> Vector2: a card pile's screen point (set by the
+## match); flying cards start and end there.
+var pile_screen: Callable
 var _refs: Dictionary = {}
 var _gems: MagicGems
 ## END TURN pulses when nothing else is left to do.
 var end_turn_pulsing: bool = false
 var _pulse: Tween
-var _deck_label: Label
-var _discard_label: Label
 ## Full-screen pause menu. The match moves it above the hand so it takes the mouse first.
 var pause_overlay: Control
 const ARMOUR_COLOR := Color("#7ac8ff")
@@ -86,7 +86,7 @@ func _init() -> void:
 
 
 func panels() -> Array[Control]:
-	return [_you, _rival, _you_bar, _rival_bar, _deck_box, _gems_plate, end_turn_button, pause_button]
+	return [_you, _rival, _you_bar, _rival_bar, _gems_plate, end_turn_button, pause_button]
 
 
 func refresh(s: GameState, human: int) -> void:
@@ -95,11 +95,10 @@ func refresh(s: GameState, human: int) -> void:
 	_fill_corner("Rival", foe, "%d CARDS" % foe.hand.size())
 	var me: GameState.PlayerState = s.players[human]
 	_gems.set_magic(me.magic, me.max_magic)
-	_deck_label.text = "DECK  %d" % me.deck.size()
-	_discard_label.text = "DISCARD  %d" % me.discard.size()
 	var mine: bool = s.active == human and s.phase != GameState.Phase.OVER
-	end_turn_button.text = "END TURN" if mine or s.phase == GameState.Phase.OVER else "RIVAL'S TURN"
-	end_turn_button.add_theme_font_size_override("font_size", 28 if mine else 20)
+	var st: Dictionary = end_turn_state(s, human)
+	end_turn_button.text = st["text"]
+	end_turn_button.add_theme_font_size_override("font_size", st["font"])
 	_you.modulate = Color.WHITE if mine else Color(0.82, 0.82, 0.82)
 	_rival.modulate = Color.WHITE if not mine else Color(0.82, 0.82, 0.82)
 	_you_bar.modulate = _you.modulate
@@ -109,6 +108,20 @@ func refresh(s: GameState, human: int) -> void:
 		_fill_armour(who, s.players[q].armour)
 		_fill_tribes(who, s, q)
 	_fill_field(s)
+
+
+## END TURN's face: "RIVAL'S TURN" on the AI's turn; "END TURN" plus "N CAN ACT" while N of
+## your creatures can still attack or boop.
+static func end_turn_state(s: GameState, human: int) -> Dictionary:
+	if s.active != human or s.phase != GameState.Phase.MAIN:
+		return {"text": "RIVAL'S TURN" if s.phase != GameState.Phase.OVER else "END TURN", "font": 20, "can_act": 0}
+	var n: int = 0
+	for l: int in GameState.LANES:
+		if Rules.can_attack(s, human, l) or Rules.can_boop(s, human, l):
+			n += 1
+	if n > 0:
+		return {"text": "END TURN\n%d CAN ACT" % n, "font": 20, "can_act": n}
+	return {"text": "END TURN", "font": 28, "can_act": 0}
 
 
 ## Pops the armour shield (gained armour).
@@ -282,12 +295,16 @@ func corner_rects() -> Array[Rect2]:
 	return [_you.get_global_rect(), _rival.get_global_rect(), _you_bar.get_global_rect(), _rival_bar.get_global_rect()]
 
 
-func deck_screen_pos() -> Vector2:
-	return _deck_label.get_global_rect().get_center()
+func deck_screen_pos(human_side: bool = true) -> Vector2:
+	if pile_screen.is_valid():
+		return pile_screen.call(0 if human_side else 1, &"deck")
+	return get_viewport_rect().size * Vector2(0.85, 0.75)
 
 
-func discard_screen_pos() -> Vector2:
-	return _discard_label.get_global_rect().get_center()
+func discard_screen_pos(human_side: bool = true) -> Vector2:
+	if pile_screen.is_valid():
+		return pile_screen.call(0 if human_side else 1, &"discard")
+	return get_viewport_rect().size * Vector2(0.85, 0.6)
 
 
 ## Centre of the magic orb that a gained gem flies to.
@@ -438,24 +455,8 @@ func _wood(radius: int = 16, col: Color = UiStyle.WOOD) -> StyleBoxFlat:
 	return sb
 
 
-## Deck box bottom-left; magic gems on a brass plate over the END TURN button bottom-right.
+## Magic gems on a wooden plate over the brass END TURN button, bottom-right.
 func _build_bottom() -> void:
-	_deck_box = Panel.new()
-	_deck_box.name = "DeckBox"
-	_deck_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_deck_box.add_theme_stylebox_override("panel", _wood(14))
-	_deck_box.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_deck_box.offset_left = MARGIN
-	_deck_box.offset_right = MARGIN + DECK_BOX.x
-	_deck_box.offset_top = -MARGIN - DECK_BOX.y
-	_deck_box.offset_bottom = -MARGIN
-	add_child(_deck_box)
-	_deck_label = _plate("DECK", Vector2(DECK_BOX.x - 20, 38), 16)
-	_deck_label.position = Vector2(10, 8)
-	_deck_box.add_child(_deck_label)
-	_discard_label = _plate("DISCARD", Vector2(DECK_BOX.x - 20, 38), 16)
-	_discard_label.position = Vector2(10, 54)
-	_deck_box.add_child(_discard_label)
 	_gems_plate = Panel.new()
 	_gems_plate.name = "GemsPlate"
 	_gems_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -533,7 +534,7 @@ func _build_pause() -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	pause_overlay.add_child(dim)
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", UiStyle.panel(Color(1, 1, 1, 0.97), 22))
+	box.add_theme_stylebox_override("panel", UiStyle.parchment_panel(22))
 	box.set_anchors_preset(Control.PRESET_CENTER)
 	box.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	box.grow_vertical = Control.GROW_DIRECTION_BOTH

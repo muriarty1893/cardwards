@@ -44,7 +44,9 @@ static func resolve(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	var cr: GameState.CreatureState = s.players[p].lanes[a.lane].creature
 	Rules.reveal(s, p, a.lane, ev)
 	cr.attacks_used += 1
-	ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "target_lane": a.target_lane, "hit": int(a.hit)}))
+	var target_cr: GameState.CreatureState = s.players[foe].lanes[a.target_lane].creature if a.target_lane >= 0 else null
+	ev.append(GameEvent.make(&"attack", {"player": p, "lane": a.lane, "target_lane": a.target_lane, "hit": int(a.hit),
+		"card": cr.card.id, "target_card": target_cr.card.id if target_cr else &""}))
 	var atk: int = Rules.effective_attack(s, p, a.lane)
 	var src: Dictionary = {"player": p, "lane": a.lane, "kind": &"attack"}
 	var defender: GameState.CreatureState = s.players[foe].lanes[a.target_lane].creature if a.target_lane >= 0 else null

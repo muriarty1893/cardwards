@@ -24,6 +24,7 @@ var _lane: int = 0
 var _dressing: Node3D
 var _density: float = 1.0
 var _field_tween: Tween
+var _wipe: Tween
 
 
 func setup(land_type: int, player: int = 0, lane: int = 0, density: float = 1.0) -> void:
@@ -63,6 +64,9 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 		return
 	var old: int = land
 	land = new_land
+	# A change while the last one is still sweeping: finish that one first.
+	if _wipe and _wipe.is_valid():
+		_wipe.kill()
 	_mat.set_shader_parameter("prev_land", old)
 	_mat.set_shader_parameter("land", new_land)
 	_mat.set_shader_parameter("morph_origin", origin)
@@ -76,8 +80,8 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 			old_dressing.free()
 		return
 	_mat.set_shader_parameter("morph", 0.0)
-	var wipe := create_tween()
-	wipe.tween_method(func(v: float) -> void: _mat.set_shader_parameter("morph", v), 0.0, 1.0, MORPH_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_wipe = create_tween()
+	_wipe.tween_method(func(v: float) -> void: _mat.set_shader_parameter("morph", v), 0.0, 1.0, MORPH_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	if is_instance_valid(old_dressing):
 		var sink := create_tween()
 		sink.tween_property(old_dressing, "scale", Vector3(1.0, 0.01, 1.0), MORPH_TIME * 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)

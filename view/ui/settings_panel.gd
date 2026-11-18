@@ -1,19 +1,21 @@
 class_name SettingsPanel
 extends PanelContainer
-## Music and effects volume sliders and a graphics quality choice. Every change goes
-## straight to the Settings autoload (which saves it).
+## Music and effects volume sliders, a graphics quality choice and the camera options (battle
+## close-ups, zoom speed). Every change goes straight to the Settings autoload (which saves it).
 
 signal closed
 
 var music_slider: HSlider
 var sfx_slider: HSlider
 var quality_option: OptionButton
+var closeups_check: CheckButton
+var zoom_slider: HSlider
 
 
 ## `with_close` adds a CLOSE button (the pause menu embeds the panel without one).
 static func make(with_close: bool = true) -> SettingsPanel:
 	var p := SettingsPanel.new()
-	p.add_theme_stylebox_override("panel", UiStyle.panel(Color(1, 1, 1, 0.97), 22))
+	p.add_theme_stylebox_override("panel", UiStyle.parchment_panel(22))
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 12)
 	p.add_child(vb)
@@ -35,6 +37,23 @@ static func make(with_close: bool = true) -> SettingsPanel:
 	p.quality_option.custom_minimum_size = Vector2(200, 36)
 	p.quality_option.item_selected.connect(func(i: int) -> void: Settings.set_value(&"quality", i))
 	row.add_child(p.quality_option)
+	# Camera: battle close-ups on attacks, and how fast the wheel / pinch zooms.
+	var cam_row := HBoxContainer.new()
+	cam_row.add_theme_constant_override("separation", 12)
+	vb.add_child(cam_row)
+	var cl := UiStyle.title(UiStyle.label("Close-ups", 20)) as Label
+	cl.custom_minimum_size = Vector2(110, 0)
+	cam_row.add_child(cl)
+	p.closeups_check = CheckButton.new()
+	p.closeups_check.text = "Battle close-ups"
+	p.closeups_check.button_pressed = Settings.battle_closeups
+	p.closeups_check.toggled.connect(func(on: bool) -> void: Settings.set_battle_closeups(on))
+	cam_row.add_child(p.closeups_check)
+	p.zoom_slider = p._slider(vb, "Zoom speed", Settings.zoom_speed, &"")
+	p.zoom_slider.min_value = 0.25
+	p.zoom_slider.max_value = 2.0
+	p.zoom_slider.value = Settings.zoom_speed
+	p.zoom_slider.value_changed.connect(func(v: float) -> void: Settings.set_zoom_speed(v))
 	if with_close:
 		var close := MenuButtons.big("CLOSE", Palette.GOLD, 20)
 		close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -57,6 +76,7 @@ func _slider(parent: Container, label: String, value: float, key: StringName) ->
 	s.value = value
 	s.custom_minimum_size = Vector2(200, 32)
 	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	s.value_changed.connect(func(v: float) -> void: Settings.set_value(key, v))
+	if key != &"":
+		s.value_changed.connect(func(v: float) -> void: Settings.set_value(key, v))
 	row.add_child(s)
 	return s

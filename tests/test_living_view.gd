@@ -100,3 +100,21 @@ func test_houses_follow_creatures() -> bool:
 	assert_true(not is_instance_valid(h) or (h as CreatureHouse).resident == null, "the empty house sinks away")
 	m.queue_free()
 	return true
+
+
+## Second Wind brings the creature's view back (the board used to go out of sync and resync).
+func test_second_wind_comes_back_on_board() -> bool:
+	var m: MatchController = await Fx.load_match()
+	_fast(m)
+	_clear(m)
+	var s: GameState = m.state
+	Fx.put_creature(s, 0, 0, &"flarebeak")
+	Fx.put_creature(s, 1, 0, &"puffcap", 2)  # 2/3 second wind, 1 HP left
+	m.sync_all()
+	var before: Variant = m.creature_views[1][0]
+	await m.perform(Action.attack(0, 0, 0))
+	assert_true(s.players[1].lanes[0].creature != null and s.players[1].lanes[0].creature.second_wind_used, "came back in the state")
+	assert_true(is_instance_valid(m.creature_views[1][0]) and m.creature_views[1][0] != before, "a fresh view stands in the lane")
+	assert_eq((m.creature_views[1][0] as CreatureView).card.id, &"puffcap", "it's the puffcap")
+	m.queue_free()
+	return true

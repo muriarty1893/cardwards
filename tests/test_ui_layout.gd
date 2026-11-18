@@ -159,7 +159,7 @@ func test_eight_cards_fit() -> bool:
 		assert_eq(ws.size(), 8, "8 cards at %s" % sz)
 		for i: int in ws.size():
 			var r: Rect2 = hand.card_rect(i)
-			assert_true(r.position.x >= Hand.REGION_LEFT - 1 and r.end.x <= sz.x - Hand.REGION_RIGHT + 1, "card %d between the deck box and END TURN at %s" % [i, sz])
+			assert_true(r.position.x >= Hand.REGION_LEFT - 1 and r.end.x <= sz.x - Hand.REGION_RIGHT + 1, "card %d inside the hand region at %s" % [i, sz])
 			# Slim hand: only the top of each card peeks into the strip along the bottom edge.
 			assert_true(r.position.y >= sz.y - Hud.HAND_STRIP_H and r.position.y <= sz.y - 60.0, "card %d peeks into the hand strip at %s (%s)" % [i, sz, r])
 			if i > 0:

@@ -16,19 +16,28 @@ static var _title_font: FontFile
 static var _bold_font: SystemFont
 
 
-static func panel(bg: Color = Color(1, 1, 1, 0.95), radius: int = 16) -> StyleBoxFlat:
+## Chunky panel with a dark wood border (parchment by default).
+static func panel(bg: Color = PARCHMENT, radius: int = 16) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
-	sb.border_color = Palette.INK
+	sb.border_color = WOOD_INK
 	sb.set_border_width_all(5)
 	sb.set_corner_radius_all(radius)
-	sb.shadow_color = Color(Palette.INK, 0.45)
+	sb.shadow_color = Color(WOOD_INK, 0.45)
 	sb.shadow_offset = Vector2(0, 5)
 	sb.shadow_size = 1
 	sb.set_content_margin_all(8)
 	sb.content_margin_left = 14
 	sb.content_margin_right = 14
 	return sb
+
+
+static func parchment_panel(radius: int = 16) -> StyleBoxFlat:
+	return panel(PARCHMENT, radius)
+
+
+static func wood_panel(radius: int = 16) -> StyleBoxFlat:
+	return panel(WOOD, radius)
 
 
 static func label(text: String, size: int = 20, color: Color = Palette.INK) -> Label:

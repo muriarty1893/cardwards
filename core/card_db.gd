@@ -11,6 +11,11 @@ static var _card_list: Array[CardData] = []
 static var _decks: Dictionary[StringName, DeckData] = {}
 
 
+static func has_card(id: StringName) -> bool:
+	_ensure_loaded()
+	return _cards.has(id)
+
+
 static func card(id: StringName) -> CardData:
 	_ensure_loaded()
 	if not _cards.has(id):
