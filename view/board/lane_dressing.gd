@@ -22,6 +22,8 @@ const HALF := Vector2(Island.WIDTH / 2.0 - 0.06, Island.LENGTH / 2.0 - 0.12)
 ## Cover and props keep this far in from the tile's side edges.
 const MARGIN := 0.06
 const BUILDING_R := 0.8
+## Looks per land (Meadow has one).
+const VARIANTS := 3
 ## Cover pieces per half-lane at High (Low passes density 0.5): Mushroom, Ember, Candy, Frost,
 ## Meadow.
 const DENSITY: Array[int] = [160, 90, 120, 110, 120]
@@ -62,29 +64,33 @@ static func cover_material() -> ShaderMaterial:
 	return _material
 
 
-## `shape`: the tile's outline (wavy lane edges); a straight full-width tile when null.
-static func build(land: int, player: int, seed: int, density: float = 1.0, shape: TileShape = null) -> Node3D:
+## `shape`: the tile's outline (wavy lane edges); a straight full-width tile when null. `variant` (0..2) and `corner`
+## (0 left, 1 right) pick the land's look and where its big set piece stands.
+static func build(land: int, player: int, seed: int, density: float = 1.0, shape: TileShape = null, variant: int = 0, corner: int = 0) -> Node3D:
 	if shape == null:
 		shape = TileShape.straight()
 	var root := Node3D.new()
 	root.name = "Dressing"
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 9100 + seed
-	root.add_child(_accents(land, player, rng, shape))
+	rng.seed = 9100 + seed + 37 * variant + 101 * corner
+	var pieces: Node3D = SetPieces.build(land, variant, corner, player, shape, density, rng)
+	root.add_child(pieces)
+	var avoid: Array[Rect2] = set_piece_rects(root)
+	root.add_child(_accents(land, player, rng, shape, avoid))
 	var cover := Node3D.new()
 	cover.name = "Cover"
 	root.add_child(cover)
 	for kind: Array in KINDS[land]:
 		var n: int = int(round(DENSITY[land] * float(kind[1]) * density))
 		if n > 0:
-			cover.add_child(_cover(kind, n, player, rng, shape))
+			cover.add_child(_cover(kind, n, player, rng, shape, avoid))
 	return root
 
 
-static func _accents(land: int, player: int, rng: RandomNumberGenerator, shape: TileShape) -> Node3D:
+static func _accents(land: int, player: int, rng: RandomNumberGenerator, shape: TileShape, avoid: Array[Rect2]) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Accents"
-	var count: int = 4 + rng.randi_range(0, 2)
+	var count: int = (4 if avoid.is_empty() else 2) + rng.randi_range(0, 2)
 	var options: Array = PROPS[land]
 	var placed: int = 0
 	var guard: int = 0
@@ -94,7 +100,7 @@ static func _accents(land: int, player: int, rng: RandomNumberGenerator, shape: 
 		var z: float = rng.randf_range(-HALF.y, HALF.y)
 		var hw: float = shape.half_width(z) - MARGIN
 		var pos := Vector3(shape.centre(z) + side * rng.randf_range(hw - 0.22, hw), 0.0, z)
-		if not is_clear(pos, player, shape):
+		if not is_clear(pos, player, shape) or _in_any(pos, avoid, 0.12):
 			continue
 		var pick: Array = options[rng.randi_range(0, options.size() - 1)]
 		var prop: Node3D = _make(pick[0], pick[1] * rng.randf_range(0.85, 1.2), land)
@@ -105,7 +111,7 @@ static func _accents(land: int, player: int, rng: RandomNumberGenerator, shape: 
 	return root
 
 
-static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator, shape: TileShape) -> MultiMeshInstance3D:
+static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator, shape: TileShape, avoid: Array[Rect2]) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_custom_data = true
@@ -124,7 +130,7 @@ static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator,
 			if edge_only:
 				x = shape.centre(z) + signf(rng.randf() - 0.5) * rng.randf_range(hw + MARGIN - EDGE_BAND, hw)
 			pos = Vector3(x, 0.0, z)
-			if is_clear(pos, player, shape):
+			if is_clear(pos, player, shape) and not _in_any(pos, avoid, 0.02):
 				break
 		var k: float = rng.randf_range(kind[2], kind[3])
 		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * k)
@@ -160,6 +166,25 @@ static func is_clear(local: Vector3, player: int, shape: TileShape = null) -> bo
 		if absf(local.x - shape.centre(plate_z)) < BoopPlate.SIZE.x / 2.0 + 0.1 and absf(local.z - plate_z) < BoopPlate.SIZE.y / 2.0 + 0.1:
 			return false
 	return true
+
+
+## Ground footprints (tile-local) of the dressing's set pieces.
+static func set_piece_rects(root: Node3D) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	var pieces: Node = root.get_node_or_null("SetPieces")
+	if pieces == null:
+		return out
+	for c: Node in pieces.get_children():
+		if c.has_meta("footprint"):
+			out.append(c.get_meta("footprint"))
+	return out
+
+
+static func _in_any(pos: Vector3, rects: Array[Rect2], grow: float) -> bool:
+	for r: Rect2 in rects:
+		if r.grow(grow).has_point(Vector2(pos.x, pos.z)):
+			return true
+	return false
 
 
 ## Positions of the accent props (not the cover).

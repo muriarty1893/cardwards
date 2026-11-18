@@ -177,32 +177,48 @@ func anchor(player: int, lane: int) -> Vector3:
 
 
 ## Where `player`'s creature in `lane` may wander (world x/z): the half-lane's front part (seam
-## side), inset from the lane edges and the seam.
+## side), inset from the lane edges and the seam, stopping short of the boop plate row.
 func roam_rect(player: int, lane: int) -> Rect2:
+	return roam_rect_for(layout, player, lane)
+
+
+static func roam_rect_for(lay: BoardLayout, player: int, lane: int) -> Rect2:
 	var s: float = 1.0 if player == 0 else -1.0
 	var near: float = SEAM / 2.0 + ROAM_INSET
 	var far: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH) - 0.1 - ROAM_BACK
 	var z0: float = minf(near * s, far * s)
-	var span: Vector2 = layout.inner_span(lane, z0, z0 + far - near)
+	var span: Vector2 = lay.inner_span(lane, z0, z0 + far - near)
 	return Rect2(span.x + ROAM_INSET, z0, span.y - span.x - 2.0 * ROAM_INSET, far - near)
 
 
 ## Centre of the half-lane's back part (owner's edge), on the tile surface.
 func building_point(player: int, lane: int) -> Vector3:
+	return building_point_for(layout, player, lane)
+
+
+static func building_point_for(lay: BoardLayout, player: int, lane: int) -> Vector3:
 	var s: float = 1.0 if player == 0 else -1.0
 	var z: float = (SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH / 2.0)) * s
-	return Vector3(layout.centre_x(lane, z), Island.TOP_Y, z)
+	return Vector3(lay.centre_x(lane, z), Island.TOP_Y, z)
 
 
 ## Where a creature's house stands (tile surface).
 func house_point(player: int, lane: int) -> Vector3:
+	return house_point_for(layout, player, lane)
+
+
+static func house_point_for(lay: BoardLayout, player: int, lane: int) -> Vector3:
 	var z: float = HOUSE_Z * (1.0 if player == 0 else -1.0)
-	return Vector3(layout.right_x(lane, z) - (Island.WIDTH / 2.0 - HOUSE_X), Island.TOP_Y, z)
+	return Vector3(lay.right_x(lane, z) - (Island.WIDTH / 2.0 - HOUSE_X), Island.TOP_Y, z)
 
 
 ## The centre of the human's boop plate in `lane`.
 func boop_point(lane: int) -> Vector3:
-	return Vector3(layout.centre_x(lane, PLATE_Z), Island.TOP_Y, PLATE_Z)
+	return boop_point_for(layout, lane)
+
+
+static func boop_point_for(lay: BoardLayout, lane: int) -> Vector3:
+	return Vector3(lay.centre_x(lane, PLATE_Z), Island.TOP_Y, PLATE_Z)
 
 
 func boop_plate(lane: int) -> BoopPlate:

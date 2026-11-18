@@ -7,7 +7,9 @@ func test_props_clear_of_pieces() -> bool:
 		for p: int in 2:
 			var root: Node3D = LaneDressing.build(land, p, p * 4 + land, 1.0)
 			var pos: Array[Vector3] = LaneDressing.prop_positions(root)
-			assert_true(pos.size() >= 4 and pos.size() <= 8, "4-8 accent props land %d p%d (%d)" % [land, p, pos.size()])
+			# Lands with set pieces get 2-4 small accent props; bare Meadow 4-6.
+			var lo: int = 4 if LaneDressing.set_piece_rects(root).is_empty() else 2
+			assert_true(pos.size() >= lo and pos.size() <= lo + 2, "%d-%d accent props land %d p%d (%d)" % [lo, lo + 2, land, p, pos.size()])
 			for v: Vector3 in pos:
 				assert_true(LaneDressing.is_clear(v, p), "prop %s clear land %d p%d" % [v, land, p])
 			root.free()

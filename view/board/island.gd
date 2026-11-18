@@ -15,6 +15,11 @@ const MORPH_TIME := 1.1
 const FIELD_FADE := 1.2
 
 var land: int = 0
+## The land's look (0..2) and set-piece corner (0 left, 1 right), rolled each time the land is set.
+var variant: int = 0
+var corner: int = 0
+## How many times the land has changed (feeds the look roll).
+var changes: int = 0
 var highlight: Highlight = Highlight.OFF
 var _mat: ShaderMaterial
 
@@ -35,6 +40,7 @@ func setup(land_type: int, player: int = 0, lane: int = 0, density: float = 1.0,
 	_player = player
 	_lane = lane
 	shape = shape_ if shape_ else TileShape.straight(lane, position.z)
+	_roll()
 	var plane := PlaneMesh.new()
 	# Wide enough for the lane at its widest; the shader clips to the curves.
 	_mesh_size = Vector2(2.0 * shape.max_half_extent() + 0.04, LENGTH)
@@ -66,7 +72,7 @@ func set_density(density: float) -> void:
 	_density = density
 	if is_instance_valid(_dressing):
 		_dressing.free()
-	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, density, shape)
+	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, density, shape, variant, corner)
 	_dressing.position.y = TOP_Y
 	add_child(_dressing)
 
@@ -78,6 +84,8 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 		return
 	var old: int = land
 	land = new_land
+	changes += 1
+	_roll()
 	# A change while the last one is still sweeping: finish that one first.
 	if _wipe and _wipe.is_valid():
 		_wipe.kill()
@@ -85,7 +93,7 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 	_mat.set_shader_parameter("land", new_land)
 	_mat.set_shader_parameter("morph_origin", origin)
 	var old_dressing: Node3D = _dressing
-	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, _density, shape)
+	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, _density, shape, variant, corner)
 	_dressing.position.y = TOP_Y
 	add_child(_dressing)
 	if not animate or not is_inside_tree():
@@ -105,9 +113,11 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 	var grow := create_tween()
 	grow.tween_interval(MORPH_TIME * 0.35)
 	grow.tween_property(cover, "scale", Vector3.ONE, MORPH_TIME * 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	# Props pop up one by one as the front reaches them.
+	# Props and set pieces pop up one by one as the front reaches them.
 	var reach: float = Vector2(WIDTH, LENGTH).length() + 0.6
-	for prop: Node in _dressing.get_node("Accents").get_children():
+	var pops: Array[Node] = _dressing.get_node("Accents").get_children()
+	pops.append_array(_dressing.get_node("SetPieces").get_children())
+	for prop: Node in pops:
 		var n := prop as Node3D
 		var d: float = Vector2(n.position.x, n.position.z).distance_to(origin)
 		var full: Vector3 = n.scale
@@ -115,6 +125,19 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 		var pop := n.create_tween()
 		pop.tween_interval(MORPH_TIME * clampf(d / reach, 0.0, 1.0))
 		pop.tween_property(n, "scale", full, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Variant (x) and corner (y) for player `p`'s tile in `lane` after `n` land changes, from the layout seed.
+static func roll_look(seed: int, p: int, lane: int, n: int) -> Vector2i:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([seed, p, lane, n, 0x1a4d])
+	return Vector2i(rng.randi() % LaneDressing.VARIANTS, rng.randi() % 2)
+
+
+func _roll() -> void:
+	var r: Vector2i = roll_look(shape.layout.seed, _player, _lane, changes)
+	variant = r.x
+	corner = r.y
 
 
 ## A field's weather over the tile (`field_land` -1 clears it), faded in or out.
