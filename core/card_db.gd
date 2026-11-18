@@ -42,6 +42,12 @@ static func dream_up_pool(filter_kind: int, filter_land: int) -> Array[CardData]
 
 static func deck(id: StringName) -> DeckData:
 	_ensure_loaded()
+	if DeckStore.is_custom(id):
+		var custom: DeckData = DeckStore.find(id)
+		if custom and DeckStore.validate(custom.cards) == "":
+			return custom
+		push_warning("CardDB: custom deck '%s' missing or not legal; using %s" % [id, DECK_ORDER[0]])
+		return _decks[DECK_ORDER[0]]
 	if not _decks.has(id):
 		push_error("CardDB: unknown deck id '%s'" % id)
 		return null

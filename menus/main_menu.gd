@@ -1,6 +1,7 @@
 extends Node3D
 ## Title screen over the table in the cottage, the camera drifting gently from the player's side:
-## pick a deck and difficulty, then play.
+## pick a deck (a starter or one of your own) and difficulty, then play. DECKS opens the deck
+## viewer and builder.
 
 const FLAVOUR: Dictionary = {
 	&"grove_guard": "Outlast them with healing.",
@@ -14,6 +15,7 @@ var _t: float = 0.0
 var _deck_buttons: Dictionary = {}
 var _diff_buttons: Array[Button] = []
 var _ui_root: Control
+var _custom_row: HBoxContainer
 
 
 func _ready() -> void:
@@ -40,6 +42,11 @@ func _ready() -> void:
 	Outline.attach(_cam)
 	_build_ui()
 	Audio.music(GameAudio.MENU_MUSIC)
+	if "--deck-builder" in OS.get_cmdline_user_args():
+		var builder: DeckBuilder = open_deck_builder()
+		for arg: String in OS.get_cmdline_user_args():
+			if arg == "--deck-builder-new":
+				builder.copy_deck()
 
 
 func _process(delta: float) -> void:
@@ -99,6 +106,12 @@ func _build_ui() -> void:
 		UiStyle.sound_button(btn)
 		decks.add_child(btn)
 		_deck_buttons[d.id] = btn
+	_custom_row = HBoxContainer.new()
+	_custom_row.name = "CustomDecks"
+	_custom_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_custom_row.add_theme_constant_override("separation", 10)
+	vb.add_child(_custom_row)
+	_fill_custom_row()
 	var diff := HBoxContainer.new()
 	diff.alignment = BoxContainer.ALIGNMENT_CENTER
 	diff.add_theme_constant_override("separation", 8)
@@ -119,6 +132,10 @@ func _build_ui() -> void:
 	play.custom_minimum_size = Vector2(200, 0)
 	play.pressed.connect(_play)
 	row.add_child(play)
+	var decks_b := MenuButtons.big("DECKS", Color.WHITE, 20)
+	decks_b.name = "DecksButton"
+	decks_b.pressed.connect(open_deck_builder)
+	row.add_child(decks_b)
 	var settings := MenuButtons.big("SETTINGS", Color.WHITE, 20)
 	settings.pressed.connect(func() -> void: _open_panel(SettingsPanel.make()))
 	row.add_child(settings)
@@ -130,6 +147,8 @@ func _build_ui() -> void:
 		var quit := MenuButtons.big("QUIT", Color.WHITE, 20)
 		quit.pressed.connect(func() -> void: get_tree().quit())
 		row.add_child(quit)
+	if DeckStore.is_custom(Session.player_deck) and not _deck_buttons.has(Session.player_deck):
+		Session.player_deck = CardDB.DECK_ORDER[0]
 	_select_deck(Session.player_deck)
 	_select_difficulty(Session.difficulty)
 	play.grab_focus()
@@ -156,6 +175,48 @@ func _open_panel(panel: PanelContainer) -> void:
 	dim.add_child(center)
 	center.add_child(panel)
 	panel.connect("closed", dim.queue_free)
+
+
+## Your legal decks as smaller buttons under the starters.
+func _fill_custom_row() -> void:
+	for k: StringName in _deck_buttons.keys():
+		if DeckStore.is_custom(k):
+			_deck_buttons.erase(k)
+	for c: Node in _custom_row.get_children():
+		c.free()
+	var mine: Array[DeckData] = DeckStore.all().filter(func(d: DeckData) -> bool: return DeckStore.validate(d.cards) == "")
+	_custom_row.visible = not mine.is_empty()
+	if mine.is_empty():
+		return
+	var l := UiStyle.title(UiStyle.label("YOUR DECKS", 16, Color.WHITE)) as Label
+	l.add_theme_color_override("font_outline_color", UiStyle.WOOD_INK)
+	l.add_theme_constant_override("outline_size", 8)
+	_custom_row.add_child(l)
+	for d: DeckData in mine:
+		var b := MenuButtons.big(d.display_name, Color.WHITE, 16)
+		b.name = "Deck_%s" % d.id
+		b.toggle_mode = true
+		var on := UiStyle.panel(Palette.LAND_CARD[d.lands[0]], 14)
+		on.set_border_width_all(6)
+		b.add_theme_stylebox_override("pressed", on)
+		b.pressed.connect(_select_deck.bind(d.id))
+		_custom_row.add_child(b)
+		_deck_buttons[d.id] = b
+
+
+func open_deck_builder() -> DeckBuilder:
+	var builder := DeckBuilder.new()
+	_ui_root.add_child(builder)
+	builder.deck_chosen.connect(func(id: StringName) -> void:
+		_fill_custom_row()
+		_select_deck(id))
+	builder.closed.connect(func() -> void:
+		_fill_custom_row()
+		if not _deck_buttons.has(Session.player_deck):
+			_select_deck(CardDB.DECK_ORDER[0])
+		else:
+			_select_deck(Session.player_deck))
+	return builder
 
 
 func _select_deck(id: StringName) -> void:
