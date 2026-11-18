@@ -8,9 +8,9 @@ const MEADOW := CardData.Land.NEUTRAL
 ## Home quirk per land (MUSHROOM, EMBER, CANDY, FROST).
 const QUIRKS: Array[String] = ["Rooted", "Fired up", "Plump", "Ice skin"]
 const QUIRK_RULES: Array[String] = [
-	"Heals 1 at the start of your turn.",
+	"Heals 2 at the start of your turn.",
 	"+1 ATK.",
-	"+1 HP.",
+	"+1 ATK and +1 HP.",
 	"Takes 1 less damage from attacks and hit-back (minimum 1).",
 ]
 ## Spell land → lane land → reaction (spec 4).

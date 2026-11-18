@@ -379,12 +379,12 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 
 # --- Triggers, stats, damage and deaths --------------------------------------
 
-## Start of p's turn: creatures at home on Mushroom Forest heal 1 (Rooted); Grove heals the hero.
+## Start of p's turn: creatures at home on Mushroom Forest heal 2 (Rooted); Grove heals the hero.
 static func _start_of_turn_lands(s: GameState, p: int, ev: Array[GameEvent]) -> void:
 	for l: int in GameState.LANES:
 		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
 		if cr and cr.damage > 0 and Lands.home(s, p, l) == CardData.Land.MUSHROOM:
-			heal_creature(s, p, l, 1, ev)
+			heal_creature(s, p, l, 2, ev)
 	var grove: int = Tribes.grove_heal(s, p)
 	if grove > 0 and s.players[p].hero_hp < GameState.MAX_HP:
 		ev.append(GameEvent.make(&"tribe_bonus", {"player": p, "tribe": &"sprout"}))
@@ -398,13 +398,14 @@ static func _run_lane_triggers(s: GameState, p: int, trigger: StringName, ev: Ar
 			Effects.run(s, p, l, b, trigger, [], ev)
 
 
-## Printed ATK plus buffs, building auras, home (Fired up), tribe (Pack), level and field.
+## Printed ATK plus buffs, building auras, home (Fired up, Plump), tribe (Pack), level and field.
 static func effective_attack(s: GameState, p: int, lane: int) -> int:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
 		return 0
 	var atk: int = cr.card.attack + cr.atk_bonus + _aura(s, p, lane, &"lane_atk") - _aura(s, s.opponent(p), lane, &"opposing_atk")
-	if Lands.home(s, p, lane) == CardData.Land.EMBER:
+	var home: int = Lands.home(s, p, lane)
+	if home == CardData.Land.EMBER or home == CardData.Land.CANDY:
 		atk += 1
 	atk += Tribes.atk_bonus(s, p, lane) + Levels.bonus(cr) + Fields.atk_bonus(s, p, lane)
 	return maxi(atk, 0)

@@ -239,21 +239,10 @@ static func _mesh(kind: StringName) -> Mesh:
 				var col: Color = Color("#ff5a9a").srgb_to_linear() if r % 2 == 0 else Color(1, 1, 1)
 				_append(st, Palette.cylinder(0.32 - 0.1 * r, 0.32 - 0.1 * r, 0.07 + 0.01 * r, 14), Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, 0.95, 0.005 * r)), col)
 		&"flower":
-			_append(st, Palette.cylinder(0.03, 0.04, 0.6, 5), Transform3D(Basis(), Vector3(0, 0.3, 0)), Color(0.32, 0.62, 0.24))
-			for i: int in 5:
-				var a: float = float(i) / 5.0 * TAU
-				var petal := SphereMesh.new()
-				petal.radius = 0.11
-				petal.height = 0.12
-				petal.radial_segments = 6
-				petal.rings = 2
-				_append(st, petal, Transform3D(Basis(), Vector3(cos(a) * 0.12, 0.64, sin(a) * 0.12)), Color(1, 1, 1))
-			var eye := SphereMesh.new()
-			eye.radius = 0.08
-			eye.height = 0.12
-			eye.radial_segments = 6
-			eye.rings = 2
-			_append(st, eye, Transform3D(Basis(), Vector3(0, 0.67, 0)), Color(1.0, 0.75, 0.15))
+			# Cheap: a stem, a flat petal disc and a raised eye (~60 triangles).
+			_append(st, Palette.cylinder(0.03, 0.04, 0.6, 4), Transform3D(Basis(), Vector3(0, 0.3, 0)), Color(0.32, 0.62, 0.24))
+			_append(st, Palette.cylinder(0.24, 0.2, 0.05, 7), Transform3D(Basis(), Vector3(0, 0.63, 0)), Color(1, 1, 1))
+			_append(st, Palette.cylinder(0.07, 0.09, 0.08, 6), Transform3D(Basis(), Vector3(0, 0.67, 0)), Color(1.0, 0.75, 0.15))
 		&"crystal":
 			for i: int in 3:
 				var h: float = [1.0, 0.7, 0.55][i]

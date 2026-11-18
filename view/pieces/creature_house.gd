@@ -88,6 +88,8 @@ func _build() -> void:
 				var dot := SphereMesh.new()
 				dot.radius = 0.03
 				dot.height = 0.06
+				dot.radial_segments = 6
+				dot.rings = 3
 				body.add_child(Palette.mesh(dot, Toon.plain(cols[i]), Vector3(-0.15 + 0.1 * i, 0.27, -0.175)))
 			body.add_child(Palette.mesh(_box(Vector3(0.11, 0.16, 0.03)), Toon.plain(Color("#ffffff")), Vector3(0.07, 0.08, -0.175)))
 			_window = Palette.mesh(_box(Vector3(0.07, 0.07, 0.02)), _window_mat, Vector3(-0.1, 0.16, -0.175), false)

@@ -1,8 +1,9 @@
 # Dream Isles: Living board design (tabletop part 2)
 
-Date: 2026-11-18. Branch: `feat/tabletop`. Status: decided by Claude under the user's "full
-permission" (the user was away; their list is below). Every rule here is a default the user can
-overrule after playing.
+Date: 2026-11-18. Branch: `feat/tabletop`. Status: **built** (commits 92ae4ca..). Decided by
+Claude under the user's "full permission" (the user was away; their list is below). Every rule
+here is a default the user can overrule after playing. Build notes and rulings:
+`.superpowers/sdd/2026-11-18-living-board/progress.md`.
 
 ## 1. The user's list (2026-11-18, after playing the tabletop build)
 
@@ -39,9 +40,9 @@ overrule after playing.
 
 | Land | Quirk | Rule |
 |---|---|---|
-| Mushroom Forest | Rooted | Heals 1 at the start of your turn. |
+| Mushroom Forest | Rooted | Heals 2 at the start of your turn. |
 | Ember Flats | Fired up | +1 ATK. |
-| Candy Hills | Plump | +1 HP. |
+| Candy Hills | Plump | +1 ATK and +1 HP. |
 | Frostpeak | Ice skin | Takes 1 less damage from attacks and hit-back (minimum 1). |
 
   Creatures on another land or on Meadow get nothing (no penalty).
@@ -68,7 +69,8 @@ Reactions show a name over the lane ("MELT!") and their own effect.
 | Mushroom → Mushroom Forest | **Bloom** | Heals 2 more. |
 | Mushroom → Meadow | **Sprout** | The lane grows into Mushroom Forest. |
 
-Reactions come only from spells (field spells included), once per target per effect. Melt and
+Reactions come only from spells (not field spells, not creature or building abilities), once
+per target per effect. Melt and
 Bloom change the amount; the others happen after the effect.
 
 ## 5. Tribes
@@ -167,6 +169,12 @@ Changed cards (armour, tribe conditions, level-up steps):
 | Snowmite | Level up: freeze the opposing creature. |
 
 Decks swap 2–3 cards each for the new ones (one field and one armour card per deck).
+
+## 10b. Fatigue
+
+Drawing from an empty deck now hurts 2, then 3, 4, … (was always 2): with Rooted, Grove and
+armour, a Grove Guard mirror could otherwise heal through fatigue forever (an AI-vs-AI match ran
+2600 turns).
 
 ## 11. AI
 
