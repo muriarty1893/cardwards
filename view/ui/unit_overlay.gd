@@ -9,6 +9,8 @@ const GREEN := Color("#3ad16a")
 const YELLOW := Color("#ffcf3a")
 const RED := Color("#e5384f")
 const DRAIN := 0.3
+## Where your building's badge sits relative to the building (front-right foot).
+const BADGE_NEAR := Vector3(0.6, 0.25, 0.35)
 const HOVER_SCALE := 1.6
 
 var _m: MatchController
@@ -190,7 +192,9 @@ func _process(_delta: float) -> void:
 			var badge: Control = _badges[p][l]
 			var bv: Variant = _m.building_views[p][l]
 			if badge.visible and is_instance_valid(bv):
-				badge.position = cam.unproject_position((bv as Node3D).global_position + Vector3(0, BuildingView.HEIGHT + 0.25, 0)) - badge.size / 2.0
+				# Yours sit at the building's front-right foot so they never cover the boop plate in front of it.
+				var off: Vector3 = BADGE_NEAR if p == MatchController.HUMAN else Vector3(0, BuildingView.HEIGHT + 0.25, 0)
+				badge.position = cam.unproject_position((bv as Node3D).global_position + off) - badge.size / 2.0
 	_hover_plates(cam)
 	_update_hover()
 

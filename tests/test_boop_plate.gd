@@ -71,3 +71,27 @@ func test_plate_clear_of_zones() -> bool:
 				assert_true(plate.position.x > b.layout.left_x(l, z) + 0.05 and plate.end.x < b.layout.right_x(l, z) - 0.05, "seed %d plate %d inside its lane" % [seed, l])
 		b.free()
 	return true
+
+
+func test_building_badge_clear_of_plate() -> bool:
+	var m: MatchController = await Fx.load_match()
+	for l: int in 4:
+		Fx.put_building(m.state, 0, l, &"kiln_tower")
+	m.sync_all(); m.refresh_ui()
+	var tree := Engine.get_main_loop() as SceneTree
+	await tree.process_frame
+	await tree.process_frame
+	var cam: Camera3D = m.rig.camera
+	for l: int in 4:
+		var bp: Vector3 = m.board.boop_point(l) + Vector3(0, BoopPlate.REST_Y + 0.05, 0)
+		var pts: Array[Vector2] = []
+		for sx: float in [-0.5, 0.5]:
+			for sz: float in [-0.5, 0.5]:
+				pts.append(cam.unproject_position(bp + Vector3(sx * BoopPlate.SIZE.x, 0, sz * BoopPlate.SIZE.y)))
+		var plate := Rect2(pts[0], Vector2.ZERO)
+		for v: Vector2 in pts:
+			plate = plate.expand(v)
+		var badge: Rect2 = m.overlay.badge(0, l).get_global_rect()
+		assert_true(not badge.intersects(plate.grow(-4.0)), "lane %d badge %s clear of the plate %s" % [l, badge, plate])
+	m.queue_free()
+	return true

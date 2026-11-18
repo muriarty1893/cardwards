@@ -98,6 +98,9 @@ func _ready() -> void:
 		return
 	if "--full-board" in OS.get_cmdline_user_args():
 		_demo_full_board()
+	if "--demo-expansion" in OS.get_cmdline_user_args():
+		_demo_expansion()
+		return
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--demo-living"):
 			_demo_living(arg.substr(14) if arg.length() > 14 else "volcano")
@@ -207,6 +210,24 @@ func _demo_full_board() -> void:
 	sync_all()
 
 
+## Dev view of board look 2 + card expansion 2 (screenshots): every land claimed (so each shows a look), merged
+## creatures and the new buildings, with the board already split.
+func _demo_expansion() -> void:
+	var lands: Array[Array] = [[0, 1, 2, 3], [3, 2, 1, 0]]
+	var ids: Array[StringName] = [&"sporemoth", &"twinflame_hound", &"gummy_goliath", &"glacial_wisp", &"snowfang_alpha", &"candyfloss_bat", &"magma_wraith", &"mossback_colossus"]
+	for p: int in 2:
+		for l: int in 4:
+			state.players[p].lanes[l].land = lands[p][l]
+			_demo_put(p, l, ids[p * 4 + l])
+	state.players[0].lanes[1].building = CardDB.card(&"bellows_forge")
+	state.players[0].lanes[3].building = CardDB.card(&"frost_lookout")
+	state.players[1].lanes[1].building = CardDB.card(&"gingerbread_gate")
+	state.players[1].lanes[3].building = CardDB.card(&"fairy_ring")
+	sync_all()
+	board.reveal_split(false)
+	refresh_ui()
+
+
 ## Dev view of the living board (screenshots): claimed lands, a field (--demo-living=<field id>),
 ## levelled creatures, buildings and armour.
 func _demo_living(field_id: String) -> void:
@@ -225,6 +246,7 @@ func _demo_living(field_id: String) -> void:
 		state.field = CardDB.card(StringName(field_id))
 		state.field_owner = 1
 	sync_all()
+	board.reveal_split(false)
 	refresh_ui()
 
 
