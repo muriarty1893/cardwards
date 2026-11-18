@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_glacial_wisp_0"]
+script = ExtResource("2_eff")
+when = &"on_boop"
+op = &"freeze"
+who = &"chosen_enemy_creature"
+
+[sub_resource type="Resource" id="eff_glacial_wisp_1"]
+script = ExtResource("2_eff")
+when = &"on_level_up"
+op = &"give_keyword"
+who = &"self"
+keyword = &"bubble"
+
+[resource]
+script = ExtResource("1_card")
+id = &"glacial_wisp"
+display_name = "Glacial Wisp"
+land = 3
+level = 1
+cost = 4
+attack = 3
+health = 5
+keywords = Array[StringName]([&"bubble"])
+tribe = &"spirit"
+effects = Array[ExtResource("2_eff")]([SubResource("eff_glacial_wisp_0"), SubResource("eff_glacial_wisp_1")])
+collectible = false

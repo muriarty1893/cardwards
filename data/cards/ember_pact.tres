@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_ember_pact_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"damage"
+amount = 3
+who = &"own_hero"
+
+[sub_resource type="Resource" id="eff_ember_pact_1"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"draw"
+amount = 2
+who = &"own_hero"
+
+[resource]
+script = ExtResource("1_card")
+id = &"ember_pact"
+display_name = "Ember Pact"
+kind = 2
+land = 1
+cost = 1
+effects = Array[ExtResource("2_eff")]([SubResource("eff_ember_pact_0"), SubResource("eff_ember_pact_1")])

@@ -2,7 +2,7 @@ class_name EffectData
 extends Resource
 ## One step of a card's ability (spec 5.1): when it runs, what it does, how much, and to whom.
 
-## on_play, on_boop, on_destroyed, after_damage, start_of_turn, end_of_turn, aura, on_level_up;
+## on_play, on_boop, on_destroyed, after_damage, on_hurt (this took damage), start_of_turn, end_of_turn, aura, on_level_up;
 ## field spells: field_aura, field_start, field_end
 @export var when: StringName = &""
 @export var op: StringName = &""

@@ -20,3 +20,5 @@ attack = 2
 health = 4
 effects = Array[ExtResource("1_gcsmx")]([SubResource("Resource_6acrf")])
 tribe = &"blob"
+merge_with = &"gummy_cub"
+merges_into = &"gummy_goliath"

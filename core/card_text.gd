@@ -6,7 +6,7 @@ extends RefCounted
 const _PREFIX: Dictionary = {
 	&"on_boop": "Boop: ", &"on_destroyed": "When destroyed: ",
 	&"start_of_turn": "Start of your turn: ", &"end_of_turn": "End of your turn: ",
-	&"after_damage": "After this damages a creature, ",
+	&"after_damage": "After this damages a creature, ", &"on_hurt": "After this takes damage, ",
 	&"on_level_up": "Level up: ", &"field_start": "Start of each turn: ", &"field_end": "End of each turn: ",
 }
 ## How each `who` reads as the object of a sentence.
@@ -103,6 +103,9 @@ static func _render(c: CardData, bold: bool) -> String:
 			i += 2
 			continue
 		var sentence: String = _phrase(e, bold)
+		# A prefix ending in a comma ("After this takes damage, ") continues the sentence.
+		if prefix.ends_with(", ") and not sentence.begins_with("["):
+			sentence = sentence.substr(0, 1).to_lower() + sentence.substr(1)
 		i += 1
 		while i < effs.size() and effs[i].who == &"same_target" and effs[i].combo == e.combo:
 			sentence += " and " + _phrase(effs[i], bold)

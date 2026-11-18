@@ -38,12 +38,14 @@ static func collectible_cards() -> Array[CardData]:
 	return out
 
 
-## Every card that merges into `into` (its two partners), in display order.
+## Every card that merges into `into` (its two partners): the costlier first (ties by name).
 static func merge_partners(into: StringName) -> Array[CardData]:
 	var out: Array[CardData] = []
 	for c: CardData in all_cards():
 		if c.merges_into == into:
 			out.append(c)
+	out.sort_custom(func(a: CardData, b: CardData) -> bool:
+		return a.cost > b.cost if a.cost != b.cost else a.display_name < b.display_name)
 	return out
 
 
@@ -122,9 +124,13 @@ static func _ensure_loaded() -> void:
 
 ## Display order inside each land (matches the spec tables).
 const _ORDER: Array[StringName] = [
-	&"sporeling", &"mossback", &"puffcap", &"glimmer_morel", &"rootstalker", &"elder_shroomhulk", &"spore_hut", &"glowcap_lantern", &"rain_of_spores", &"regrowth", &"bark_shield", &"spore_bloom",
-	&"cinderpup", &"ashmite", &"flarebeak", &"magmaw", &"blazehorn", &"inferno_drake", &"kiln_tower", &"smokestack", &"fireball", &"ember_rain", &"volcano",
-	&"gumdrop", &"taffy_snail", &"lollibat", &"sugar_sprite", &"jellywobble", &"bonbon_behemoth", &"sugar_shack", &"candy_mill", &"sugar_rush", &"swap_trick", &"candy_shell", &"sugar_rain",
-	&"snowmite", &"iceling", &"frostfang", &"glacier_tortoise", &"rimewing", &"blizzard_titan", &"ice_wall", &"frost_spire", &"cold_snap", &"avalanche", &"snowstorm",
+	&"sporeling", &"glowmoth", &"mossback", &"barkbeetle", &"puffcap", &"glimmer_morel", &"pain_shroom", &"rootstalker", &"elder_shroomhulk", &"spore_hut", &"glowcap_lantern", &"fairy_ring", &"rain_of_spores", &"regrowth", &"bark_shield", &"bark_coat", &"deep_roots", &"grove_roar", &"thorn_lash", &"spore_bloom",
+	&"sporemoth", &"mossback_colossus",
+	&"hot_head", &"cinderpup", &"emberkit", &"ashmite", &"cinder_wisp", &"flarebeak", &"magmaw", &"blazehorn", &"inferno_drake", &"kiln_tower", &"smokestack", &"bellows_forge", &"stoke", &"overheat", &"ember_pact", &"fireball", &"finish_off", &"ember_rain", &"volcano",
+	&"twinflame_hound", &"magma_wraith",
+	&"gummy_cub", &"gumdrop", &"taffy_snail", &"cotton_puff", &"sugar_smuggler", &"lollibat", &"sugar_sprite", &"jellywobble", &"bonbon_behemoth", &"sugar_shack", &"candy_mill", &"gingerbread_gate", &"sugar_shiv", &"sugar_high", &"sugar_rush", &"swap_trick", &"jawbreaker", &"taffy_pull", &"candy_shell", &"sugar_rain",
+	&"gummy_goliath", &"candyfloss_bat",
+	&"snowmite", &"iceling", &"frostwisp", &"frostfang", &"snow_pup", &"glacier_tortoise", &"ice_sage", &"rimewing", &"blizzard_titan", &"ice_wall", &"frost_spire", &"frost_lookout", &"cold_snap", &"icicle", &"crack_the_ice", &"avalanche", &"whiteout", &"snowmanify", &"snowstorm",
+	&"glacial_wisp", &"snowfang_alpha", &"snowman",
 	&"star_shard",
 ]

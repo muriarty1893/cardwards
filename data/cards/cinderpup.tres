@@ -32,3 +32,5 @@ health = 1
 tribe = &"beast"
 keywords = Array[StringName]([&"dash"])
 effects = Array[ExtResource("1_0rm4b")]([SubResource("Resource_lb_cinderpup_0"), SubResource("Resource_lb_cinderpup_1")])
+merge_with = &"emberkit"
+merges_into = &"twinflame_hound"

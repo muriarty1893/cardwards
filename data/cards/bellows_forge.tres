@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_bellows_forge_0"]
+script = ExtResource("2_eff")
+when = &"start_of_turn"
+op = &"damage"
+amount = 1
+who = &"lane_creature"
+
+[sub_resource type="Resource" id="eff_bellows_forge_1"]
+script = ExtResource("2_eff")
+when = &"start_of_turn"
+op = &"buff"
+amount = 2
+who = &"same_target"
+
+[resource]
+script = ExtResource("1_card")
+id = &"bellows_forge"
+display_name = "Bellows Forge"
+kind = 1
+land = 1
+cost = 2
+effects = Array[ExtResource("2_eff")]([SubResource("eff_bellows_forge_0"), SubResource("eff_bellows_forge_1")])

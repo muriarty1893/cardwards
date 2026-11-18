@@ -22,3 +22,5 @@ health = 3
 tribe = &"spirit"
 keywords = Array[StringName]([&"bubble"])
 effects = Array[ExtResource("1_3q2xb")]([SubResource("Resource_lb_iceling_0")])
+merge_with = &"frostwisp"
+merges_into = &"glacial_wisp"

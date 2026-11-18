@@ -21,3 +21,5 @@ health = 5
 tribe = &"blob"
 keywords = Array[StringName]([&"guard"])
 effects = Array[ExtResource("1_mwk3e")]([SubResource("Resource_lb_mossback_0")])
+merge_with = &"barkbeetle"
+merges_into = &"mossback_colossus"

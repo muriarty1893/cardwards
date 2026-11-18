@@ -20,3 +20,5 @@ attack = 3
 health = 3
 effects = Array[ExtResource("1_nggxj")]([SubResource("Resource_vgksa")])
 tribe = &"beast"
+merge_with = &"snow_pup"
+merges_into = &"snowfang_alpha"

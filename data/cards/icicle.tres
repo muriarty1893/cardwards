@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_icicle_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"damage"
+amount = 4
+who = &"chosen_creature"
+cond = &"target_frozen"
+
+[sub_resource type="Resource" id="eff_icicle_1"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"freeze"
+who = &"same_target"
+cond = &"target_not_frozen"
+
+[resource]
+script = ExtResource("1_card")
+id = &"icicle"
+display_name = "Icicle"
+kind = 2
+land = 3
+cost = 1
+effects = Array[ExtResource("2_eff")]([SubResource("eff_icicle_0"), SubResource("eff_icicle_1")])

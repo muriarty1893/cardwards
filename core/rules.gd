@@ -556,6 +556,9 @@ static func damage_creature(s: GameState, p: int, lane: int, amount: int, src: D
 	if dealt > 0 and sc:
 		_leech(s, sp, sl, dealt, ev)
 		Effects.run(s, sp, sl, sc.card, &"after_damage", [], ev, {"damaged": {"player": p, "lane": lane}})
+	# "After this takes damage" (Pain Shroom, Emberkit): the damaged creature's own trigger.
+	if dealt > 0 and s.players[p].lanes[lane].creature == cr:
+		Effects.run(s, p, lane, cr.card, &"on_hurt", [], ev)
 	return dealt
 
 

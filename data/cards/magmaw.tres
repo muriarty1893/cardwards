@@ -21,3 +21,5 @@ attack = 4
 health = 4
 effects = Array[ExtResource("1_wtdnw")]([SubResource("Resource_bq2fo")])
 tribe = &"spirit"
+merge_with = &"cinder_wisp"
+merges_into = &"magma_wraith"

@@ -130,7 +130,7 @@ func test_merge_text() -> bool:
 	assert_true(CardText.render(cs[1]).ends_with("Merges with mpa."), "partner text (%s)" % CardText.render(cs[1]))
 	var t: String = CardText.render(cs[2])
 	assert_true(t.contains("When merged: Draw a card."), "merged form's on-play reads When merged (%s)" % t)
-	assert_true(t.contains("Merged form of mpa + mpb."), "names its partners (%s)" % t)
+	assert_true(t.contains("Merged form of mpb + mpa."), "names its partners (%s)" % t)
 	_cleanup()
 	return true
 

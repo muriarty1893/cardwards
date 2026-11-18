@@ -160,7 +160,8 @@ func test_dream_up_small_pool_and_full_hand() -> bool:
 	var s: GameState = Fx.blank()
 	var ev: Array[GameEvent] = []
 	Rules.offer_dream_up(s, 0, CardData.Kind.BUILDING, CardData.Land.CANDY, ev)
-	assert_eq(s.pending_choice.size(), 2, "only the two candy buildings")
+	var pool: int = CardDB.dream_up_pool(CardData.Kind.BUILDING, CardData.Land.CANDY).size()
+	assert_eq(s.pending_choice.size(), mini(3, pool), "offers the whole small pool (%d candy buildings)" % pool)
 	for i: int in GameState.HAND_LIMIT:
 		s.players[0].hand.append(CardDB.card(&"mossback"))
 	var picked: CardData = s.pending_choice[0]

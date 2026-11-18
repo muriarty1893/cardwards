@@ -2,21 +2,41 @@ extends TestCase
 ## Card data matches the Rules 2.0 spec (section 6) and the living board spec (section 10):
 ## numbers, keywords and generated text.
 
-const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura", &"on_level_up", &"field_aura", &"field_start", &"field_end"]
+const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura", &"on_level_up", &"field_aura", &"field_start", &"field_end", &"on_hurt"]
 const OPS: Array[StringName] = [
 	&"damage", &"heal", &"draw", &"freeze", &"gain_magic", &"hush", &"return_building", &"move", &"swap",
 	&"dream_up", &"return_from_discard", &"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken",
 	&"opposing_atk", &"buff", &"give_keyword", &"destroy", &"armour", &"sprout_meadow", &"land_draw",
 	&"on_land_atk", &"off_land_atk", &"on_land_hp", &"no_quirk",
+	&"temp_atk", &"doom", &"grow_magic", &"bounce", &"spell_discount", &"transform",
 ]
 const WHOS: Array[StringName] = [
 	&"chosen_creature", &"chosen_own_creature", &"chosen_own_empty_lane", &"chosen_two_own_creatures",
 	&"chosen_discard_creature", &"self", &"opposing", &"damaged_creature", &"lane_creature",
 	&"all_enemy_creatures", &"all_own_creatures", &"enemy_hero", &"own_hero", &"same_target", &"own_on_land",
+	&"chosen_enemy_creature", &"chosen_damaged_enemy", &"chosen_undamaged_creature", &"chosen_frozen_enemy", &"other_enemies",
 ]
 
-## id: [level, cost, atk, hp, keywords, spell_power] (spec section 6).
+## id: [level, cost, atk, hp, keywords, spell_power] (spec section 6; card expansion 2 spec 5).
 const SPEC: Dictionary = {
+	# Card expansion 2
+	&"glowmoth": [1, 2, 2, 1, [&"hidden"], 0], &"sporemoth": [1, 4, 4, 3, [&"venom", &"hidden"], 0],
+	&"barkbeetle": [1, 3, 3, 3, [], 0], &"mossback_colossus": [1, 5, 4, 8, [&"guard"], 0],
+	&"pain_shroom": [1, 3, 1, 4, [], 0], &"fairy_ring": [0, 2, 0, 0, [], 0], &"deep_roots": [0, 2, 0, 0, [], 0],
+	&"bark_coat": [0, 2, 0, 0, [], 0], &"thorn_lash": [0, 4, 0, 0, [], 0], &"grove_roar": [0, 3, 0, 0, [], 0],
+	&"emberkit": [1, 2, 2, 2, [], 0], &"twinflame_hound": [1, 3, 4, 3, [&"dash"], 0],
+	&"cinder_wisp": [1, 2, 1, 3, [], 0], &"magma_wraith": [2, 6, 5, 6, [], 0], &"hot_head": [1, 1, 3, 2, [], 0],
+	&"bellows_forge": [0, 2, 0, 0, [], 0], &"stoke": [0, 0, 0, 0, [], 0], &"overheat": [0, 1, 0, 0, [], 0],
+	&"finish_off": [0, 2, 0, 0, [], 0], &"ember_pact": [0, 1, 0, 0, [], 0],
+	&"gummy_cub": [1, 1, 1, 3, [], 0], &"gummy_goliath": [1, 3, 4, 7, [], 0],
+	&"cotton_puff": [1, 2, 2, 2, [&"bubble"], 0], &"candyfloss_bat": [1, 5, 4, 5, [&"bubble", &"flurry"], 0],
+	&"sugar_smuggler": [1, 2, 2, 2, [&"hidden"], 0], &"gingerbread_gate": [0, 2, 0, 0, [], 0],
+	&"taffy_pull": [0, 2, 0, 0, [], 0], &"sugar_shiv": [0, 0, 0, 0, [], 0], &"jawbreaker": [0, 2, 0, 0, [], 0],
+	&"sugar_high": [0, 0, 0, 0, [], 0],
+	&"frostwisp": [1, 2, 1, 3, [], 0], &"glacial_wisp": [1, 4, 3, 5, [&"bubble"], 0],
+	&"snow_pup": [1, 3, 2, 3, [], 0], &"snowfang_alpha": [1, 6, 5, 5, [], 0], &"ice_sage": [1, 3, 2, 4, [], 1],
+	&"frost_lookout": [0, 4, 0, 0, [], 0], &"crack_the_ice": [0, 1, 0, 0, [], 0], &"whiteout": [0, 3, 0, 0, [], 0],
+	&"icicle": [0, 1, 0, 0, [], 0], &"snowmanify": [0, 4, 0, 0, [], 0], &"snowman": [1, 1, 1, 1, [], 0],
 	&"sporeling": [1, 2, 1, 2, [&"venom"], 0], &"mossback": [1, 2, 1, 5, [&"guard"], 0],
 	&"puffcap": [1, 3, 2, 3, [&"second_wind"], 0], &"glimmer_morel": [2, 3, 3, 4, [], 0],
 	&"rootstalker": [2, 4, 3, 5, [&"leech"], 0], &"elder_shroomhulk": [3, 7, 5, 8, [&"guard", &"second_wind"], 0],
@@ -45,8 +65,50 @@ const SPEC: Dictionary = {
 
 ## Rules text, verbatim from spec section 6.
 const SPEC_TEXT: Dictionary = {
-	&"sporeling": "Venom. Boop: Heal this creature 2. Level up: Heal your hero 2.",
-	&"mossback": "Guard. On play: Gain 2 armour.",
+	# Card expansion 2
+	&"glowmoth": "Hidden. Merges with Sporeling.",
+	&"sporemoth": "Merged form of Glowmoth + Sporeling. Venom. Hidden. Boop: Heal this creature 2. Level up: Heal your hero 2.",
+	&"barkbeetle": "On play: Give all your creatures +0/+1. Merges with Mossback.",
+	&"mossback_colossus": "Merged form of Barkbeetle + Mossback. Guard. When merged: Gain 2 armour. Give all your creatures +0/+1.",
+	&"pain_shroom": "After this takes damage, draw a card.",
+	&"fairy_ring": "The creature in this lane has Leech.",
+	&"deep_roots": "Gain 1 max magic.",
+	&"bark_coat": "Give a creature +2/+2 and give it Guard.",
+	&"thorn_lash": "Deal 4 damage to an enemy creature. Deal 1 damage to every other enemy.",
+	&"grove_roar": "Give all your creatures +2 ATK this turn.",
+	&"emberkit": "After this takes damage, give this creature +1/+0. Merges with Cinderpup.",
+	&"twinflame_hound": "Merged form of Emberkit + Cinderpup. Dash. When merged: Give this creature +1/+1. After this takes damage, give this creature +1/+0. Level up: Give this creature Flurry.",
+	&"cinder_wisp": "Boop: Deal 1 damage to an enemy creature. Merges with Magmaw.",
+	&"magma_wraith": "Merged form of Magmaw + Cinder Wisp. Boop: Deal 1 damage to an enemy creature. Deal 2 damage to the enemy hero.",
+	&"hot_head": "On play: Deal 2 damage to your hero.",
+	&"bellows_forge": "Start of your turn: Deal 1 damage to the creature in this lane and give it +2/+0.",
+	&"stoke": "Deal 1 damage to one of your creatures and give it +2/+0.",
+	&"overheat": "Give one of your creatures +4/+4 and destroy it at the end of your turn.",
+	&"finish_off": "Destroy a damaged enemy creature.",
+	&"ember_pact": "Deal 3 damage to your hero. Draw 2 cards.",
+	&"gummy_cub": "On play, if you control another Blob: Draw a card. Merges with Gumdrop.",
+	&"gummy_goliath": "Merged form of Gumdrop + Gummy Cub. When merged: Draw a card. Boop: Draw a card.",
+	&"cotton_puff": "Bubble. Merges with Lollibat.",
+	&"candyfloss_bat": "Merged form of Lollibat + Cotton Puff. Bubble. Flurry. Boop: Move this creature to one of your empty lanes.",
+	&"sugar_smuggler": "Hidden. On play, Combo: Draw a card.",
+	&"gingerbread_gate": "The creature in this lane has Guard and +2 HP.",
+	&"taffy_pull": "Return an enemy creature to its owner's hand.",
+	&"sugar_shiv": "Deal 2 damage to an undamaged creature.",
+	&"jawbreaker": "Deal 2 damage to a creature. Combo: deal 2 more damage to it.",
+	&"sugar_high": "Your next spell this turn costs 2 less.",
+	&"frostwisp": "Boop: Freeze an enemy creature. Merges with Iceling.",
+	&"glacial_wisp": "Merged form of Frostwisp + Iceling. Bubble. Boop: Freeze an enemy creature. Level up: Give this creature Bubble.",
+	&"snow_pup": "On play: Freeze the opposing creature. Merges with Frostfang.",
+	&"snowfang_alpha": "Merged form of Frostfang + Snow Pup. When merged: Freeze the opposing creature. After this damages a creature, freeze it.",
+	&"ice_sage": "Spell Power +1.",
+	&"frost_lookout": "End of your turn: Freeze the opposing creature.",
+	&"crack_the_ice": "Destroy a frozen enemy creature.",
+	&"whiteout": "Freeze all enemy creatures.",
+	&"icicle": "Freeze a creature. If it was already frozen, deal 4 damage to it instead.",
+	&"snowmanify": "Turn a creature into a 1/1 Snowman with no abilities.",
+	&"snowman": "",
+	&"sporeling": "Venom. Boop: Heal this creature 2. Level up: Heal your hero 2. Merges with Glowmoth.",
+	&"mossback": "Guard. On play: Gain 2 armour. Merges with Barkbeetle.",
 	&"puffcap": "Second Wind. Boop: Heal your hero 2.",
 	&"glimmer_morel": "Boop: Heal all your creatures 2. On play, if you control another Sprout: Gain 3 armour.",
 	&"rootstalker": "Leech. On play: Heal your hero 2.",
@@ -55,19 +117,19 @@ const SPEC_TEXT: Dictionary = {
 	&"glowcap_lantern": "The creature in this lane has +2 HP and Guard.",
 	&"rain_of_spores": "Heal one of your creatures 4.",
 	&"regrowth": "Return a creature from your discard pile to your hand.",
-	&"cinderpup": "Dash. On play, if you control another Beast: Give this creature +1/+1. Level up: Give this creature Flurry.",
+	&"cinderpup": "Dash. On play, if you control another Beast: Give this creature +1/+1. Level up: Give this creature Flurry. Merges with Emberkit.",
 	&"ashmite": "Spell Power +1. Boop: Deal 1 damage to the opposing creature.",
 	&"flarebeak": "Dash. Level up: Deal 1 damage to the enemy hero.",
-	&"magmaw": "Boop: Deal 2 damage to the enemy hero.",
+	&"magmaw": "Boop: Deal 2 damage to the enemy hero. Merges with Cinder Wisp.",
 	&"blazehorn": "Dash. On play: Deal 2 damage to the opposing creature.",
 	&"inferno_drake": "Spell Power +1. Boop: Deal 2 damage to all enemy creatures.",
 	&"kiln_tower": "The creature in this lane has +2 ATK.",
 	&"smokestack": "End of your turn: Deal 1 damage to the enemy hero.",
 	&"fireball": "Deal 3 damage to a creature.",
 	&"ember_rain": "Deal 2 damage to all enemy creatures.",
-	&"gumdrop": "Boop: Draw a card.",
+	&"gumdrop": "Boop: Draw a card. Merges with Gummy Cub.",
 	&"taffy_snail": "On play: Gain 1 magic. On play, if you control 2 other Blobs: Gain 1 magic.",
-	&"lollibat": "Flurry. Boop: Move this creature to one of your empty lanes.",
+	&"lollibat": "Flurry. Boop: Move this creature to one of your empty lanes. Merges with Cotton Puff.",
 	&"sugar_sprite": "Hidden. On play, Combo: Return the opposing building to its owner's hand. Level up: Draw a card.",
 	&"jellywobble": "When destroyed: Draw 2 cards.",
 	&"bonbon_behemoth": "On play: Dream Up a Candy Hills card. Boop: Draw 2 cards.",
@@ -76,8 +138,8 @@ const SPEC_TEXT: Dictionary = {
 	&"sugar_rush": "Draw 2 cards.",
 	&"swap_trick": "Swap two of your creatures between lanes. Combo: Draw a card.",
 	&"snowmite": "Boop: Freeze the opposing creature. Level up: Freeze the opposing creature.",
-	&"iceling": "Bubble. Level up: Give this creature Bubble.",
-	&"frostfang": "After this damages a creature, freeze it.",
+	&"iceling": "Bubble. Level up: Give this creature Bubble. Merges with Frostwisp.",
+	&"frostfang": "After this damages a creature, freeze it. Merges with Snow Pup.",
 	&"glacier_tortoise": "Bubble. On play: Gain 3 armour.",
 	&"rimewing": "On play: Hush the opposing creature. On play, if you control another Flyer: Draw a card.",
 	&"blizzard_titan": "Bubble. Boop: Freeze all enemy creatures.",
@@ -97,9 +159,11 @@ const SPEC_TEXT: Dictionary = {
 
 func test_card_count() -> bool:
 	var cards: Array[CardData] = CardDB.all_cards()
-	assert_eq(cards.size(), 47, "47 cards")
-	# 10 per land from Rules 2.0, plus each land's field spell and the two armour spells.
-	var per_land: Array[int] = [12, 11, 12, 11]
+	assert_eq(cards.size(), 88, "88 cards (47 + card expansion 2's 41)")
+	assert_eq(CardDB.collectible_cards().size(), 79, "79 collectible")
+	# 10 per land from Rules 2.0, each land's field spell, the two armour spells, then expansion 2 (10 per land,
+	# Frost 11 with the Snowman token).
+	var per_land: Array[int] = [22, 21, 22, 22]
 	for land: int in 4:
 		assert_eq(cards.filter(func(c: CardData) -> bool: return c.land == land).size(), per_land[land], "%d cards for land %d" % [per_land[land], land])
 	var neutral: Array = cards.filter(func(c: CardData) -> bool: return c.land == CardData.Land.NEUTRAL)
@@ -134,13 +198,14 @@ func test_cards_validate() -> bool:
 			assert_true(k in Keywords.ORDER, "%s keyword %s" % [c.id, k])
 		for e: EffectData in c.effects:
 			assert_true(e.when in WHENS and e.op in OPS and e.who in WHOS, "%s effect %s/%s/%s" % [c.id, e.when, e.op, e.who])
-		if c.is_creature():
+		if c.is_creature() and c.collectible:
 			var band: Array = [[], [1, 3], [3, 5], [6, 8]][c.level]
 			assert_true(c.cost >= band[0] and c.cost <= band[1], "%s cost in level band" % c.id)
 			assert_true(c.attack >= 0 and c.health > 0, "%s stats" % c.id)
-		else:
+		elif not c.is_creature():
 			assert_eq(c.level, 0, "%s non-creature level 0" % c.id)
-			assert_true(c.cost >= 1 and c.cost <= 5 or c.id == &"star_shard", "%s cost 1-5" % c.id)
+			# Expansion 2 has 0-cost trade-off spells (Stoke, Sugar Shiv, Sugar High).
+			assert_true(c.cost >= 0 and c.cost <= 5, "%s cost 0-5" % c.id)
 	return true
 
 

@@ -49,7 +49,9 @@ Change: the black background square was removed so the icons are white on transp
 
 - `icons/`, by **Lorc** (https://lorcblog.blogspot.com): fireball, burning-meteor, pollen-dust,
   sprout, wrapped-sweet, snowflake-2, crossed-swords, cut-diamond, checked-shield, sword-break,
-  star-swirl, snowing, spiral-shell, volcano.
+  star-swirl, snowing, spiral-shell, volcano, flame-claws, heat-haze, guillotine, burning-book, root-tip,
+  leaf-swirl, thorny-vine, wolf-howl, back-forth, stiletto, punch, lightning-frequency, shattered-glass,
+  frozen-orb, ice-bolt, snowman.
 - `icons/`, by **Delapouite** (https://delapouite.com): card-exchange, falling-rocks, chimney,
   mushrooms-cluster, spiral-lollipop.
 - `icons/`, by **Willdabeast** (https://wjbstories.blogspot.com): round-shield.

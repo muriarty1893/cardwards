@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_gingerbread_gate_0"]
+script = ExtResource("2_eff")
+when = &"aura"
+op = &"lane_keyword"
+who = &"lane_creature"
+keyword = &"guard"
+
+[sub_resource type="Resource" id="eff_gingerbread_gate_1"]
+script = ExtResource("2_eff")
+when = &"aura"
+op = &"lane_hp"
+amount = 2
+who = &"lane_creature"
+
+[resource]
+script = ExtResource("1_card")
+id = &"gingerbread_gate"
+display_name = "Gingerbread Gate"
+kind = 1
+land = 2
+cost = 2
+effects = Array[ExtResource("2_eff")]([SubResource("eff_gingerbread_gate_0"), SubResource("eff_gingerbread_gate_1")])

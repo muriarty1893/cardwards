@@ -21,10 +21,21 @@ const TINTS: Dictionary = {
 	&"b_ember": Color("#ff7a3a", 0.25),
 	&"b_candy": Color("#ff9fcf", 0.25),
 	&"b_frost": Color("#9fd8ff", 0.25),
+	&"glow": Color("#c8ff6a", 0.55),
+	&"bruise": Color("#9a6ad8", 0.45),
+	&"gummy_red": Color("#ff4a5a", 0.5),
+	&"frost_white": Color("#eaf6ff", 0.6),
+	&"snow": Color("#ffffff", 0.75),
+	&"hot": Color("#ff3a2a", 0.5),
+	&"b_forge": Color("#ff5a1a", 0.35),
+	&"b_fairy": Color("#c8ff8a", 0.35),
+	&"b_ginger": Color("#c8853a", 0.4),
+	&"b_lookout": Color("#cfeeff", 0.35),
 }
 
 ## Creatures: "model" is relative to res://assets/monsters (Quaternius "Ultimate Monsters", CC0).
-## Buildings use res://assets/buildings/<id>.gltf. Spells have no model.
+## Merged forms: "merge" = [big partner, rider partner] (CreatureView builds the pair; the model path is the big one's).
+## Buildings use res://assets/buildings/<id>.gltf, or <"building">.gltf when set. Spells have no model.
 const ENTRIES: Dictionary = {
 	# Mushroom Forest
 	&"sporeling": {"model": "blob/Mushnub", "tint": &"none"},
@@ -70,6 +81,36 @@ const ENTRIES: Dictionary = {
 	&"frost_spire": {"tint": &"b_frost"},
 	&"cold_snap": {},
 	&"avalanche": {},
+	# Card expansion 2 (new creatures reuse the pack's models in new colours until more models can be fetched)
+	&"glowmoth": {"model": "flying/Armabee", "tint": &"glow"},
+	&"barkbeetle": {"model": "flying/Goleling_Evolved", "tint": &"bark"},
+	&"pain_shroom": {"model": "blob/Mushnub_Evolved", "tint": &"bruise"},
+	&"emberkit": {"model": "blob/Cat", "tint": &"ember"},
+	&"cinder_wisp": {"model": "flying/Ghost", "tint": &"ember"},
+	&"hot_head": {"model": "blob/Yeti", "tint": &"hot"},
+	&"gummy_cub": {"model": "blob/PinkBlob", "tint": &"gummy_red"},
+	&"cotton_puff": {"model": "flying/Glub", "tint": &"candy_pink"},
+	&"sugar_smuggler": {"model": "blob/Mushnub", "tint": &"candy_purple"},
+	&"frostwisp": {"model": "flying/Hywirl", "tint": &"frost_white"},
+	&"snow_pup": {"model": "blob/Dog", "tint": &"icy"},
+	&"ice_sage": {"model": "big/Bunny", "tint": &"frost_white"},
+	&"snowman": {"model": "blob/Yeti", "tint": &"snow"},
+	&"sporemoth": {"merge": [&"sporeling", &"glowmoth"]},
+	&"mossback_colossus": {"merge": [&"barkbeetle", &"mossback"]},
+	&"twinflame_hound": {"merge": [&"cinderpup", &"emberkit"]},
+	&"magma_wraith": {"merge": [&"magmaw", &"cinder_wisp"]},
+	&"gummy_goliath": {"merge": [&"gumdrop", &"gummy_cub"]},
+	&"candyfloss_bat": {"merge": [&"cotton_puff", &"lollibat"]},
+	&"glacial_wisp": {"merge": [&"iceling", &"frostwisp"]},
+	&"snowfang_alpha": {"merge": [&"frostfang", &"snow_pup"]},
+	&"bellows_forge": {"building": "smokestack", "tint": &"b_forge"},
+	&"fairy_ring": {"building": "glowcap_lantern", "tint": &"b_fairy"},
+	&"gingerbread_gate": {"building": "sugar_shack", "tint": &"b_ginger"},
+	&"frost_lookout": {"building": "frost_spire", "tint": &"b_lookout"},
+	&"stoke": {}, &"overheat": {}, &"finish_off": {}, &"ember_pact": {},
+	&"deep_roots": {}, &"bark_coat": {}, &"thorn_lash": {}, &"grove_roar": {},
+	&"taffy_pull": {}, &"sugar_shiv": {}, &"jawbreaker": {}, &"sugar_high": {},
+	&"crack_the_ice": {}, &"whiteout": {}, &"icicle": {}, &"snowmanify": {},
 	# Neutral
 	&"star_shard": {},
 	# Living board: field spells and armour spells
@@ -95,6 +136,22 @@ const SPELL_ICONS: Dictionary = {
 	&"sugar_rain": "res://assets/icons/spiral-lollipop.svg",
 	&"bark_shield": "res://assets/icons/round-shield.svg",
 	&"candy_shell": "res://assets/icons/spiral-shell.svg",
+	&"stoke": "res://assets/icons/flame-claws.svg",
+	&"overheat": "res://assets/icons/heat-haze.svg",
+	&"finish_off": "res://assets/icons/guillotine.svg",
+	&"ember_pact": "res://assets/icons/burning-book.svg",
+	&"deep_roots": "res://assets/icons/root-tip.svg",
+	&"bark_coat": "res://assets/icons/leaf-swirl.svg",
+	&"thorn_lash": "res://assets/icons/thorny-vine.svg",
+	&"grove_roar": "res://assets/icons/wolf-howl.svg",
+	&"taffy_pull": "res://assets/icons/back-forth.svg",
+	&"sugar_shiv": "res://assets/icons/stiletto.svg",
+	&"jawbreaker": "res://assets/icons/punch.svg",
+	&"sugar_high": "res://assets/icons/lightning-frequency.svg",
+	&"crack_the_ice": "res://assets/icons/shattered-glass.svg",
+	&"whiteout": "res://assets/icons/frozen-orb.svg",
+	&"icicle": "res://assets/icons/ice-bolt.svg",
+	&"snowmanify": "res://assets/icons/snowman.svg",
 }
 ## Glow behind spell icons, by land.
 const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff"), Color("#ffe07a")]
@@ -115,6 +172,14 @@ const EFFECTS: Dictionary = {
 	&"star_shard": &"magic",
 	&"bark_shield": &"armour", &"candy_shell": &"armour",
 	&"volcano": &"field", &"snowstorm": &"field", &"spore_bloom": &"field", &"sugar_rain": &"field",
+	&"pain_shroom": &"draw", &"cinder_wisp": &"damage", &"hot_head": &"damage", &"gummy_cub": &"draw",
+	&"sugar_smuggler": &"draw", &"frostwisp": &"freeze", &"snow_pup": &"freeze",
+	&"sporemoth": &"heal", &"mossback_colossus": &"armour", &"magma_wraith": &"damage", &"gummy_goliath": &"draw",
+	&"candyfloss_bat": &"move", &"glacial_wisp": &"freeze", &"snowfang_alpha": &"freeze",
+	&"bellows_forge": &"damage", &"frost_lookout": &"freeze",
+	&"stoke": &"fireball", &"ember_pact": &"damage", &"deep_roots": &"magic", &"thorn_lash": &"damage",
+	&"taffy_pull": &"regrowth", &"sugar_shiv": &"damage", &"jawbreaker": &"damage", &"whiteout": &"cold_snap",
+	&"icicle": &"avalanche",
 }
 
 
@@ -125,6 +190,10 @@ const SOUNDS: Dictionary = {
 	&"star_shard": &"candy_pop",
 	&"bark_shield": &"building_rise", &"candy_shell": &"candy_pop",
 	&"volcano": &"explosion", &"snowstorm": &"freeze", &"spore_bloom": &"heal", &"sugar_rain": &"candy_pop",
+	&"stoke": &"fire_whoosh", &"overheat": &"fire_whoosh", &"finish_off": &"explosion", &"ember_pact": &"fire_whoosh",
+	&"deep_roots": &"heal", &"bark_coat": &"building_rise", &"thorn_lash": &"explosion", &"grove_roar": &"heal",
+	&"taffy_pull": &"candy_pop", &"sugar_shiv": &"candy_pop", &"jawbreaker": &"candy_pop", &"sugar_high": &"candy_pop",
+	&"crack_the_ice": &"explosion", &"whiteout": &"freeze", &"icicle": &"freeze", &"snowmanify": &"freeze",
 }
 
 
@@ -138,6 +207,10 @@ const BADGES: Dictionary = {
 	&"candy_mill": "res://assets/icons/cut-diamond.svg",
 	&"ice_wall": "res://assets/icons/checked-shield.svg",
 	&"frost_spire": "res://assets/icons/sword-break.svg",
+	&"bellows_forge": "res://assets/icons/crossed-swords.svg",
+	&"fairy_ring": "res://assets/icons/heart-plus.svg",
+	&"gingerbread_gate": "res://assets/icons/checked-shield.svg",
+	&"frost_lookout": "res://assets/icons/snowflake-2.svg",
 }
 
 
@@ -162,15 +235,26 @@ static func ids() -> Array[StringName]:
 
 static func model_path(id: StringName) -> String:
 	var e: Dictionary = ENTRIES.get(id, {})
+	if e.has("merge"):
+		return model_path(e["merge"][0])
 	if e.has("model"):
 		return "res://assets/monsters/%s.gltf" % e["model"]
+	if e.has("building"):
+		return "res://assets/buildings/%s.gltf" % e["building"]
 	if e.has("tint"):
 		return "res://assets/buildings/%s.gltf" % id
 	return ""
 
 
+## A merged form's [big partner, rider partner] ids, or [] for other cards.
+static func merge_pair(id: StringName) -> Array:
+	return ENTRIES.get(id, {}).get("merge", [])
+
+
 static func tint(id: StringName) -> Color:
 	var e: Dictionary = ENTRIES.get(id, {})
+	if e.has("merge"):
+		return tint(e["merge"][0])
 	return TINTS.get(e.get("tint", &"none"), TINTS[&"none"])
 
 

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_magma_wraith_0"]
+script = ExtResource("2_eff")
+when = &"on_boop"
+op = &"damage"
+amount = 1
+who = &"chosen_enemy_creature"
+
+[sub_resource type="Resource" id="eff_magma_wraith_1"]
+script = ExtResource("2_eff")
+when = &"on_boop"
+op = &"damage"
+amount = 2
+who = &"enemy_hero"
+
+[resource]
+script = ExtResource("1_card")
+id = &"magma_wraith"
+display_name = "Magma Wraith"
+land = 1
+level = 2
+cost = 6
+attack = 5
+health = 6
+tribe = &"spirit"
+effects = Array[ExtResource("2_eff")]([SubResource("eff_magma_wraith_0"), SubResource("eff_magma_wraith_1")])
+collectible = false

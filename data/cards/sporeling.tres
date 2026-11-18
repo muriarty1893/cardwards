@@ -28,3 +28,5 @@ health = 2
 tribe = &"sprout"
 keywords = Array[StringName]([&"venom"])
 effects = Array[ExtResource("1_4ryty")]([SubResource("Resource_cl5ay"), SubResource("Resource_lb_sporeling_0")])
+merge_with = &"glowmoth"
+merges_into = &"sporemoth"
