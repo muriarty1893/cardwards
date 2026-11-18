@@ -33,3 +33,10 @@ func test_ember_looks() -> bool:
 	_expect(1, 1, ["BasaltColumns", "Bridge"], false)
 	_expect(1, 2, ["Ridge", "Vents", "Stumps"], true)
 	return true
+
+
+func test_mushroom_looks() -> bool:
+	_expect(0, 0, ["Pond", "LongGrass", "Reeds"], false)
+	_expect(0, 1, ["GiantShrooms", "Log", "FairyRing"], false)
+	_expect(0, 2, ["Knoll", "Boulders"], false)
+	return true

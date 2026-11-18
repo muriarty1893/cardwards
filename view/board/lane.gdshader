@@ -140,7 +140,26 @@ vec3 paint(int l, vec2 p, out vec3 emi) {
 vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 emi) {
 	vec2 bc = (corner_box.xy + corner_box.zw) * 0.5;
 	vec2 bs = max(corner_box.zw - corner_box.xy, vec2(0.05));
-	if (l == 1) {
+	if (l == 0) {
+		if (v == 0) {          // Pond Glade: a darker damp shore around the pond
+			float d = length((p - bc) / (bs * vec2(0.62, 0.55)));
+			col = mix(col, col * vec3(0.72, 0.85, 0.7), (1.0 - smoothstep(0.75, 1.15, d)) * 0.7);
+		} else if (v == 1) {   // Giant Shroom Grove: dappled shade
+			float shade = smoothstep(0.45, 0.7, fbm(pw * 1.7 + 4.0));
+			col = mix(col, col * 0.78, shade * 0.6);
+		} else {               // Mossy Knoll: clover patches and a stepping-stone path from the knoll to the seam
+			float clover = smoothstep(0.58, 0.66, fbm(pw * 2.3 + 7.0));
+			col = mix(col, vec3(0.62, 0.86, 0.45), clover * 0.6);
+			float cell = 0.42;
+			float zc = (floor(p.y / cell) + 0.5) * cell;
+			float px = bc.x * 0.6 + 0.22 * sin(zc * 1.7 + 0.7);
+			vec2 sd = (p - vec2(px, zc)) / vec2(0.11, 0.08);
+			float stone = 1.0 - smoothstep(0.85, 1.0, length(sd));
+			float edge = smoothstep(0.7, 0.85, length(sd)) * stone;
+			col = mix(col, vec3(0.78, 0.74, 0.66), stone);
+			col = mix(col, INK, edge * 0.7);
+		}
+	} else if (l == 1) {
 		if (v == 0) {          // Volcano: scorched ground with glowing cracks around its foot
 			float d = length((p - bc) / (bs * vec2(1.1, 0.75)));
 			float scorch = 1.0 - smoothstep(0.55, 1.25, d);

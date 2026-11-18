@@ -21,6 +21,12 @@ static func build(ctx: Dictionary) -> bool:
 			_lava_rift(ctx)
 		Vector2i(1, 2):
 			_ash_slopes(ctx)
+		Vector2i(0, 0):
+			_pond_glade(ctx)
+		Vector2i(0, 1):
+			_shroom_grove(ctx)
+		Vector2i(0, 2):
+			_mossy_knoll(ctx)
 		_:
 			return false
 	return true
@@ -270,3 +276,126 @@ static func _ash_slopes(ctx: Dictionary) -> void:
 		br.rotation.z = -0.9
 		stumps.add_child(br)
 	SetPieces.add_piece(ctx, stumps, Vector3.ZERO, other, other)
+
+
+# --- Mushroom Forest -------------------------------------------------------------------------------
+
+const GRASS: Array = ["#5bbd42", "#6fcf4c", "#86dd5e", "#52b03e"]
+const MOSS := Color("#5aa84a")
+const BARK := Color("#7a5232")
+
+
+## A pond with ripples, lily pads and reeds in the back corner; long swaying grass along both sides.
+static func _pond_glade(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var rx: float = box.size.x * 0.5
+	var rz: float = minf(box.size.y * 0.42, rx * 1.9)
+	var c: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.3))
+	var pond := Node3D.new()
+	pond.name = "Pond"
+	pond.add_child(SetPieces.pool(0, rx, rz))
+	for i: int in 3:
+		var a: float = rng.randf() * TAU
+		var e: float = rng.randf_range(0.2, 0.6)
+		var pad := SetPieces.cyl(0.07, 0.07, 0.008, Color("#4fbf4a"), Vector3(cos(a) * rx * e, 0.014, sin(a) * rz * e), 12)
+		pond.add_child(pad)
+		if i == 0:
+			pond.add_child(SetPieces.sphere(0.03, Color("#ffd0e8"), Vector3(cos(a) * rx * e, 0.04, sin(a) * rz * e), Vector3(1, 0.7, 1), 8))
+	SetPieces.add_piece(ctx, pond, c, Rect2(c.x - rx, c.z - rz, rx * 2.0, rz * 2.0), box)
+	# Reeds at the pond's far end.
+	var reeds := Node3D.new()
+	reeds.name = "Reeds"
+	var rz0: float = c.z + rz * (1.0 if _back(ctx) > 0.5 else -1.0) * 0.75
+	for i: int in 5:
+		var x: float = c.x + rng.randf_range(-rx * 0.8, rx * 0.8)
+		var z: float = clampf(rz0 + rng.randf_range(-0.06, 0.06), box.position.y + 0.03, box.end.y - 0.03)
+		var hh: float = rng.randf_range(0.28, 0.45) * float(ctx["scale"])
+		reeds.add_child(SetPieces.cyl(0.008, 0.012, hh, Color("#5c8a3a"), Vector3(x, 0, z), 5))
+		reeds.add_child(SetPieces.cyl(0.022, 0.022, 0.07, Color("#7a4a2a"), Vector3(x, hh * 0.78, z), 6))
+	SetPieces.add_piece(ctx, reeds, Vector3.ZERO, Rect2(c.x - rx, rz0 - 0.1, rx * 2.0, 0.2), box)
+	for key: String in ["band", "other_band"]:
+		var band: Rect2 = ctx[key]
+		var g := Node3D.new()
+		g.name = "LongGrass"
+		g.add_child(SetPieces.long_grass(ctx, band, int(band.size.y * 22.0), GRASS))
+		SetPieces.add_piece(ctx, g, Vector3.ZERO, band, band)
+
+
+## Giant toadstools in the back corner, a fallen log along one side with ferns, a fairy ring in the other corner.
+static func _shroom_grove(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var caps: Array[Color] = [Color("#e8483c"), Color("#e8873c"), Color("#b05ad8")]
+	var grove := Node3D.new()
+	grove.name = "GiantShrooms"
+	var n: int = 3
+	for i: int in n:
+		var hh: float = lerpf(0.75, 0.45, float(i) / n) * sc
+		var cr: float = hh * 0.42
+		var v: float = lerpf(_back(ctx), 0.5, float(i) / n) * 0.8 + 0.1
+		var x: float = clampf(box.get_center().x + rng.randf_range(-0.05, 0.05), box.position.x + cr, box.end.x - cr)
+		var t: Node3D = SetPieces.toadstool(hh, caps[i % caps.size()], rng)
+		t.position = Vector3(x, 0, lerpf(box.position.y, box.end.y, v))
+		grove.add_child(t)
+	SetPieces.add_piece(ctx, grove, Vector3.ZERO, box, box)
+	var band: Rect2 = ctx["band"]
+	var log := Node3D.new()
+	log.name = "Log"
+	var lr: float = clampf(band.size.x * 0.45, 0.06, 0.1)
+	var ll: float = minf(band.size.y * 0.5, 1.1)
+	var lz: float = lerpf(band.position.y + ll / 2.0, band.end.y - ll / 2.0, rng.randf())
+	var trunk := SetPieces.mesh(Palette.cylinder(lr, lr, ll, 12), BARK, Vector3.ZERO)
+	trunk.rotation.x = PI / 2.0
+	trunk.position = Vector3(band.get_center().x, lr, lz)
+	log.add_child(trunk)
+	for sz: float in [-1.0, 1.0]:
+		var end := SetPieces.mesh(Palette.cylinder(lr * 0.85, lr * 0.85, 0.012, 12), Color("#d8b483"), Vector3.ZERO)
+		end.rotation.x = PI / 2.0
+		end.position = Vector3(band.get_center().x, lr, lz + sz * ll / 2.0)
+		log.add_child(end)
+	log.add_child(SetPieces.sphere(lr * 0.7, MOSS, Vector3(band.get_center().x, lr * 1.7, lz + ll * 0.15), Vector3(1.2, 0.45, 2.0), 8))
+	var fern: Node3D = SetPieces.model("nature/Fern_1", 0.22 * sc)
+	fern.position = Vector3(band.get_center().x, 0, clampf(lz + ll / 2.0 + 0.12, band.position.y, band.end.y))
+	log.add_child(fern)
+	SetPieces.add_piece(ctx, log, Vector3.ZERO, Rect2(band.position.x, lz - ll / 2.0, band.size.x, ll), band)
+	var other: Rect2 = ctx["other_box"]
+	var ring := Node3D.new()
+	ring.name = "FairyRing"
+	var rr: float = minf(other.size.x, other.size.y) * 0.38
+	var rc: Vector3 = _at(other, 0.5, 0.5)
+	for i: int in 9:
+		var a: float = TAU * i / 9.0
+		var t: Node3D = SetPieces.toadstool(rng.randf_range(0.08, 0.12), Color("#fff2e0") if i % 3 else Color("#ffcf6a"), rng)
+		t.position = rc + Vector3(cos(a) * rr, 0, sin(a) * rr)
+		ring.add_child(t)
+	SetPieces.add_piece(ctx, ring, Vector3.ZERO, Rect2(rc.x - rr - 0.06, rc.z - rr - 0.06, rr * 2.0 + 0.12, rr * 2.0 + 0.12), other)
+
+
+## A raised mossy knoll with a big tree in the back corner, mossy boulders in the other; the lane shader paints
+## clover patches and a stepping-stone path.
+static func _mossy_knoll(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var knoll := Node3D.new()
+	knoll.name = "Knoll"
+	var rx: float = box.size.x * 0.5
+	var rz: float = minf(box.size.y * 0.45, rx * 2.2)
+	var c: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.2))
+	knoll.add_child(SetPieces.sphere(1.0, MOSS, Vector3(0, -0.02, 0), Vector3(rx, 0.24 * sc, rz), 18))
+	knoll.add_child(SetPieces.sphere(1.0, Color("#6fbf55"), Vector3(0, 0.0, 0), Vector3(rx * 0.7, 0.26 * sc, rz * 0.7), 16))
+	var tree: Node3D = SetPieces.model("nature/CommonTree_1" if rng.randf() < 0.5 else "nature/CommonTree_3", 0.95 * sc, Toon.NO_TINT, 0.03)
+	tree.position = Vector3(0, 0.2 * sc, 0)
+	knoll.add_child(tree)
+	SetPieces.add_piece(ctx, knoll, c, Rect2(c.x - rx, c.z - rz, rx * 2.0, rz * 2.0), box)
+	var other: Rect2 = ctx["other_box"]
+	var boulders := Node3D.new()
+	boulders.name = "Boulders"
+	for i: int in 3:
+		var br: float = minf(other.size.x * 0.32, 0.16) * rng.randf_range(0.7, 1.0)
+		var p := Vector3(clampf(other.get_center().x + rng.randf_range(-0.05, 0.05), other.position.x + br, other.end.x - br), 0.0, lerpf(other.position.y + br, other.end.y - br, (i + 0.5) / 3.0))
+		boulders.add_child(SetPieces.sphere(br, Color("#8f8a80"), p + Vector3(0, br * 0.35, 0), Vector3(1.0, 0.75, 1.0), 10))
+		boulders.add_child(SetPieces.sphere(br * 0.8, MOSS, p + Vector3(0, br * 0.85, 0), Vector3(1.0, 0.35, 1.0), 10))
+	SetPieces.add_piece(ctx, boulders, Vector3.ZERO, other, other)

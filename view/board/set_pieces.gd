@@ -136,6 +136,60 @@ static func model(path: String, height: float, tint: Color = Toon.NO_TINT, sway:
 	return mdl
 
 
+## A flat pool (0 water, 1 ice, 2 chocolate) filling an ellipse of radii (rx, rz) at y just above the ground.
+static func pool(kind: int, rx: float, rz: float) -> MeshInstance3D:
+	var q := QuadMesh.new()
+	q.size = Vector2(rx * 2.0, rz * 2.0)
+	q.orientation = PlaneMesh.FACE_Y
+	var m := ShaderMaterial.new()
+	m.shader = load("res://view/board/pond.gdshader") as Shader
+	m.set_shader_parameter("kind", kind)
+	m.set_shader_parameter("cell_tex", NoiseBank.cells())
+	var mi := Palette.mesh(q, m, Vector3(0, 0.012, 0), false)
+	return mi
+
+
+## Tall swaying grass (the cover's tuft, bending away from creatures) scattered in `area`.
+static func long_grass(ctx: Dictionary, area: Rect2, n: int, colors: Array, h: Vector2 = Vector2(0.38, 0.62)) -> MultiMeshInstance3D:
+	var rng: RandomNumberGenerator = ctx["rng"]
+	n = int(round(n * float(ctx["density"])))
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.use_colors = true
+	mm.mesh = LaneDressing._mesh(&"tuft")
+	mm.instance_count = maxi(n, 1)
+	for i: int in mm.instance_count:
+		var pos := Vector3(rng.randf_range(area.position.x, area.end.x), 0.0, rng.randf_range(area.position.y, area.end.y))
+		var k: float = rng.randf_range(h.x, h.y) * float(ctx["scale"])
+		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(k * 0.7, k, k * 0.7))
+		mm.set_instance_transform(i, Transform3D(basis, pos))
+		var c := Color(colors[rng.randi_range(0, colors.size() - 1)]).srgb_to_linear()
+		mm.set_instance_custom_data(i, Color(c.r, c.g, c.b, 1.0))
+		mm.set_instance_color(i, Color.WHITE)
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = LaneDressing.cover_material()
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mmi
+
+
+## A storybook toadstool: cream stem, round cap with white spots, base at y = 0.
+static func toadstool(h: float, cap: Color, rng: RandomNumberGenerator) -> Node3D:
+	var t := Node3D.new()
+	var stem_r: float = h * 0.13
+	t.add_child(cyl(stem_r * 0.85, stem_r * 1.15, h * 0.72, Color("#f3e6c8"), Vector3.ZERO, 10))
+	var cr: float = h * 0.42
+	t.add_child(sphere(cr, cap, Vector3(0, h * 0.72, 0), Vector3(1.0, 0.62, 1.0), 16))
+	for i: int in 5:
+		var a: float = rng.randf() * TAU
+		var e: float = rng.randf_range(0.25, 0.85)
+		var dir := Vector3(cos(a) * e, 0.0, sin(a) * e)
+		var pos := Vector3(dir.x * cr, h * 0.72 + cr * 0.62 * sqrt(maxf(1.0 - e * e, 0.0)), dir.z * cr)
+		t.add_child(sphere(cr * 0.14, Color("#fff8ec"), pos, Vector3(1.0, 0.5, 1.0), 8))
+	return t
+
+
 ## A small cluster of `n` rocks inside `area` (the fallback look).
 static func rocks(ctx: Dictionary, area: Rect2, n: int) -> void:
 	var rng: RandomNumberGenerator = ctx["rng"]
