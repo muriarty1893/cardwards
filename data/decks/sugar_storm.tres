@@ -10,18 +10,18 @@
 [ext_resource type="Resource" path="res://data/cards/sugar_shack.tres" id="8_sugar_shack"]
 [ext_resource type="Resource" path="res://data/cards/candy_mill.tres" id="9_candy_mill"]
 [ext_resource type="Resource" path="res://data/cards/sugar_rush.tres" id="10_sugar_rush"]
-[ext_resource type="Resource" path="res://data/cards/swap_trick.tres" id="11_swap_trick"]
-[ext_resource type="Resource" path="res://data/cards/sporeling.tres" id="12_sporeling"]
-[ext_resource type="Resource" path="res://data/cards/mossback.tres" id="13_mossback"]
-[ext_resource type="Resource" path="res://data/cards/puffcap.tres" id="14_puffcap"]
-[ext_resource type="Resource" path="res://data/cards/spore_hut.tres" id="15_spore_hut"]
-[ext_resource type="Resource" path="res://data/cards/rain_of_spores.tres" id="16_rain_of_spores"]
-[ext_resource type="Resource" path="res://data/cards/sugar_rain.tres" id="lb_sugar_rain"]
-[ext_resource type="Resource" path="res://data/cards/candy_shell.tres" id="lb_candy_shell"]
+[ext_resource type="Resource" path="res://data/cards/sporeling.tres" id="11_sporeling"]
+[ext_resource type="Resource" path="res://data/cards/mossback.tres" id="12_mossback"]
+[ext_resource type="Resource" path="res://data/cards/rain_of_spores.tres" id="13_rain_of_spores"]
+[ext_resource type="Resource" path="res://data/cards/sugar_rain.tres" id="14_sugar_rain"]
+[ext_resource type="Resource" path="res://data/cards/cotton_puff.tres" id="15_cotton_puff"]
+[ext_resource type="Resource" path="res://data/cards/jawbreaker.tres" id="16_jawbreaker"]
+[ext_resource type="Resource" path="res://data/cards/sugar_shiv.tres" id="17_sugar_shiv"]
+[ext_resource type="Resource" path="res://data/cards/taffy_pull.tres" id="18_taffy_pull"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"sugar_storm"
 display_name = "Sugar Storm"
 lands = Array[int]([2, 2, 0, 2])
-cards = Array[Resource]([ExtResource("2_gumdrop"), ExtResource("2_gumdrop"), ExtResource("3_taffy_snail"), ExtResource("3_taffy_snail"), ExtResource("4_lollibat"), ExtResource("4_lollibat"), ExtResource("5_sugar_sprite"), ExtResource("5_sugar_sprite"), ExtResource("6_jellywobble"), ExtResource("6_jellywobble"), ExtResource("7_bonbon_behemoth"), ExtResource("7_bonbon_behemoth"), ExtResource("8_sugar_shack"), ExtResource("8_sugar_shack"), ExtResource("9_candy_mill"), ExtResource("9_candy_mill"), ExtResource("10_sugar_rush"), ExtResource("10_sugar_rush"), ExtResource("11_swap_trick"), ExtResource("12_sporeling"), ExtResource("12_sporeling"), ExtResource("13_mossback"), ExtResource("13_mossback"), ExtResource("14_puffcap"), ExtResource("14_puffcap"), ExtResource("15_spore_hut"), ExtResource("16_rain_of_spores"), ExtResource("16_rain_of_spores"), ExtResource("lb_sugar_rain"), ExtResource("lb_candy_shell")])
+cards = Array[Resource]([ExtResource("2_gumdrop"), ExtResource("2_gumdrop"), ExtResource("3_taffy_snail"), ExtResource("3_taffy_snail"), ExtResource("4_lollibat"), ExtResource("4_lollibat"), ExtResource("5_sugar_sprite"), ExtResource("5_sugar_sprite"), ExtResource("6_jellywobble"), ExtResource("7_bonbon_behemoth"), ExtResource("7_bonbon_behemoth"), ExtResource("8_sugar_shack"), ExtResource("8_sugar_shack"), ExtResource("9_candy_mill"), ExtResource("9_candy_mill"), ExtResource("10_sugar_rush"), ExtResource("10_sugar_rush"), ExtResource("11_sporeling"), ExtResource("11_sporeling"), ExtResource("12_mossback"), ExtResource("12_mossback"), ExtResource("13_rain_of_spores"), ExtResource("13_rain_of_spores"), ExtResource("14_sugar_rain"), ExtResource("15_cotton_puff"), ExtResource("15_cotton_puff"), ExtResource("16_jawbreaker"), ExtResource("16_jawbreaker"), ExtResource("17_sugar_shiv"), ExtResource("18_taffy_pull")])
