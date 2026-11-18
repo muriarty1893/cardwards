@@ -131,13 +131,26 @@ static func _validate_play(s: GameState, a: Action) -> String:
 		if a.lane < 0 or a.lane >= GameState.LANES:
 			return "Invalid target"
 		var lane: GameState.LaneState = ps.lanes[a.lane]
-		if c.kind == CardData.Kind.CREATURE and lane.creature != null:
+		if c.kind == CardData.Kind.CREATURE and lane.creature != null and not can_merge(s, a.player, a.lane, c):
 			return "Lane already has a creature"
 		if c.kind == CardData.Kind.BUILDING and lane.building != null:
 			return "Lane already has a building"
 	if c.kind == CardData.Kind.CREATURE and Lands.count_after_play(s, a.player, a.lane, c.land) < c.level:
 		return "Needs %d %s lane%s" % [c.level, CardData.LAND_NAMES[c.land], "" if c.level == 1 else "s"]
-	return _validate_targets(s, a.player, c, &"on_play", a.lane if c.kind != CardData.Kind.SPELL else -1, a.targets)
+	return _validate_targets(s, a.player, _played_form(s, a.player, a.lane, c), &"on_play", a.lane if c.kind != CardData.Kind.SPELL else -1, a.targets)
+
+
+## True if creature card `c` from player p's hand would merge with p's creature in `lane`.
+static func can_merge(s: GameState, p: int, lane: int, c: CardData) -> bool:
+	if c == null or c.kind != CardData.Kind.CREATURE or c.merge_with == &"" or lane < 0 or lane >= GameState.LANES:
+		return false
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	return cr != null and cr.card.id == c.merge_with and CardDB.has_card(c.merges_into)
+
+
+## The card whose on-play runs when `c` is played into `lane`: its merged form when it merges, else itself.
+static func _played_form(s: GameState, p: int, lane: int, c: CardData) -> CardData:
+	return CardDB.card(c.merges_into) if can_merge(s, p, lane, c) else c
 
 
 static func _validate_boop(s: GameState, a: Action) -> String:
@@ -248,7 +261,7 @@ static func legal_actions(s: GameState) -> Array[Action]:
 				if c.kind != CardData.Kind.SPELL:
 					lanes = [0, 1, 2, 3]
 				for lane: int in lanes:
-					for t: Array[Dictionary] in _target_options(s, p, c, &"on_play", lane):
+					for t: Array[Dictionary] in _target_options(s, p, _played_form(s, p, lane, c), &"on_play", lane):
 						var a: Action = Action.play(p, i, lane, t)
 						if validate(s, a) == "":
 							out.append(a)
@@ -337,7 +350,10 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	if cost > 0:
 		ps.magic -= cost
 		ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic}))
+	var merging: bool = can_merge(s, p, a.lane, c)
 	match c.kind:
+		CardData.Kind.CREATURE when merging:
+			_merge(s, p, a.lane, c, a.targets, ev)
 		CardData.Kind.CREATURE:
 			enter_creature(s, p, a.lane, c, ev)
 			ev.append(GameEvent.make(&"creature_played", {"player": p, "lane": a.lane, "card": c.id}))
@@ -359,6 +375,22 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	if ps.cards_played == 1:
 		ev.append(GameEvent.make(&"combo_active", {"player": p}))
 	resolve_deaths(s, ev)
+
+
+## Merges hand card `c` into p's partner in `lane`: the creature becomes the merged form, keeping its damage, level,
+## buffs, gained keywords, freeze, hush and readiness; the form's printed Bubble / Hidden switch on and its on-play
+## ("When merged") runs. The hand card is absorbed.
+static func _merge(s: GameState, p: int, lane: int, c: CardData, targets: Array[Dictionary], ev: Array[GameEvent]) -> void:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var into: CardData = CardDB.card(c.merges_into)
+	var from: CardData = cr.card
+	cr.card = into
+	if &"bubble" in into.keywords:
+		cr.bubble = true
+	if &"hidden" in into.keywords:
+		cr.hidden = true
+	ev.append(GameEvent.make(&"creature_merged", {"player": p, "lane": lane, "from": from.id, "card": c.id, "into": into.id}))
+	Effects.run(s, p, lane, into, &"on_play", targets, ev)
 
 
 static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:

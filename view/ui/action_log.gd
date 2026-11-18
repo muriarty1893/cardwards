@@ -299,6 +299,12 @@ static func describe(e: GameEvent, s: GameState) -> String:
 	match e.type:
 		&"creature_played":
 			return "%s played %s" % [who, _card_name(d["card"])]
+		&"creature_merged":
+			return "%s merged %s + %s into %s" % [who, _card_name(d["from"]), _card_name(d["card"]), _card_name(d["into"])]
+		&"creature_bounced":
+			return "%s %s went back to hand" % [whose, _card_name(d["card"])]
+		&"creature_transformed":
+			return "%s %s turned into %s" % [whose, _card_name(d["from"]), _card_name(d["card"])]
 		&"building_played":
 			return "%s built %s" % [who, _card_name(d["card"])]
 		&"spell_cast":

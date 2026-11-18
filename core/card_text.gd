@@ -67,6 +67,11 @@ static func tooltip(c: CardData) -> String:
 
 static func _render(c: CardData, bold: bool) -> String:
 	var parts: Array[String] = []
+	var partners: Array[CardData] = []
+	if c.kind == CardData.Kind.CREATURE:
+		partners = CardDB.merge_partners(c.id)
+	if partners.size() >= 2:
+		parts.append("%s of %s + %s." % [_b("Merged form", bold), partners[0].display_name, partners[1].display_name])
 	if c.field:
 		parts.append(_b("Field", bold) + ".")
 	for k: StringName in Keywords.ORDER:
@@ -103,6 +108,9 @@ static func _render(c: CardData, bold: bool) -> String:
 			sentence += " and " + _phrase(effs[i], bold)
 			i += 1
 		parts.append(prefix + sentence + ".")
+	if c.merge_with != &"":
+		var other: CardData = CardDB.card(c.merge_with) if CardDB.has_card(c.merge_with) else null
+		parts.append("%s %s." % [_b("Merges with", bold), other.display_name if other else String(c.merge_with)])
 	return " ".join(parts)
 
 
@@ -120,7 +128,7 @@ static func _b(word: String, bold: bool) -> String:
 static func _prefix(c: CardData, e: EffectData, bold: bool) -> String:
 	var base: String = ""
 	if e.when == &"on_play":
-		base = "" if c.kind == CardData.Kind.SPELL else "On play: "
+		base = "" if c.kind == CardData.Kind.SPELL else ("When merged: " if not c.collectible and c.kind == CardData.Kind.CREATURE and not CardDB.merge_partners(c.id).is_empty() else "On play: ")
 	else:
 		base = _PREFIX.get(e.when, "")
 	if e.need > 0:

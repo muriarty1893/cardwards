@@ -29,10 +29,42 @@ static func all_cards() -> Array[CardData]:
 	return _card_list.duplicate()
 
 
-## Cards Dream Up may offer: never neutral ones. -1 means any kind / any land.
-static func dream_up_pool(filter_kind: int, filter_land: int) -> Array[CardData]:
+## Cards that can go in decks (not merged forms or tokens).
+static func collectible_cards() -> Array[CardData]:
 	var out: Array[CardData] = []
 	for c: CardData in all_cards():
+		if c.collectible:
+			out.append(c)
+	return out
+
+
+## Every card that merges into `into` (its two partners), in display order.
+static func merge_partners(into: StringName) -> Array[CardData]:
+	var out: Array[CardData] = []
+	for c: CardData in all_cards():
+		if c.merges_into == into:
+			out.append(c)
+	return out
+
+
+## Tests: adds a card to the database until remove_test_card.
+static func add_test_card(c: CardData) -> void:
+	_ensure_loaded()
+	_cards[c.id] = c
+	if not c in _card_list:
+		_card_list.append(c)
+
+
+static func remove_test_card(id: StringName) -> void:
+	if _cards.has(id):
+		_card_list.erase(_cards[id])
+		_cards.erase(id)
+
+
+## Cards Dream Up may offer: never neutral ones or non-collectible ones. -1 means any kind / any land.
+static func dream_up_pool(filter_kind: int, filter_land: int) -> Array[CardData]:
+	var out: Array[CardData] = []
+	for c: CardData in collectible_cards():
 		if c.land == CardData.Land.NEUTRAL:
 			continue
 		if (filter_kind < 0 or c.kind == filter_kind) and (filter_land < 0 or c.land == filter_land):

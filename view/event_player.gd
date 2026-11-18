@@ -21,7 +21,7 @@ const LAND_SOUNDS: Array[StringName] = [&"heal", &"fire_whoosh", &"candy_pop", &
 ## How each event changes the hand of the player it names (the rival's fan follows it live).
 const HAND_DELTA: Dictionary = {
 	&"card_drawn": 1, &"card_returned": 1, &"dream_up_chosen": 1,
-	&"creature_played": -1, &"building_played": -1, &"spell_cast": -1,
+	&"creature_played": -1, &"building_played": -1, &"spell_cast": -1, &"creature_merged": -1,
 }
 
 var m: MatchController
@@ -53,7 +53,7 @@ func play(events: Array[GameEvent]) -> void:
 func _play_one(e: GameEvent) -> void:
 	var d: Dictionary = e.data
 	_rival_react(e)
-	if e.type in [&"creature_played", &"building_played", &"spell_cast"] and int(d.get("player", -1)) == MatchController.AI:
+	if e.type in [&"creature_played", &"building_played", &"spell_cast", &"creature_merged"] and int(d.get("player", -1)) == MatchController.AI:
 		await _reveal(CardDB.card(d["card"]))
 	if e.type in EFFECT_EVENTS:
 		var kind: StringName = FxDirector.choose(_source, e)
@@ -126,6 +126,8 @@ func _play_one(e: GameEvent) -> void:
 			await _second_wind(d)
 		&"creature_bounced":
 			await _bounced(d)
+		&"creature_merged":
+			await _merged(d)
 		&"creature_transformed":
 			await _transformed(d)
 		&"doomed":
@@ -227,6 +229,11 @@ func _transformed(d: Dictionary, burst: StringName = &"smoke", stamp: String = "
 	if is_instance_valid(v):
 		v.busy = false
 	m.refresh_pieces()
+
+
+## Two partners merge: the hand creature flies in and the pair becomes the merged form.
+func _merged(d: Dictionary) -> void:
+	await _transformed({"player": d["player"], "lane": d["lane"], "card": d["into"]}, &"stars", "MERGE!")
 
 
 func _second_wind(d: Dictionary) -> void:

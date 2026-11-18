@@ -20,7 +20,7 @@ static func validate(cards: Array[CardData]) -> String:
 		return "A deck needs %d cards (%d now)" % [DECK_SIZE, cards.size()]
 	var counts: Dictionary = {}
 	for c: CardData in cards:
-		if c.land == CardData.Land.NEUTRAL:
+		if c.land == CardData.Land.NEUTRAL or not c.collectible:
 			return "%s can't go in a deck" % c.display_name
 		counts[c.id] = int(counts.get(c.id, 0)) + 1
 		if counts[c.id] > MAX_COPIES:
@@ -29,7 +29,7 @@ static func validate(cards: Array[CardData]) -> String:
 
 
 static func can_add(cards: Array[CardData], c: CardData) -> bool:
-	if c.land == CardData.Land.NEUTRAL or cards.size() >= DECK_SIZE:
+	if c.land == CardData.Land.NEUTRAL or not c.collectible or cards.size() >= DECK_SIZE:
 		return false
 	return cards.count(c) < MAX_COPIES
 

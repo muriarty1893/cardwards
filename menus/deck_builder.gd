@@ -144,7 +144,7 @@ func _build_middle() -> Control:
 	_grid.add_theme_constant_override("h_separation", 12)
 	_grid.add_theme_constant_override("v_separation", 12)
 	pad.add_child(_grid)
-	for c: CardData in CardDB.all_cards():
+	for c: CardData in CardDB.collectible_cards():
 		if c.land == CardData.Land.NEUTRAL:
 			continue
 		_grid.add_child(_make_thumb(c))

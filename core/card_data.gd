@@ -25,6 +25,12 @@ const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hill
 ## Field spell: stays in play for both players until another field replaces it.
 @export var field: bool = false
 @export var effects: Array[EffectData] = []
+## Merging (card expansion 2, spec 4): played onto your creature `merge_with`, this card merges with it into
+## `merges_into`. Both partners name each other.
+@export var merge_with: StringName = &""
+@export var merges_into: StringName = &""
+## False for merged forms and tokens: never in decks, the deck builder or Dream Up.
+@export var collectible: bool = true
 
 
 func is_creature() -> bool:
