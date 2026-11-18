@@ -12,6 +12,7 @@ const START_HAND := 5
 const HAND_LIMIT := 8
 ## Max magic grows by 1 each turn up to this.
 const MAGIC_CAP := 8
+const MAGIC_CAP_MAX := 10
 const FATIGUE_DAMAGE := 2
 const LANES := 4
 
@@ -41,6 +42,10 @@ class PlayerState:
 	var fatigue: int = 0
 	## Cards played this turn (for Combo).
 	var cards_played: int = 0
+	## Your next spell this turn costs this much less (Sugar High); cleared at the end of the turn.
+	var spell_discount: int = 0
+	## Highest max magic the turn growth reaches (Deep Roots raises it, up to MAGIC_CAP_MAX).
+	var magic_cap: int = MAGIC_CAP
 	var deck: Array[CardData] = []
 	var hand: Array[CardData] = []
 	var discard: Array[CardData] = []
@@ -54,6 +59,8 @@ class PlayerState:
 		p.max_magic = max_magic
 		p.fatigue = fatigue
 		p.cards_played = cards_played
+		p.spell_discount = spell_discount
+		p.magic_cap = magic_cap
 		p.deck = deck.duplicate()
 		p.hand = hand.duplicate()
 		p.discard = discard.duplicate()
@@ -89,6 +96,10 @@ class CreatureState:
 	var hushed: bool = false
 	var atk_bonus: int = 0
 	var hp_bonus: int = 0
+	## Attack that lasts until the end of the turn (Grove Roar).
+	var temp_atk: int = 0
+	## Destroyed at the end of its owner's turn (Overheat).
+	var doomed: bool = false
 	## Bubble still up.
 	var bubble: bool = false
 	## Still hidden (not yet revealed by attacking or booping).
@@ -115,6 +126,8 @@ class CreatureState:
 		c.hushed = hushed
 		c.atk_bonus = atk_bonus
 		c.hp_bonus = hp_bonus
+		c.temp_atk = temp_atk
+		c.doomed = doomed
 		c.bubble = bubble
 		c.hidden = hidden
 		c.second_wind_used = second_wind_used

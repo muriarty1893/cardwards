@@ -124,6 +124,16 @@ func _play_one(e: GameEvent) -> void:
 			m.refresh_ui()
 		&"second_wind":
 			await _second_wind(d)
+		&"creature_bounced":
+			await _bounced(d)
+		&"creature_transformed":
+			await _transformed(d)
+		&"doomed":
+			var v: CreatureView = _view(d["player"], d["lane"])
+			if v:
+				Burst.spawn(m, &"embers", v.global_position + Vector3(0, v.height * 0.6, 0), Color.WHITE, 1.2)
+				DamageNumber.stamp(m, v.global_position + Vector3(0, v.height + 0.7, 0.2), "DOOMED!")
+			await _wait(0.35)
 		&"land_changed":
 			await _land_changed(d)
 		&"land_reaction":
@@ -174,6 +184,51 @@ func _rival_react(e: GameEvent) -> void:
 
 
 ## Second Wind: the creature that just fell springs back up in its lane with 1 HP.
+## A creature is sent back to its owner's hand: it shrinks and flies up off the board.
+func _bounced(d: Dictionary) -> void:
+	var p: int = d["player"]
+	var l: int = d["lane"]
+	var v: CreatureView = _view(p, l)
+	if v == null:
+		return
+	m.creature_views[p][l] = null
+	v.busy = true
+	Audio.sfx(&"card_deal")
+	Burst.spawn(m, &"stars", v.global_position + Vector3(0, 0.3, 0), Color.WHITE, 1.0)
+	var tw := v.create_tween().set_parallel()
+	tw.tween_property(v, "position", v.position + Vector3(0, 1.4, 0), 0.4 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.tween_property(v, "scale", Vector3.ONE * 0.05, 0.4 / speed).set_ease(Tween.EASE_IN)
+	await tw.finished
+	if is_instance_valid(v):
+		v.queue_free()
+	m.refresh_pieces()
+
+
+## A creature turns into another (a token, or a merged form): a puff of smoke and the new one pops up in its place.
+func _transformed(d: Dictionary, burst: StringName = &"smoke", stamp: String = "") -> void:
+	var p: int = d["player"]
+	var l: int = d["lane"]
+	var old: CreatureView = _view(p, l)
+	var at: Vector3 = old.global_position if old else m.board.anchor(p, l)
+	if old:
+		m.creature_views[p][l] = null
+		old.queue_free()
+	Burst.spawn(m, burst, at + Vector3(0, 0.3, 0), Color.WHITE, 1.5)
+	Audio.sfx(&"card_play")
+	var v: CreatureView = m.place_creature(p, l, CardDB.card(d["card"]))
+	var full: Vector3 = v.scale
+	v.scale = Vector3.ONE * 0.05
+	v.busy = true
+	if stamp != "":
+		DamageNumber.stamp(m, v.global_position + Vector3(0, v.height + 0.7, 0.2), stamp)
+	var tw := v.create_tween()
+	tw.tween_property(v, "scale", full, 0.45 / speed).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	if is_instance_valid(v):
+		v.busy = false
+	m.refresh_pieces()
+
+
 func _second_wind(d: Dictionary) -> void:
 	var p: int = d["player"]
 	var l: int = d["lane"]

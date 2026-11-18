@@ -16,6 +16,9 @@ const _WHO: Dictionary = {
 	&"all_enemy_creatures": "all enemy creatures", &"all_own_creatures": "all your creatures",
 	&"self": "this creature", &"lane_creature": "the creature in this lane",
 	&"damaged_creature": "it", &"same_target": "it",
+	&"chosen_enemy_creature": "an enemy creature", &"chosen_damaged_enemy": "a damaged enemy creature",
+	&"chosen_undamaged_creature": "an undamaged creature", &"chosen_frozen_enemy": "a frozen enemy creature",
+	&"other_enemies": "every other enemy",
 }
 const _LANE_AURAS: Array[StringName] = [&"lane_atk", &"lane_hp", &"lane_keyword"]
 const _KIND_WORDS: Array[String] = ["creature", "building", "spell"]
@@ -87,13 +90,27 @@ static func _render(c: CardData, bold: bool) -> String:
 		var key: String = "%s|%s|%s%d" % [e.when, e.combo, e.tribe, e.need]
 		var prefix: String = "" if key == run_key else _prefix(c, e, bold)
 		run_key = key
+		# "Freeze X. If it was already frozen, deal N damage to it instead." (Icicle)
+		if e.cond == &"target_frozen" and i + 1 < effs.size() and effs[i + 1].who == &"same_target" and effs[i + 1].cond == &"target_not_frozen":
+			var other: EffectData = effs[i + 1]
+			parts.append(prefix + _phrase(_as_who(other, e.who), bold) + ".")
+			parts.append("If it was already frozen, %s instead." % _phrase(_as_who(e, &"same_target"), bold))
+			i += 2
+			continue
 		var sentence: String = _phrase(e, bold)
 		i += 1
-		while i < effs.size() and effs[i].who == &"same_target":
+		while i < effs.size() and effs[i].who == &"same_target" and effs[i].combo == e.combo:
 			sentence += " and " + _phrase(effs[i], bold)
 			i += 1
 		parts.append(prefix + sentence + ".")
 	return " ".join(parts)
+
+
+## A copy of `e` aimed at `who` (to reword a step's target).
+static func _as_who(e: EffectData, who: StringName) -> EffectData:
+	var c: EffectData = e.duplicate()
+	c.who = who
+	return c
 
 
 static func _b(word: String, bold: bool) -> String:
@@ -132,7 +149,7 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 	var s: String = ""
 	match e.op:
 		&"damage":
-			s = "Deal %d damage to %s" % [e.amount, x]
+			s = "Deal %d %sdamage to %s" % [e.amount, "more " if e.combo and e.who == &"same_target" else "", x]
 		&"heal":
 			s = "Heal %s %d" % [x, e.amount]
 		&"draw":
@@ -169,6 +186,19 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			s = "Destroy %s" % x
 		&"armour":
 			s = "Gain %d %s" % [e.amount, _b("armour", bold)]
+		&"temp_atk":
+			s = "Give %s +%d ATK this turn" % [x, e.amount]
+		&"doom":
+			s = "Destroy %s at the end of your turn" % x
+		&"grow_magic":
+			s = "Gain %d max magic" % e.amount
+		&"bounce":
+			s = "Return %s to its owner's hand" % x
+		&"spell_discount":
+			s = "Your next spell this turn costs %d less" % e.amount
+		&"transform":
+			var into: CardData = CardDB.card(e.card_id) if CardDB.has_card(e.card_id) else null
+			s = "Turn %s into a %d/%d %s with no abilities" % [x, into.attack if into else 1, into.health if into else 1, into.display_name if into else String(e.card_id).capitalize()]
 		&"sprout_meadow":
 			s = "That player's first Meadow lane grows into Mushroom Forest"
 		&"land_draw":

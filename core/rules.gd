@@ -44,7 +44,7 @@ static func start_turn(s: GameState) -> Array[GameEvent]:
 	var ps: GameState.PlayerState = s.players[p]
 	s.phase = GameState.Phase.MAIN
 	ev.append(GameEvent.make(&"turn_started", {"player": p, "turn": s.turn}))
-	ps.max_magic = mini(ps.max_magic + 1, GameState.MAGIC_CAP)
+	ps.max_magic = maxi(ps.max_magic, mini(ps.max_magic + 1, ps.magic_cap))
 	ps.magic = ps.max_magic
 	ps.cards_played = 0
 	for lane: GameState.LaneState in ps.lanes:
@@ -125,7 +125,7 @@ static func _validate_play(s: GameState, a: Action) -> String:
 	if a.hand_index < 0 or a.hand_index >= ps.hand.size():
 		return "No such card"
 	var c: CardData = ps.hand[a.hand_index]
-	if c.cost > ps.magic:
+	if card_cost(s, a.player, c) > ps.magic:
 		return "Not enough magic"
 	if c.kind != CardData.Kind.SPELL:
 		if a.lane < 0 or a.lane >= GameState.LANES:
@@ -330,9 +330,12 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	var p: int = a.player
 	var ps: GameState.PlayerState = s.players[p]
 	var c: CardData = ps.hand[a.hand_index]
+	var cost: int = card_cost(s, p, c)
 	ps.hand.remove_at(a.hand_index)
-	if c.cost > 0:
-		ps.magic -= c.cost
+	if c.kind == CardData.Kind.SPELL:
+		ps.spell_discount = 0
+	if cost > 0:
+		ps.magic -= cost
 		ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic}))
 	match c.kind:
 		CardData.Kind.CREATURE:
@@ -362,7 +365,16 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 	var p: int = s.active
 	_run_lane_triggers(s, p, &"end_of_turn", ev)
 	Fields.run(s, p, &"field_end", ev)
+	for l: int in GameState.LANES:
+		var mine: GameState.CreatureState = s.players[p].lanes[l].creature
+		if mine and mine.doomed:
+			destroy_creature(s, p, l, ev)
 	resolve_deaths(s, ev)
+	s.players[p].spell_discount = 0
+	for q: int in 2:
+		for lane: GameState.LaneState in s.players[q].lanes:
+			if lane.creature:
+				lane.creature.temp_atk = 0
 	if s.phase == GameState.Phase.OVER:
 		return
 	for l: int in GameState.LANES:
@@ -403,7 +415,7 @@ static func effective_attack(s: GameState, p: int, lane: int) -> int:
 	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
 	if cr == null:
 		return 0
-	var atk: int = cr.card.attack + cr.atk_bonus + _aura(s, p, lane, &"lane_atk") - _aura(s, s.opponent(p), lane, &"opposing_atk")
+	var atk: int = cr.card.attack + cr.atk_bonus + cr.temp_atk + _aura(s, p, lane, &"lane_atk") - _aura(s, s.opponent(p), lane, &"opposing_atk")
 	var home: int = Lands.home(s, p, lane)
 	if home == CardData.Land.EMBER or home == CardData.Land.CANDY:
 		atk += 1
@@ -638,6 +650,37 @@ static func return_to_hand(s: GameState, p: int, c: CardData, ev: Array[GameEven
 	else:
 		ps.hand.append(c)
 		ev.append(GameEvent.make(&"card_returned", {"player": p, "card": c.id}))
+
+
+## What `c` costs player p right now: spells get the pending spell discount (never below 0).
+static func card_cost(s: GameState, p: int, c: CardData) -> int:
+	if c.kind == CardData.Kind.SPELL:
+		return maxi(c.cost - s.players[p].spell_discount, 0)
+	return c.cost
+
+
+## Takes a creature off the board back to its owner's hand (discarded if the hand is full). Not a death.
+static func bounce_creature(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
+	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if cr == null:
+		return
+	s.players[p].lanes[lane].creature = null
+	ev.append(GameEvent.make(&"creature_bounced", {"player": p, "lane": lane, "card": cr.card.id}))
+	return_to_hand(s, p, cr.card, ev)
+
+
+## Turns a creature into `into` where it stands: a fresh creature (no damage, buffs, keywords or level) that keeps
+## its readiness for this turn.
+static func transform_creature(s: GameState, p: int, lane: int, into: CardData, ev: Array[GameEvent]) -> void:
+	var old: GameState.CreatureState = s.players[p].lanes[lane].creature
+	if old == null:
+		return
+	var cr: GameState.CreatureState = enter_creature(s, p, lane, into, ev)
+	cr.played_turn = old.played_turn
+	cr.ready = old.ready
+	cr.attacks_used = old.attacks_used
+	cr.booped = old.booped
+	ev.append(GameEvent.make(&"creature_transformed", {"player": p, "lane": lane, "from": old.card.id, "card": into.id}))
 
 
 static func _hero_down(s: GameState) -> bool:

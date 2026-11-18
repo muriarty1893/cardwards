@@ -33,6 +33,8 @@ static func run(s: GameState, p: int, lane: int, card: CardData, when: StringNam
 
 static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectData, ts: Array[Dictionary], chosen: Array[Dictionary], ev: Array[GameEvent]) -> void:
 	var ps: GameState.PlayerState = s.players[p]
+	if e.cond != &"":
+		ts = ts.filter(func(t: Dictionary) -> bool: return _cond_ok(s, e.cond, t))
 	match e.op:
 		&"damage":
 			var amount: int = e.amount
@@ -134,11 +136,48 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 					for i: int in e.amount:
 						Rules.draw(s, p, ev)
 					break
+		&"temp_atk":
+			for t: Dictionary in ts:
+				if _creature(s, t):
+					s.players[t["player"]].lanes[t["lane"]].creature.temp_atk += e.amount
+					ev.append(GameEvent.make(&"buffed", {"player": t["player"], "lane": t["lane"], "atk": e.amount, "hp": 0, "temp": true}))
+		&"doom":
+			for t: Dictionary in ts:
+				if _creature(s, t):
+					s.players[t["player"]].lanes[t["lane"]].creature.doomed = true
+					ev.append(GameEvent.make(&"doomed", {"player": t["player"], "lane": t["lane"]}))
+		&"grow_magic":
+			ps.magic_cap = mini(ps.magic_cap + e.amount, GameState.MAGIC_CAP_MAX)
+			ps.max_magic = mini(ps.max_magic + e.amount, ps.magic_cap)
+			ev.append(GameEvent.make(&"magic_changed", {"player": p, "value": ps.magic, "max": ps.max_magic}))
+		&"bounce":
+			for t: Dictionary in ts:
+				if _creature(s, t):
+					Rules.bounce_creature(s, t["player"], t["lane"], ev)
+		&"spell_discount":
+			ps.spell_discount += e.amount
+		&"transform":
+			var into: CardData = CardDB.card(e.card_id) if CardDB.has_card(e.card_id) else null
+			for t: Dictionary in ts:
+				if into and _creature(s, t):
+					Rules.transform_creature(s, t["player"], t["lane"], into, ev)
 		&"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken", &"opposing_atk", \
 				&"on_land_atk", &"off_land_atk", &"on_land_hp", &"no_quirk":
 			pass  # auras: read by Rules.effective_* / keywords_of / damage_reduction / Fields
 		_:
 			push_warning("Effects: unknown op '%s'" % e.op)
+
+
+static func _cond_ok(s: GameState, cond: StringName, t: Dictionary) -> bool:
+	if not _creature(s, t):
+		return false
+	var frozen: bool = s.players[t["player"]].lanes[t["lane"]].creature.is_frozen()
+	match cond:
+		&"target_frozen":
+			return frozen
+		&"target_not_frozen":
+			return not frozen
+	return true
 
 
 static func _creature(s: GameState, t: Dictionary) -> bool:

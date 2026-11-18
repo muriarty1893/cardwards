@@ -17,6 +17,10 @@ extends Resource
 @export var filter_land: int = -1
 ## Runs only if its owner already played another card this turn.
 @export var combo: bool = false
+## Per target: &"target_frozen" / &"target_not_frozen" (checked when the step runs), &"" always.
+@export var cond: StringName = &""
+## The card a transform turns its target into.
+@export var card_id: StringName = &""
 ## Runs only if its owner controls at least `need` other creatures of `tribe`.
 @export var tribe: StringName = &""
 @export var need: int = 0

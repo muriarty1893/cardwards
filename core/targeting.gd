@@ -6,6 +6,7 @@ extends RefCounted
 const CHOSEN: Array[StringName] = [
 	&"chosen_creature", &"chosen_own_creature", &"chosen_own_empty_lane",
 	&"chosen_two_own_creatures", &"chosen_discard_creature",
+	&"chosen_enemy_creature", &"chosen_damaged_enemy", &"chosen_undamaged_creature", &"chosen_frozen_enemy",
 ]
 
 
@@ -41,6 +42,23 @@ static func valid(s: GameState, p: int, who: StringName, source_lane: int = -1) 
 			for l: int in GameState.LANES:
 				if l != source_lane and s.players[p].lanes[l].creature == null:
 					out.append({"player": p, "lane": l})
+		&"chosen_enemy_creature", &"chosen_damaged_enemy", &"chosen_frozen_enemy":
+			var foe: int = s.opponent(p)
+			for l: int in GameState.LANES:
+				var cr: GameState.CreatureState = s.players[foe].lanes[l].creature
+				if cr == null or cr.hidden:
+					continue
+				if who == &"chosen_damaged_enemy" and cr.damage <= 0:
+					continue
+				if who == &"chosen_frozen_enemy" and not cr.is_frozen():
+					continue
+				out.append({"player": foe, "lane": l})
+		&"chosen_undamaged_creature":
+			for q: int in [p, s.opponent(p)]:
+				for l: int in GameState.LANES:
+					var cr: GameState.CreatureState = s.players[q].lanes[l].creature
+					if cr and cr.damage == 0 and not (q != p and cr.hidden):
+						out.append({"player": q, "lane": l})
 		&"chosen_discard_creature":
 			var d: Array[CardData] = s.players[p].discard
 			for i: int in d.size():
@@ -78,6 +96,14 @@ static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Ar
 				out.append(ctx["damaged"])
 		&"same_target":
 			out.assign(ctx.get("last", []))
+		&"other_enemies":
+			var last: Array = ctx.get("last", [])
+			for l: int in GameState.LANES:
+				var t := {"player": foe, "lane": l}
+				if s.players[foe].lanes[l].creature and not t in last:
+					out.append(t)
+			if not {"hero": foe} in last:
+				out.append({"hero": foe})
 		_:
 			if who in CHOSEN:
 				out.assign(chosen)
