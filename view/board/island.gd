@@ -21,24 +21,38 @@ var _mat: ShaderMaterial
 
 var _player: int = 0
 var _lane: int = 0
+var shape: TileShape
+var _mesh_size := Vector2.ZERO
 var _dressing: Node3D
 var _density: float = 1.0
 var _field_tween: Tween
 var _wipe: Tween
 
 
-func setup(land_type: int, player: int = 0, lane: int = 0, density: float = 1.0) -> void:
+## `shape_`: the tile's outline (its lane's curves); a straight full-width tile when null.
+func setup(land_type: int, player: int = 0, lane: int = 0, density: float = 1.0, shape_: TileShape = null) -> void:
 	land = land_type
 	_player = player
 	_lane = lane
+	shape = shape_ if shape_ else TileShape.straight(lane, position.z)
 	var plane := PlaneMesh.new()
-	# A little wider than the hit area so the wavy painted edge fits inside the mesh.
-	plane.size = Vector2(WIDTH + 0.12, LENGTH)
+	# Wide enough for the lane at its widest; the shader clips to the curves.
+	_mesh_size = Vector2(2.0 * shape.max_half_extent() + 0.04, LENGTH)
+	plane.size = _mesh_size
 	_mat = ShaderMaterial.new()
 	_mat.shader = load("res://view/board/lane.gdshader") as Shader
 	_mat.set_shader_parameter("land", land)
-	_mat.set_shader_parameter("size", Vector2(WIDTH + 0.12, LENGTH))
+	_mat.set_shader_parameter("size", _mesh_size)
 	_mat.set_shader_parameter("wave_seed", float(player * 4 + lane) * 1.7)
+	var lc: Array[Vector4] = shape.left_curve()
+	var rc: Array[Vector4] = shape.right_curve()
+	_mat.set_shader_parameter("left_c1", lc[0])
+	_mat.set_shader_parameter("left_c2", lc[1])
+	_mat.set_shader_parameter("right_c1", rc[0])
+	_mat.set_shader_parameter("right_c2", rc[1])
+	_mat.set_shader_parameter("tile_origin", Vector2(shape.tile_x, shape.tile_z))
+	_mat.set_shader_parameter("outer_left", 1.0 if lane == 0 else 0.0)
+	_mat.set_shader_parameter("outer_right", 1.0 if lane == 3 else 0.0)
 	_mat.set_shader_parameter("fbm_tex", NoiseBank.fbm())
 	_mat.set_shader_parameter("cell_tex", NoiseBank.cells())
 	_mat.set_shader_parameter("edge_color", EDGE[player])
@@ -52,7 +66,7 @@ func set_density(density: float) -> void:
 	_density = density
 	if is_instance_valid(_dressing):
 		_dressing.free()
-	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, density)
+	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, density, shape)
 	_dressing.position.y = TOP_Y
 	add_child(_dressing)
 
@@ -71,7 +85,7 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 	_mat.set_shader_parameter("land", new_land)
 	_mat.set_shader_parameter("morph_origin", origin)
 	var old_dressing: Node3D = _dressing
-	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, _density)
+	_dressing = LaneDressing.build(land, _player, _player * 4 + _lane, _density, shape)
 	_dressing.position.y = TOP_Y
 	add_child(_dressing)
 	if not animate or not is_inside_tree():
@@ -128,4 +142,12 @@ func set_highlight(mode: Highlight) -> void:
 
 
 func contains(local_x: float, local_z: float) -> bool:
-	return absf(local_x) <= WIDTH / 2.0 and absf(local_z) <= LENGTH / 2.0
+	return shape.contains(local_x, local_z)
+
+
+func material() -> ShaderMaterial:
+	return _mat
+
+
+func mesh_size() -> Vector2:
+	return _mesh_size

@@ -76,7 +76,7 @@ func _ready() -> void:
 		for l: GameState.LaneState in state.players[p].lanes:
 			row.append(l.land)
 		lands.append(row)
-	board.build(lands)
+	board.build(lands, BoardLayout.make(seed))
 	_build_ui()
 	Audio.music(GameAudio.MATCH_MUSIC)
 	sync_all()

@@ -27,7 +27,7 @@ func _ready() -> void:
 			for l: int in 4:
 				for sx: float in [-1.0, 1.0]:
 					for sz: float in [-1.0, 1.0]:
-						var s: Vector2 = cam.unproject_position(Vector3(Board.LANE_X[l] + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0))
+						var s: Vector2 = cam.unproject_position(Vector3(BoardLayout.straight().base_centre(l) + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0))
 						ymin = minf(ymin, s.y); ymax = maxf(ymax, s.y); xmin = minf(xmin, s.x); xmax = maxf(xmax, s.x)
 		var head: Rect2 = rival.hero_rect(cam)
 		var pitch: float = rad_to_deg(atan2(pos.y - look.y, pos.z - look.z))

@@ -24,7 +24,7 @@ static func _tile_corners(p: int, l: int) -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			out.append(Vector3(Board.LANE_X[l] + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0))
+			out.append(Vector3(BoardLayout.straight().base_centre(l) + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0))
 	return out
 
 

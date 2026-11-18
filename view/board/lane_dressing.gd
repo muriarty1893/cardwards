@@ -19,6 +19,8 @@ const PROPS: Array[Array] = [
 const TINTS: Array[Color] = [Color(1, 1, 1, 0), Color("#3a2626", 0.75), Color(1, 1, 1, 0), Color("#e4f3ff", 0.65), Color(1, 1, 1, 0)]
 const SWAY: Array[float] = [0.05, 0.0, 0.0, 0.0, 0.06]
 const HALF := Vector2(Island.WIDTH / 2.0 - 0.06, Island.LENGTH / 2.0 - 0.12)
+## Cover and props keep this far in from the tile's side edges.
+const MARGIN := 0.06
 const BUILDING_R := 0.8
 const BOOP_R := 0.45
 ## Cover pieces per half-lane at High (Low passes density 0.5): Mushroom, Ember, Candy, Frost,
@@ -61,23 +63,26 @@ static func cover_material() -> ShaderMaterial:
 	return _material
 
 
-static func build(land: int, player: int, seed: int, density: float = 1.0) -> Node3D:
+## `shape`: the tile's outline (wavy lane edges); a straight full-width tile when null.
+static func build(land: int, player: int, seed: int, density: float = 1.0, shape: TileShape = null) -> Node3D:
+	if shape == null:
+		shape = TileShape.straight()
 	var root := Node3D.new()
 	root.name = "Dressing"
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9100 + seed
-	root.add_child(_accents(land, player, rng))
+	root.add_child(_accents(land, player, rng, shape))
 	var cover := Node3D.new()
 	cover.name = "Cover"
 	root.add_child(cover)
 	for kind: Array in KINDS[land]:
 		var n: int = int(round(DENSITY[land] * float(kind[1]) * density))
 		if n > 0:
-			cover.add_child(_cover(kind, n, player, rng))
+			cover.add_child(_cover(kind, n, player, rng, shape))
 	return root
 
 
-static func _accents(land: int, player: int, rng: RandomNumberGenerator) -> Node3D:
+static func _accents(land: int, player: int, rng: RandomNumberGenerator, shape: TileShape) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Accents"
 	var count: int = 4 + rng.randi_range(0, 2)
@@ -87,8 +92,10 @@ static func _accents(land: int, player: int, rng: RandomNumberGenerator) -> Node
 	while placed < count and guard < 400:
 		guard += 1
 		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
-		var pos := Vector3(side * rng.randf_range(HALF.x - 0.22, HALF.x), 0.0, rng.randf_range(-HALF.y, HALF.y))
-		if not is_clear(pos, player):
+		var z: float = rng.randf_range(-HALF.y, HALF.y)
+		var hw: float = shape.half_width(z) - MARGIN
+		var pos := Vector3(shape.centre(z) + side * rng.randf_range(hw - 0.22, hw), 0.0, z)
+		if not is_clear(pos, player, shape):
 			continue
 		var pick: Array = options[rng.randi_range(0, options.size() - 1)]
 		var prop: Node3D = _make(pick[0], pick[1] * rng.randf_range(0.85, 1.2), land)
@@ -99,7 +106,7 @@ static func _accents(land: int, player: int, rng: RandomNumberGenerator) -> Node
 	return root
 
 
-static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator) -> MultiMeshInstance3D:
+static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator, shape: TileShape) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_custom_data = true
@@ -112,11 +119,13 @@ static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator)
 	for i: int in n:
 		var pos := Vector3.ZERO
 		for t: int in 60:
-			var x: float = rng.randf_range(-HALF.x, HALF.x)
+			var z: float = rng.randf_range(-HALF.y, HALF.y)
+			var hw: float = shape.half_width(z) - MARGIN
+			var x: float = shape.centre(z) + rng.randf_range(-hw, hw)
 			if edge_only:
-				x = signf(rng.randf() - 0.5) * rng.randf_range(Island.WIDTH / 2.0 - EDGE_BAND, HALF.x)
-			pos = Vector3(x, 0.0, rng.randf_range(-HALF.y, HALF.y))
-			if is_clear(pos, player):
+				x = shape.centre(z) + signf(rng.randf() - 0.5) * rng.randf_range(hw + MARGIN - EDGE_BAND, hw)
+			pos = Vector3(x, 0.0, z)
+			if is_clear(pos, player, shape):
 				break
 		var k: float = rng.randf_range(kind[2], kind[3])
 		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * k)
@@ -133,17 +142,21 @@ static func _cover(kind: Array, n: int, player: int, rng: RandomNumberGenerator)
 	return mmi
 
 
-## Tile-local test: not on the building spot (back of the half-lane) or the boop spot.
-static func is_clear(local: Vector3, player: int) -> bool:
-	if absf(local.x) > HALF.x or absf(local.z) > HALF.y:
+## Tile-local test: inside the tile (MARGIN in from its edges), not on the building spot (back of the half-lane) or
+## the boop spot.
+static func is_clear(local: Vector3, player: int, shape: TileShape = null) -> bool:
+	if shape == null:
+		shape = TileShape.straight()
+	if absf(local.z) > HALF.y or local.x < shape.left(local.z) + MARGIN or local.x > shape.right(local.z) - MARGIN:
 		return false
-	# Tile-local spots (the tile centre is LANE_X, STRIP_Z): building at the back, boop beside it.
+	# Tile-local spots (the tile centre is Board.lane_x, STRIP_Z): building at the back, boop beside it.
 	var s: float = 1.0 if player == 0 else -1.0
 	var back_z: float = (Board.SEAM / 2.0 + Island.LENGTH * (1.0 - Board.BUILDING_DEPTH / 2.0)) * s - Board.STRIP_Z[player]
 	var p := Vector2(local.x, local.z)
-	if p.distance_to(Vector2(0.0, back_z)) < BUILDING_R:
+	var bx: float = shape.centre(back_z)
+	if p.distance_to(Vector2(bx, back_z)) < BUILDING_R:
 		return false
-	if player == 0 and p.distance_to(Vector2(Board.BOOP_X, back_z)) < BOOP_R:
+	if player == 0 and p.distance_to(Vector2(bx + Board.BOOP_X, back_z)) < BOOP_R:
 		return false
 	return true
 

@@ -115,7 +115,7 @@ func test_quality_presets() -> bool:
 
 
 static func _tile_rect(p: int, l: int) -> Rect2:
-	return Rect2(Board.LANE_X[l] - Island.WIDTH / 2.0, Board.STRIP_Z[p] - Island.LENGTH / 2.0, Island.WIDTH, Island.LENGTH)
+	return Rect2(BoardLayout.straight().base_centre(l) - Island.WIDTH / 2.0, Board.STRIP_Z[p] - Island.LENGTH / 2.0, Island.WIDTH, Island.LENGTH)
 
 
 static func _circle_hits_rect(c: Vector2, r: float, rect: Rect2) -> bool:

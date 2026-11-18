@@ -22,6 +22,16 @@ uniform float morph = 1.0;
 uniform vec2 morph_origin = vec2(0.0);
 uniform int field_land = -1;
 uniform float field_amount = 0.0;
+// The lane's left/right border curves (BoardLayout, world x): x(z) = c1.x + c1.y*sin(z*c1.z + c1.w) + c2.x*sin(z*c2.y + c2.z).
+uniform vec4 left_c1 = vec4(-1.35, 0.0, 0.0, 0.0);
+uniform vec4 left_c2 = vec4(0.0);
+uniform vec4 right_c1 = vec4(1.35, 0.0, 0.0, 0.0);
+uniform vec4 right_c2 = vec4(0.0);
+// World x/z of the tile centre.
+uniform vec2 tile_origin = vec2(0.0);
+// Outer sides (against the tray frame) keep the painted rim and ink edge; inner sides meet the next lane.
+uniform float outer_left = 0.0;
+uniform float outer_right = 0.0;
 
 const vec3 INK = vec3(0.133, 0.2, 0.2);
 
@@ -145,22 +155,33 @@ vec3 weather(vec2 p, vec3 col, inout vec3 emi) {
 	return col;
 }
 
+float curve_x(vec4 c1, vec4 c2, float z) {
+	return c1.x + c1.y * sin(z * c1.z + c1.w) + c2.x * sin(z * c2.y + c2.z);
+}
+
 void fragment() {
 	vec2 p = (UV - 0.5) * size;          // lane-local x (across), y = z (along)
-	float edge_x = size.x * 0.5 - 0.08 + 0.05 * sin(p.y * 2.6 + wave_seed) + 0.015 * sin(p.y * 7.0 + wave_seed * 2.0);
+	float wz = tile_origin.y + p.y;
+	float dl = p.x - (curve_x(left_c1, left_c2, wz) - tile_origin.x);
+	float dr = (curve_x(right_c1, right_c2, wz) - tile_origin.x) - p.x;
 	float edge_z = size.y * 0.5 - 0.06 + 0.03 * sin(p.x * 4.0 + wave_seed);
-	float m = min(edge_x - abs(p.x), edge_z - abs(p.y));
-	if (m < 0.0) {
+	float dz = edge_z - abs(p.y);
+	if (min(min(dl, dr), dz) < 0.0) {
 		discard;
 	}
+	// Distance to every edge (highlights) and to the edges that get a rim and ink (outer sides and ends).
+	float m = min(min(dl, dr), dz);
+	float m_ink = min(dz, min(mix(9.0, dl, outer_left), mix(9.0, dr, outer_right)));
 	vec3 emi = vec3(0.0);
-	vec3 col = paint(land, p, emi);
+	// Paint in world space so neighbouring tiles of one land continue into each other.
+	vec2 pw = tile_origin + p;
+	vec3 col = paint(land, pw, emi);
 	if (morph < 1.0) {
 		// Land change: the new land spreads from the origin with a wobbly, glowing front.
 		float reach = morph * (length(size) + 0.6);
 		float d = length(p - morph_origin) + (fbm(p * 2.5) - 0.5) * 0.5;
 		vec3 old_emi;
-		vec3 old_col = paint(prev_land, p, old_emi);
+		vec3 old_col = paint(prev_land, pw, old_emi);
 		float inside = smoothstep(reach, reach - 0.12, d);
 		col = mix(old_col, col, inside);
 		emi = mix(old_emi, emi, inside);
@@ -169,11 +190,11 @@ void fragment() {
 		emi += vec3(1.0, 0.9, 0.6) * front * 0.8;
 	}
 	if (field_land >= 0 && field_amount > 0.0) {
-		col = weather(p, col, emi);
+		col = weather(pw, col, emi);
 	}
-	// Bevel, side rim, ink edge (from inside out).
-	col = mix(col, col * 1.18, 1.0 - smoothstep(0.075, 0.1, m));
-	col = mix(col, src_lin(edge_color), (1.0 - smoothstep(0.05, 0.07, m)) * 0.6);
+	// Bevel, side rim, ink edge (from inside out) on the outer sides and ends.
+	col = mix(col, col * 1.18, 1.0 - smoothstep(0.075, 0.1, m_ink));
+	col = mix(col, src_lin(edge_color), (1.0 - smoothstep(0.05, 0.07, m_ink)) * 0.6);
 	if (highlight > 0.5) {
 		bool target = highlight > 1.5;
 		bool guard = highlight > 2.5;
@@ -186,7 +207,7 @@ void fragment() {
 		col = mix(col, hc, band * anim);
 		emi += pow(hc, vec3(2.2)) * band * anim * 0.9;
 	}
-	col = mix(col, INK, 1.0 - smoothstep(0.035, 0.045, m));
+	col = mix(col, INK, 1.0 - smoothstep(0.035, 0.045, m_ink));
 	ALBEDO = out_col(pow(col, vec3(2.2)));
 	EMISSION = out_col(emi);   // emi is linear
 	ROUGHNESS = 1.0;

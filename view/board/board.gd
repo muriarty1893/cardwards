@@ -5,7 +5,6 @@ extends Node3D
 ## particles. Each half-lane has a building spot at its back (owner's edge), a roam zone in front
 ## of it for the creature, and (your side) a boop button spot. The room around it is Room.
 
-const LANE_X: Array[float] = [-4.05, -1.35, 1.35, 4.05]
 ## Width of the glowing seam between the two halves (z = 0).
 const SEAM := 0.3
 ## Centre of each side's tiles. Player 0 (human) is near the camera.
@@ -32,21 +31,28 @@ const SEAM_COLOR := Color("#ffe9a8")
 ## Ground cover within this distance of a creature leans away from it.
 const BEND_R := 0.4
 var ambient: Ambient
+## The lane shapes for this match (river curves; straight until build() gets one).
+var layout: BoardLayout = BoardLayout.straight()
 var _density: float = -1.0
 var _islands: Array[Array] = [[], []]
 
 
-func build(lands: Array[Array]) -> void:
+func build(lands: Array[Array], layout_: BoardLayout = null) -> void:
+	if layout_:
+		layout = layout_
 	_density = density_for(Settings.quality)
 	_build_tray()
 	for p: int in 2:
 		for l: int in 4:
 			var isl := Island.new()
-			isl.position = Vector3(LANE_X[l], 0, STRIP_Z[p])
+			isl.position = Vector3(lane_x(l), 0, STRIP_Z[p])
 			add_child(isl)
-			isl.setup(lands[p][l], p, l, _density)
+			isl.setup(lands[p][l], p, l, _density, TileShape.of(layout, l, STRIP_Z[p]))
 			_islands[p].append(isl)
-	ambient = Ambient.build(lands, Settings.quality)
+	var xs: Array[float] = []
+	for l: int in 4:
+		xs.append(lane_x(l))
+	ambient = Ambient.build(lands, Settings.quality, xs)
 	add_child(ambient)
 	apply_quality(Settings.quality)
 	if not Settings.changed.is_connected(_on_settings_changed):
@@ -88,7 +94,7 @@ func _on_settings_changed() -> void:
 func change_land(p: int, l: int, land: int, origin: Vector3 = Vector3.INF, animate: bool = true) -> void:
 	var o := Vector2.ZERO
 	if origin.is_finite():
-		o = Vector2(origin.x - LANE_X[l], origin.z - STRIP_Z[p])
+		o = Vector2(origin.x - lane_x(l), origin.z - STRIP_Z[p])
 	island(p, l).change_land(land, o, animate)
 	ambient.set_land(p, l, land)
 
@@ -104,6 +110,11 @@ func island(player: int, lane: int) -> Island:
 	return _islands[player][lane]
 
 
+## The lane's centre ignoring the wobble (where its tiles sit).
+func lane_x(lane: int) -> float:
+	return layout.base_centre(lane)
+
+
 ## Centre of the creature's roam zone, at a creature view's origin height.
 func anchor(player: int, lane: int) -> Vector3:
 	var c: Vector2 = roam_rect(player, lane).get_center()
@@ -117,32 +128,33 @@ func roam_rect(player: int, lane: int) -> Rect2:
 	var near: float = SEAM / 2.0 + ROAM_INSET
 	var far: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH) - 0.1
 	var z0: float = minf(near * s, far * s)
-	var w: float = Island.WIDTH - 2.0 * ROAM_INSET
-	return Rect2(LANE_X[lane] - w / 2.0, z0, w, far - near)
+	var span: Vector2 = layout.inner_span(lane, z0, z0 + far - near)
+	return Rect2(span.x + ROAM_INSET, z0, span.y - span.x - 2.0 * ROAM_INSET, far - near)
 
 
 ## Centre of the half-lane's back part (owner's edge), on the tile surface.
 func building_point(player: int, lane: int) -> Vector3:
 	var s: float = 1.0 if player == 0 else -1.0
-	var z: float = SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH / 2.0)
-	return Vector3(LANE_X[lane], Island.TOP_Y, z * s)
+	var z: float = (SEAM / 2.0 + Island.LENGTH * (1.0 - BUILDING_DEPTH / 2.0)) * s
+	return Vector3(layout.centre_x(lane, z), Island.TOP_Y, z)
 
 
 ## Where a creature's house stands (tile surface).
 func house_point(player: int, lane: int) -> Vector3:
-	return Vector3(LANE_X[lane] + HOUSE_X, Island.TOP_Y, HOUSE_Z * (1.0 if player == 0 else -1.0))
+	var z: float = HOUSE_Z * (1.0 if player == 0 else -1.0)
+	return Vector3(layout.right_x(lane, z) - (Island.WIDTH / 2.0 - HOUSE_X), Island.TOP_Y, z)
 
 
 ## The human's boop button spot in `lane`, beside the building.
 func boop_point(lane: int) -> Vector3:
 	var b: Vector3 = building_point(0, lane)
-	return Vector3(LANE_X[lane] + BOOP_X, Island.TOP_Y, b.z)
+	return Vector3(layout.centre_x(lane, b.z) + BOOP_X, Island.TOP_Y, b.z)
 
 
 ## World point a creature lunges to when attacking the hero behind `player`'s lane: just past
 ## the tray edge on that side.
 func hero_point(player: int, lane: int) -> Vector3:
-	return Vector3(LANE_X[lane], CREATURE_Y, 6.6 if player == 0 else -6.6)
+	return Vector3(lane_x(lane), CREATURE_Y, 6.6 if player == 0 else -6.6)
 
 
 ## The point on the tile surface under `screen_pos` (Vector3.INF if the ray misses the plane).
@@ -161,10 +173,15 @@ func lane_at_screen(cam: Camera3D, screen_pos: Vector2) -> Dictionary:
 	var hit: Vector3 = ground_at_screen(cam, screen_pos)
 	if not hit.is_finite():
 		return {}
+	return lane_at_world(hit)
+
+
+## {"player", "lane"} of the tile under world x/z, or {} (the seam, or off the board).
+func lane_at_world(pos: Vector3) -> Dictionary:
 	for p: int in 2:
-		for l: int in 4:
-			if island(p, l).contains(hit.x - LANE_X[l], hit.z - STRIP_Z[p]):
-				return {"player": p, "lane": l}
+		if absf(pos.z - STRIP_Z[p]) <= Island.LENGTH / 2.0:
+			var l: int = layout.lane_at(pos.x, pos.z)
+			return {} if l < 0 else {"player": p, "lane": l}
 	return {}
 
 
@@ -174,8 +191,8 @@ func _box(size: Vector3) -> BoxMesh:
 	return b
 
 
-## Wooden tray: a dark base under the tiles (showing as thin gaps between lanes), a raised frame
-## with brass corner caps, low dividers between lanes and a glowing seam across the middle.
+## Wooden tray: a dark base under the tiles, a raised frame with brass corner caps and a glowing seam across the
+## middle. Lanes meet edge to edge; Separators draw the lines between them.
 func _build_tray() -> void:
 	var r: Rect2 = TRAY_RECT
 	var wood: ShaderMaterial = Toon.plain(FRAME)
@@ -196,10 +213,6 @@ func _build_tray() -> void:
 	for corner: Vector2 in [r.position, Vector2(r.end.x, r.position.y), Vector2(r.position.x, r.end.y), r.end]:
 		var inward := Vector2(signf(c.x - corner.x), signf(c.y - corner.y)) * (w / 2.0)
 		add_child(Palette.mesh(_box(Vector3(w + 0.1, h + 0.08, w + 0.1)), brass, Vector3(corner.x + inward.x, (h + 0.08) / 2.0, corner.y + inward.y), false))
-	# Low dividers between lanes.
-	for i: int in 3:
-		var x: float = (LANE_X[i] + LANE_X[i + 1]) / 2.0
-		add_child(Palette.mesh(_box(Vector3(0.08, 0.2, r.size.y - 2.0 * w)), dark, Vector3(x, 0.1, c.y), false))
 	# The seam: a thin warm glow across the middle.
 	var seam_mat := StandardMaterial3D.new()
 	seam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

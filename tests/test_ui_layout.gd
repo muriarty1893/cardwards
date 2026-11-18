@@ -210,7 +210,7 @@ func test_board_clear_of_hud() -> bool:
 		for l: int in 4:
 			for sx: float in [-1.0, 1.0]:
 				for sz: float in [-1.0, 1.0]:
-					var c := Vector3(Board.LANE_X[l] + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0)
+					var c := Vector3(m.board.lane_x(l) + sx * Island.WIDTH / 2.0, Island.TOP_Y, Board.STRIP_Z[p] + sz * Island.LENGTH / 2.0)
 					var s: Vector2 = m.rig.camera.unproject_position(c)
 					assert_true(s.y < vp.y - Hud.HAND_STRIP_H, "tile p%d l%d corner above the hand strip (%s)" % [p, l, s])
 					assert_true(not hand.has_point(s), "tile p%d l%d corner clear of the hand (%s)" % [p, l, s])
