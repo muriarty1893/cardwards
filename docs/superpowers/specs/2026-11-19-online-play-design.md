@@ -161,11 +161,11 @@ server closes it.
 | `welcome` | `seat`, `token`, `code` | seat taken; save token |
 | `waiting` | `code` | host waits for a friend |
 | `start` | `seed`, `first`, `names[2]`, `decks[2]`, `log[]`, `match` | (re)start; `log` holds every move so far (rejoin), `match` counts rematches |
-| `move` | `seq`, `a` | the next move, to both players |
+| `move` | `seq`, `a`, `auto?` | the next move, to both players; `auto: true` when the room made it (backstop END_TURN) |
 | `block_wanted` | `lane`, `target`, `hit` | to the defender only |
 | `blocking` | — | to the attacker: waiting for the defender |
 | `rejected` | `why` | the sender's move was dropped (not its turn, attack pending…) |
-| `opponent` | `status` (`away`/`back`), `until?` (ms epoch) | rival's connection |
+| `opponent` | `status` (`away`/`back`/`left`), `until?` (ms epoch) | rival's connection (`left`: gone after the match ended — REMATCH turns off) |
 | `rematch_wanted` | — | the rival pressed REMATCH |
 | `over` | `winner`, `reason` (`normal`/`concede`/`forfeit`/`desync`) | match ended |
 | `error` | `code`, `msg` | `no_room`, `full`, `version`, `over`, `bad_token`, `bad_hello` — socket closes after |
@@ -211,7 +211,8 @@ Lobby: client → nothing (version is in the URL); lobby → `{t:"matched", code
 The game saves `{code, token, version}` to `user://online_rejoin.json` on `welcome` and deletes it on `over`
 (or FORGET). Rejoin = connect `/join/<code>` and `hello` with the token. The room answers `welcome` + `start` with
 the full `log`; the game re-runs setup, applies every logged move without animation, rebuilds all views
-(`sync_all`) and continues. Lost connection mid-match → "Reconnecting…" and automatic retries after 1, 2, 4, 8 … s
+(`sync_all`) and continues. If an attack is pending, the room sends the rejoiner `block_wanted` again (defender)
+or `blocking` (attacker) right after `start`. Lost connection mid-match → "Reconnecting…" and automatic retries after 1, 2, 4, 8 … s
 until the 60 s window is over; then the menu.
 
 ### 4.6 Version
