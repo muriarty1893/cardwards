@@ -8,8 +8,9 @@ signal changed
 ## A match started (first start, rematch or rejoin): the menu moves to the match scene.
 signal match_ready
 
-## The relay. Replaced with the deployed wss:// address when the server goes live.
-const SERVER_URL := "ws://127.0.0.1:8787"
+## The relay (server/, deployed with `npx wrangler deploy`). `--server=ws://127.0.0.1:8787` plays
+## against a local `wrangler dev` instead.
+const SERVER_URL := "wss://dream-isles-online.dream-isles-online.workers.dev"
 const REJOIN_FILE := "user://online_rejoin.json"
 const RECONNECT_WINDOW := 60.0
 const RETRY_DELAYS: Array[float] = [1.0, 2.0, 4.0, 8.0, 16.0]
