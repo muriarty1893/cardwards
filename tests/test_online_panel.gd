@@ -63,6 +63,7 @@ func _menu() -> Node:
 
 func test_menu_has_both_play_buttons() -> bool:
 	var saved: Dictionary = _setup(func(_p: String) -> Object: return DeadLink.new())
+	Session.player_deck = &"grove_guard"
 	var menu: Node = await _menu()
 	var ai: Button = menu.find_child("PlayAI", true, false)
 	var online: Button = menu.find_child("PlayOnline", true, false)
