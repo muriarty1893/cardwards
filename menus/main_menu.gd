@@ -1,7 +1,7 @@
 extends Node3D
 ## Title screen over the table in the cottage, the camera drifting gently from the player's side:
-## pick a deck (a starter or one of your own) and difficulty, then play. DECKS opens the deck
-## viewer and builder.
+## pick a deck (a starter or one of your own) and difficulty, then play the AI or online. DECKS
+## opens the deck viewer and builder.
 
 const FLAVOUR: Dictionary = {
 	&"grove_guard": "Outlast them with healing.",
@@ -41,6 +41,8 @@ func _ready() -> void:
 	_cam.make_current()
 	Outline.attach(_cam)
 	_build_ui()
+	_build_rejoin_banner()
+	Online.match_ready.connect(_on_match_ready)
 	Audio.music(GameAudio.MENU_MUSIC)
 	if "--deck-builder" in OS.get_cmdline_user_args():
 		var builder: DeckBuilder = open_deck_builder()
@@ -124,14 +126,24 @@ func _build_ui() -> void:
 		b.pressed.connect(_select_difficulty.bind(i))
 		diff.add_child(b)
 		_diff_buttons.append(b)
+	var plays := HBoxContainer.new()
+	plays.alignment = BoxContainer.ALIGNMENT_CENTER
+	plays.add_theme_constant_override("separation", 16)
+	vb.add_child(plays)
+	var play := MenuButtons.big("PLAY vs AI", Palette.GOLD, 28)
+	play.name = "PlayAI"
+	play.custom_minimum_size = Vector2(240, 0)
+	play.pressed.connect(_play)
+	plays.add_child(play)
+	var online := MenuButtons.big("PLAY ONLINE", Palette.GOLD, 28)
+	online.name = "PlayOnline"
+	online.custom_minimum_size = Vector2(240, 0)
+	online.pressed.connect(open_online)
+	plays.add_child(online)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 16)
 	vb.add_child(row)
-	var play := MenuButtons.big("PLAY", Palette.GOLD, 30)
-	play.custom_minimum_size = Vector2(200, 0)
-	play.pressed.connect(_play)
-	row.add_child(play)
 	var decks_b := MenuButtons.big("DECKS", Color.WHITE, 20)
 	decks_b.name = "DecksButton"
 	decks_b.pressed.connect(open_deck_builder)
@@ -233,3 +245,47 @@ func _select_difficulty(i: int) -> void:
 
 func _play() -> void:
 	get_tree().change_scene_to_file("res://view/match.tscn")
+
+
+## PLAY ONLINE: quick match, host or join (spec 2.1).
+func open_online() -> OnlinePanel:
+	var panel := OnlinePanel.make()
+	_open_panel(panel)
+	return panel
+
+
+func _on_match_ready() -> void:
+	if is_inside_tree():
+		get_tree().change_scene_to_file("res://view/match.tscn")
+
+
+## "Rejoin your match?" when an online match may still be running.
+func _build_rejoin_banner() -> void:
+	if not Online.has_rejoin():
+		return
+	var banner := PanelContainer.new()
+	banner.name = "RejoinBanner"
+	banner.add_theme_stylebox_override("panel", UiStyle.parchment_panel(16))
+	banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	banner.offset_top = 12
+	_ui_root.add_child(banner)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 12)
+	banner.add_child(hb)
+	var l := UiStyle.title(UiStyle.label("Rejoin your match?", 20)) as Label
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hb.add_child(l)
+	var rejoin := MenuButtons.big("REJOIN", Palette.GOLD, 18)
+	rejoin.name = "Rejoin"
+	rejoin.pressed.connect(func() -> void:
+		banner.visible = false
+		open_online()
+		Online.rejoin())
+	hb.add_child(rejoin)
+	var forget := MenuButtons.big("FORGET", Color.WHITE, 18)
+	forget.name = "Forget"
+	forget.pressed.connect(func() -> void:
+		Online.forget_rejoin()
+		banner.visible = false)
+	hb.add_child(forget)
