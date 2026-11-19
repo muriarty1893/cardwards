@@ -40,6 +40,11 @@ func leave() -> void:
 	pass
 
 
+## REMATCH on the results screen.
+func rematch() -> void:
+	m.get_tree().reload_current_scene()
+
+
 func rival_name() -> String:
 	return "Rival"
 

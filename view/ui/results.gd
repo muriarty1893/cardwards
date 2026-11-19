@@ -5,6 +5,9 @@ extends Control
 signal rematch
 signal menu
 
+var _again: Button
+var _reason: Label
+
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -12,7 +15,8 @@ func _init() -> void:
 	visible = false
 
 
-func show_result(won: bool, turns: int) -> void:
+## `reason` (online endings) goes under the title; `title` replaces VICTORY!/DEFEAT (NO CONTEST).
+func show_result(won: bool, turns: int, reason: String = "", title_text: String = "") -> void:
 	for c: Node in get_children():
 		c.queue_free()
 	var dim := ColorRect.new()
@@ -29,12 +33,17 @@ func show_result(won: bool, turns: int) -> void:
 	vb.add_theme_constant_override("separation", 14)
 	vb.alignment = BoxContainer.ALIGNMENT_CENTER
 	panel.add_child(vb)
-	var title := UiStyle.title(UiStyle.label("VICTORY!" if won else "DEFEAT", 64, Palette.GOLD.darkened(0.2) if won else Palette.HP)) as Label
+	var heading: String = title_text if title_text != "" else ("VICTORY!" if won else "DEFEAT")
+	var title := UiStyle.title(UiStyle.label(heading, 64, Palette.GOLD.darkened(0.2) if won else Palette.HP)) as Label
 	title.add_theme_color_override("font_outline_color", Palette.INK)
 	title.add_theme_constant_override("outline_size", 10)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.custom_minimum_size = Vector2(360, 0)
 	vb.add_child(title)
+	_reason = UiStyle.title(UiStyle.label(reason, 22)) as Label
+	_reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_reason.visible = reason != ""
+	vb.add_child(_reason)
 	var sub := UiStyle.label("The match lasted %d turns." % turns, 18)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(sub)
@@ -45,6 +54,7 @@ func show_result(won: bool, turns: int) -> void:
 	var again := MenuButtons.big("REMATCH", Palette.GOLD)
 	again.pressed.connect(func() -> void: rematch.emit())
 	hb.add_child(again)
+	_again = again
 	var back := MenuButtons.big("MENU", Color.WHITE)
 	back.pressed.connect(func() -> void: menu.emit())
 	hb.add_child(back)
@@ -60,3 +70,28 @@ func show_result(won: bool, turns: int) -> void:
 	var tw := create_tween()
 	tw.tween_property(panel, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	again.grab_focus()
+
+
+## Online: the REMATCH button's text and whether it can be pressed ("Waiting for rival…", "Rival left").
+func set_rematch(text: String, enabled: bool) -> void:
+	if _again:
+		_again.text = text
+		_again.disabled = not enabled
+
+
+func rematch_enabled() -> bool:
+	return _again != null and not _again.disabled
+
+
+func rematch_text() -> String:
+	return _again.text if _again else ""
+
+
+func set_reason(text: String) -> void:
+	if _reason:
+		_reason.text = text
+		_reason.visible = text != ""
+
+
+func reason_text() -> String:
+	return _reason.text if _reason else ""

@@ -36,8 +36,10 @@ var error_code: String = ""
 var error_msg: String = ""
 ## {"winner": int, "reason": String} once the room ended the match.
 var over: Dictionary = {}
-## Unix ms until which the rival may come back (0: present).
+## Unix ms until which the rival may come back (0: present), and when (Time.get_ticks_msec) the
+## room said so; countdowns use the local clock, the two clocks may differ.
 var rival_away_until: int = 0
+var rival_away_at: int = 0
 var rival_left: bool = false
 var rival_wants_rematch: bool = false
 var _opening: Array[GameEvent] = []
@@ -114,6 +116,7 @@ func on_message(msg: Dictionary) -> void:
 		"opponent":
 			var st: String = String(msg.get("status", ""))
 			rival_away_until = int(msg.get("until", 0)) if st == "away" else 0
+			rival_away_at = Time.get_ticks_msec() if st == "away" else 0
 			rival_left = st == "left"
 			inbox.append(msg)
 		"rematch_wanted":

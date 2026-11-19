@@ -86,6 +86,19 @@ func simulate_attack(hit: Action.Hit) -> void:
 	await _simulate(x, false)
 
 
+## Online: your attack waits for the rival's live block; simulate_block() then shows the result.
+func wait_block() -> void:
+	_setup(true, "RIVAL IS BLOCKING…")
+	_hint.text = ""
+	_x = 0.5
+	_bar.queue_redraw()
+
+
+func hide_bar() -> void:
+	if not _active:
+		visible = false
+
+
 func simulate_block(blocked: bool) -> void:
 	await _simulate(0.5 if blocked else [0.2, 0.8].pick_random(), true)
 

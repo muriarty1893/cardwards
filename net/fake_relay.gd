@@ -42,6 +42,10 @@ var code: String = "FAKE-01"
 var seed: int = 1
 ## Tests: drop one card from this seat's deck in `start` (an illegal deck).
 var corrupt_deck: int = -1
+## Tests: who goes first (-1: rolled).
+var force_first: int = -1
+## Tests: every client message handled, as {"t", "seat"} (seat -1 before hello).
+var received_log: Array[Dictionary] = []
 var rng := RandomNumberGenerator.new()
 var status: String = "claimed"
 var version: String = ""
@@ -117,6 +121,7 @@ func drop(seat: int) -> void:
 
 func _handle(link: Link, msg: Dictionary) -> void:
 	var t: String = String(msg.get("t", ""))
+	received_log.append({"t": t, "seat": link.seat})
 	if link.seat < 0:
 		if t == "hello":
 			_hello(link, msg)
@@ -256,6 +261,8 @@ func _gone(link: Link) -> void:
 
 func _begin() -> void:
 	first = rng.randi_range(0, 1)
+	if force_first >= 0:
+		first = force_first
 	active = first
 	status = "playing"
 	log.clear()

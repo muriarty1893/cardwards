@@ -48,22 +48,44 @@ var creature_views: Array[Array] = [[null, null, null, null], [null, null, null,
 ## Creature houses (decoration), kept in step with the creatures by _sync_houses.
 var house_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
 var building_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
+## Where MENU / LEAVE MATCH go (tests clear it to stay in the scene).
+var menu_scene: String = "res://menus/main_menu.tscn"
+## How often verify_views had to rebuild pieces from the state (should stay 0).
+var view_resyncs: int = 0
 
 
 func _ready() -> void:
-	var seed: int = Session.match_seed()
-	difficulty = Session.difficulty
-	var deck_a: DeckData = CardDB.deck(Session.player_deck)
-	var deck_b: DeckData = CardDB.deck(Session.resolve_ai_deck(seed))
+	var online: OnlineSession = Online.session
+	if online == null or online.status != &"playing" or online.state == null:
+		online = null
+	var seed: int
+	var deck_a: DeckData
+	var deck_b: DeckData
+	var opening: Array[GameEvent]
+	if online:
+		# Online: the session owns the canonical match; this seat sees itself as player 0.
+		seed = online.seed
+		deck_a = online.decks[online.seat]
+		deck_b = online.decks[1 - online.seat]
+		seats = SeatView.new(online.state, online.seat)
+		state = seats.view
+		driver = OnlineRival.new(online)
+		driver.m = self
+		opening = seats.events_to_view(online.take_opening())
+	else:
+		seed = Session.match_seed()
+		difficulty = Session.difficulty
+		deck_a = CardDB.deck(Session.player_deck)
+		deck_b = CardDB.deck(Session.resolve_ai_deck(seed))
+		seats = SeatView.new(Rules.setup(deck_a, deck_b, seed), HUMAN)
+		state = seats.view
+		driver = AiRival.new(AIPlayer.new(AI, difficulty, seed + 7919))
+		driver.m = self
+		var real_opening: Array[GameEvent] = Rules.start_turn(seats.real)
+		seats.sync()
+		opening = seats.events_to_view(real_opening)
 	card_backs = [CardBacks.texture_for(deck_a), CardBacks.texture_for(deck_b)]
-	seats = SeatView.new(Rules.setup(deck_a, deck_b, seed), HUMAN)
-	state = seats.view
-	driver = AiRival.new(AIPlayer.new(AI, difficulty, seed + 7919))
-	driver.m = self
-	var real_opening: Array[GameEvent] = Rules.start_turn(seats.real)
-	seats.sync()
-	var opening: Array[GameEvent] = seats.events_to_view(real_opening)
-	if "--demo-board" in OS.get_cmdline_user_args():
+	if "--demo-board" in OS.get_cmdline_user_args() and not online:
 		var ais: Array[AIPlayer] = [AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 11), AIPlayer.new(1, AIPlayer.Difficulty.MEDIUM, 12)]
 		AIRunner.play_match(state, ais, 6)
 	rig = CameraRig.new()
@@ -94,9 +116,14 @@ func _ready() -> void:
 		lands.append(row)
 	board.build(lands, BoardLayout.make(seed))
 	_build_ui()
+	if driver.is_online():
+		hud.set_online(driver.rival_name())
 	Audio.music(GameAudio.MATCH_MUSIC)
 	sync_all()
 	refresh_ui()
+	if online:
+		_begin(opening)
+		return
 	if "--demo-results" in OS.get_cmdline_user_args():
 		results.show_result(true, 9)
 		return
@@ -347,8 +374,8 @@ func _build_ui() -> void:
 		refresh_ui())
 	results = Results.new()
 	root.add_child(results)
-	results.rematch.connect(func() -> void: get_tree().reload_current_scene())
-	results.menu.connect(func() -> void: get_tree().change_scene_to_file("res://menus/main_menu.tscn"))
+	results.rematch.connect(func() -> void: driver.rematch())
+	results.menu.connect(_go_menu)
 	input = InputController.new()
 	input.match_ctl = self
 	add_child(input)
@@ -364,7 +391,14 @@ func _build_ui() -> void:
 	input.action_requested.connect(_on_action_requested)
 	overlay.setup(self)
 	hud.end_turn_pressed.connect(_on_end_turn_pressed)
-	hud.menu_requested.connect(func() -> void: get_tree().change_scene_to_file("res://menus/main_menu.tscn"))
+	hud.menu_requested.connect(_go_menu)
+
+
+## MENU after the results, QUIT TO MENU / LEAVE MATCH in the menu.
+func _go_menu() -> void:
+	driver.leave()
+	if menu_scene != "":
+		get_tree().change_scene_to_file(menu_scene)
 
 
 ## Refresh HUD, hand and input availability from the state.
@@ -502,9 +536,11 @@ func verify_views() -> void:
 			var ok_c: bool = (lane.creature == null and cv == null) or (lane.creature != null and cv != null and cv.card == lane.creature.card)
 			var ok_b: bool = (lane.building == null and bv == null) or (lane.building != null and bv != null and bv.card == lane.building)
 			if board.island(p, l).land != lane.land:
+				view_resyncs += 1
 				push_warning("Land out of sync at p%d lane %d; resyncing" % [p, l])
 				board.change_land(p, l, lane.land, Vector3.INF, false)
 			if not ok_c or not ok_b:
+				view_resyncs += 1
 				push_warning("View out of sync at p%d lane %d; resyncing" % [p, l])
 				sync_all()
 				return

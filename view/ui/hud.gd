@@ -42,6 +42,16 @@ var end_turn_pulsing: bool = false
 var _pulse: Tween
 ## Full-screen pause menu. The match moves it above the hand so it takes the mouse first.
 var pause_overlay: Control
+## QUIT TO MENU (online: LEAVE MATCH, which asks first through LEAVE / STAY).
+var quit_button: Button
+var leave_button: Button
+var stay_button: Button
+var _pause_title: Label
+var _leave_confirm: Control
+var _online: bool = false
+## Online: the burning fuse on END TURN and the connection banner.
+var _fuse: TurnFuse
+var _banner: Label
 const ARMOUR_COLOR := Color("#7ac8ff")
 const SHIELD_ICON := "res://assets/icons/checked-shield.svg"
 ## "You" / "Rival" -> {"root": Control, "label": Label}
@@ -83,6 +93,15 @@ func _init() -> void:
 	_field_chip.mouse_filter = Control.MOUSE_FILTER_PASS
 	_field_chip.visible = false
 	add_child(_field_chip)
+	_banner = _plate("", Vector2(460, 34), 17)
+	_banner.name = "Banner"
+	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_banner.offset_left = -230
+	_banner.offset_right = 230
+	_banner.offset_top = 52
+	_banner.offset_bottom = 86
+	_banner.visible = false
+	add_child(_banner)
 
 
 func panels() -> Array[Control]:
@@ -268,6 +287,7 @@ func is_paused() -> bool:
 
 func close_pause() -> void:
 	pause_overlay.visible = false
+	_leave_confirm.visible = false
 	pause_changed.emit(false)
 
 
@@ -282,6 +302,51 @@ func toggle_pause() -> void:
 		close_pause()
 	else:
 		_open_pause()
+
+
+## Online match: the rival's name in their corner; the menu can't pause, and leaving asks first.
+func set_online(rival_name: String) -> void:
+	_online = true
+	var nm: Label = _refs["Rival"]["name"]
+	nm.text = rival_name.to_upper()
+	if nm.text.length() > 7:
+		nm.add_theme_font_size_override("font_size", 13)
+	_pause_title.text = "Menu"
+	quit_button.text = "LEAVE MATCH"
+
+
+func rival_name_text() -> String:
+	return (_refs["Rival"]["name"] as Label).text
+
+
+func pause_title_text() -> String:
+	return _pause_title.text
+
+
+func leave_confirm_visible() -> bool:
+	return _leave_confirm.visible
+
+
+## Seconds left in the turn while the fuse should show; below 0 hides it.
+func set_fuse(seconds_left: float, fuse_seconds: float = 15.0) -> void:
+	if seconds_left < 0.0:
+		_fuse.visible = false
+	else:
+		_fuse.show_left(seconds_left, fuse_seconds)
+
+
+func fuse_visible() -> bool:
+	return _fuse.visible
+
+
+## A line across the top ("Rival disconnected — waiting 0:41"); "" hides it.
+func set_banner(text: String) -> void:
+	_banner.text = text
+	_banner.visible = text != ""
+
+
+func banner_text() -> String:
+	return _banner.text if _banner.visible else ""
 
 
 ## END TURN follows whether the local player may act; the menu button always works.
@@ -405,11 +470,14 @@ func _corner(left: bool, who: String, portrait: String, bg: Color) -> Control:
 	nm.position = Vector2(160, 54) if left else Vector2(8, 54)
 	nm.size = Vector2(68, 26)
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	nm.clip_text = true
+	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	c.add_child(nm)
 	var plate := _plate("", Vector2(116, 24), 14)
 	plate.position = Vector2(112, 92) if left else Vector2(8, 92)
 	c.add_child(plate)
-	_refs[who] = {"orb": orb, "plate": plate}
+	_refs[who] = {"orb": orb, "plate": plate, "name": nm}
 	return c
 
 
@@ -511,6 +579,11 @@ func _build_bottom() -> void:
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
 	UiStyle.sound_button(end_turn_button)
 	add_child(end_turn_button)
+	_fuse = TurnFuse.new()
+	_fuse.name = "TurnFuse"
+	_fuse.position = Vector2(0, -11)
+	_fuse.size = Vector2(END_TURN_SIZE.x, 22)
+	end_turn_button.add_child(_fuse)
 
 
 func _build_pause() -> void:
@@ -554,14 +627,38 @@ func _build_pause() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.custom_minimum_size = Vector2(320, 0)
 	vb.add_child(title)
+	_pause_title = title
 	var settings := SettingsPanel.make(false)
 	settings.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	vb.add_child(settings)
 	var resume := MenuButtons.big("RESUME", Palette.GOLD)
 	resume.pressed.connect(close_pause)
 	vb.add_child(resume)
-	var menu := MenuButtons.big("QUIT TO MENU", Color.WHITE)
-	menu.pressed.connect(func() -> void: menu_requested.emit())
-	vb.add_child(menu)
+	quit_button = MenuButtons.big("QUIT TO MENU", Color.WHITE)
+	quit_button.pressed.connect(func() -> void:
+		if _online:
+			_leave_confirm.visible = true
+		else:
+			menu_requested.emit())
+	vb.add_child(quit_button)
+	_leave_confirm = VBoxContainer.new()
+	_leave_confirm.add_theme_constant_override("separation", 8)
+	_leave_confirm.visible = false
+	var ask := UiStyle.label("Leaving gives your rival the win — leave?", 16)
+	ask.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ask.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ask.custom_minimum_size = Vector2(320, 0)
+	_leave_confirm.add_child(ask)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	leave_button = MenuButtons.big("LEAVE", Palette.HP, 18)
+	leave_button.pressed.connect(func() -> void: menu_requested.emit())
+	stay_button = MenuButtons.big("STAY", Palette.GOLD, 18)
+	stay_button.pressed.connect(func() -> void: _leave_confirm.visible = false)
+	row.add_child(leave_button)
+	row.add_child(stay_button)
+	_leave_confirm.add_child(row)
+	vb.add_child(_leave_confirm)
 	add_child(pause_overlay)
 	pause_button.pressed.connect(_open_pause)
