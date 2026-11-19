@@ -77,6 +77,14 @@ func rematch() -> void:
 func process(delta: float) -> void:
 	if not live or not is_instance_valid(m):
 		return
+	if Online.state == &"error" and session.status == &"playing" and not m.results.visible:
+		# The connection is gone for good (the reconnect window ran out).
+		_release_echo()
+		m.timing_bar.hide_bar()
+		m.hud.set_banner("")
+		m.results.show_result(false, m.state.turn, Online.message, "DISCONNECTED")
+		m.results.set_rematch("No rematch", false)
+		return
 	_tick_clock(delta)
 	_update_banner()
 	if not _playing and not session.inbox.is_empty():

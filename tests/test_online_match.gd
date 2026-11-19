@@ -206,3 +206,47 @@ func test_banner_when_rival_drops() -> bool:
 	assert_true(ok, "banner cleared when the rival is back")
 	_cleanup(p)
 	return true
+
+
+func test_lost_connection_shows_results() -> bool:
+	var p: Array = await _start(47, 1, false)
+	var m: MatchController = p[3]
+	var online: Node = _tree().root.get_node("Online")
+	online.set("state", &"error")
+	online.set("message", "Lost the connection")
+	var ok: bool = await _until(func() -> bool: return m.results.visible)
+	assert_true(ok, "the match says what happened")
+	assert_eq(m.results.reason_text(), "Lost the connection", "the reason")
+	assert_true(not m.results.rematch_enabled(), "no rematch without a connection")
+	_cleanup(p)
+	return true
+
+
+func test_rejoin_into_finished_match_shows_results() -> bool:
+	var relay := FakeRelay.new(48)
+	var remote := OnlineSession.new(relay.transport(&"host"), "Botty", CardDB.deck(&"deep_freeze"), VER)
+	remote.hello()
+	relay.pump()
+	var local := OnlineSession.new(relay.transport(), "Me", CardDB.deck(&"blaze_rush"), VER)
+	local.hello()
+	relay.pump()
+	remote.concede()
+	relay.pump()
+	assert_eq(local.status, &"over", "the match ended before the scene loaded")
+	var online: Node = _tree().root.get_node("Online")
+	online.set("session", local)
+	online.set("state", &"playing")
+	var m := (load("res://view/match.tscn") as PackedScene).instantiate() as MatchController
+	m.menu_scene = ""
+	_tree().root.add_child(m)
+	await _tree().process_frame
+	m.player.speed = 20.0
+	m.pace = 20.0
+	assert_true(m.driver is OnlineRival, "still the online match, not one against the AI")
+	var ok: bool = await _until(func() -> bool: return m.results.visible)
+	assert_true(ok, "results shown")
+	assert_eq(m.results.reason_text(), "Rival conceded", "with the reason")
+	m.queue_free()
+	online.set("session", null)
+	online.set("state", &"idle")
+	return true

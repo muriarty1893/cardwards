@@ -55,8 +55,10 @@ var view_resyncs: int = 0
 
 
 func _ready() -> void:
+	# An online match that already ended (a rejoin can land after the end) still opens online, to
+	# show its result.
 	var online: OnlineSession = Online.session
-	if online == null or online.status != &"playing" or online.state == null:
+	if online == null or not online.status in [&"playing", &"over"] or online.state == null:
 		online = null
 	var seed: int
 	var deck_a: DeckData
