@@ -165,6 +165,9 @@ export class Referee {
       out.push({ to: seat, msg: { t: "waiting", code: s.code } });
     } else {
       out.push({ to: seat, msg: this.startMsg() });
+      const p = s.pending;
+      if (p && seat === p.seat) out.push({ to: seat, msg: { t: "blocking" } });
+      if (p && seat !== p.seat) out.push({ to: seat, msg: { t: "block_wanted", lane: p.lane, target: p.target, hit: p.hit } });
       if (s.status === "playing") out.push({ to: other(seat), msg: { t: "opponent", status: "back" } });
     }
     return { seat, out };
@@ -208,6 +211,10 @@ export class Referee {
     switch (msg.t) {
       case "act":
         return this.act(seat, msg.a, now);
+      case "attack":
+        return this.attack(seat, msg.lane, msg.target, msg.hit, now);
+      case "block":
+        return this.block(seat, msg.blocked, now);
       default:
         return [];
     }
@@ -233,6 +240,39 @@ export class Referee {
     return this.record(a, now);
   }
 
+  private attack(seat: Seat, lane: number, target: number, hit: number, now: number): Out[] {
+    const s = this.s;
+    if (s.status !== "playing") return this.reject(seat, "not playing");
+    if (seat !== s.active) return this.reject(seat, "not your turn");
+    if (s.pending) return this.reject(seat, "attack pending");
+    if (target < 0) return this.record(this.attackMove(seat, lane, target, hit, false), now);
+    s.pending = { seat, lane, target, hit };
+    s.blockDeadline = now + TIMES.blockMs;
+    return [
+      { to: other(seat), msg: { t: "block_wanted", lane, target, hit } },
+      { to: seat, msg: { t: "blocking" } },
+    ];
+  }
+
+  private block(seat: Seat, blocked: boolean, now: number): Out[] {
+    const p = this.s.pending;
+    if (!p || seat !== other(p.seat)) return [];
+    return this.completeAttack(blocked, now);
+  }
+
+  private completeAttack(blocked: boolean, now: number): Out[] {
+    const s = this.s;
+    const p = s.pending as Pending;
+    s.pending = null;
+    s.blockDeadline = null;
+    s.lastActiveAt = now;
+    return this.record(this.attackMove(p.seat, p.lane, p.target, p.hit, blocked), now);
+  }
+
+  private attackMove(seat: Seat, lane: number, target: number, hit: number, blocked: boolean): ActionDict {
+    return actionDict({ type: ActionType.ATTACK, player: seat, lane, target_lane: target, hit, blocked });
+  }
+
   /** Append a move to the log and send it to both players. */
   private record(a: ActionDict, now: number, auto = false): Out[] {
     const s = this.s;
@@ -252,12 +292,30 @@ export class Referee {
     return [];
   }
 
-  tick(_now: number): Out[] {
-    return [];
+  tick(now: number): Out[] {
+    const s = this.s;
+    const out: Out[] = [];
+    if (s.status === "playing" && s.pending && s.blockDeadline !== null && now >= s.blockDeadline) {
+      out.push(...this.completeAttack(false, now));
+    }
+    const backstop = this.backstopAt();
+    if (backstop !== null && now >= backstop) {
+      out.push(...this.record(actionDict({ type: ActionType.END_TURN, player: s.active }), now, true));
+    }
+    return out;
+  }
+
+  /** When the room ends the active player's turn for them (frozen tab, dropped player). */
+  private backstopAt(): number | null {
+    const s = this.s;
+    return s.status === "playing" && !s.pending ? s.lastActiveAt + TIMES.backstopMs : null;
   }
 
   nextDeadline(): number | null {
-    return this.s.cleanupAt;
+    const s = this.s;
+    const times = [s.pending ? s.blockDeadline : null, this.backstopAt(), ...s.reconnectDeadline, s.cleanupAt];
+    const set = times.filter((t): t is number => t !== null);
+    return set.length ? Math.min(...set) : null;
   }
 
   dead(now: number): boolean {
