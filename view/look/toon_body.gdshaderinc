@@ -7,6 +7,8 @@
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, hint_default_white;
 uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform bool use_vertex_color = false;
+// Vertex colours hold sRGB values (baked scenery: exact 8-bit copies of the parts' colours).
+uniform bool vertex_color_srgb = false;
 // rgb = tint colour, a = how strongly the tint replaces the original colour.
 uniform vec4 tint = vec4(1.0, 1.0, 1.0, 0.0);
 uniform float sway = 0.0;
@@ -67,7 +69,7 @@ void fragment() {
 #endif
 	vec3 base = src_lin(tex.rgb * albedo_color.rgb);
 	if (use_vertex_color) {
-		base *= COLOR.rgb;
+		base *= vertex_color_srgb ? cs_srgb_to_linear(COLOR.rgb) : COLOR.rgb;
 	}
 	float luma = dot(base, vec3(0.299, 0.587, 0.114));
 	// Recolour toward the tint while keeping the model's light/dark detail readable.

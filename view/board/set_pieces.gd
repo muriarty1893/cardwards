@@ -31,6 +31,11 @@ static func build(land: int, variant: int, corner: int, player: int, shape: Tile
 	}
 	if not LandLooks.build(ctx):
 		rocks(ctx, ctx["box"], 3)
+	# Each piece's plain-coloured parts become one mesh (a full board drew ~250 of them one by one). Pieces stay
+	# separate nodes: they pop up one by one when a land changes.
+	for piece: Node in root.get_children():
+		if piece is Node3D:
+			MeshBaker.bake(piece)
 	return root
 
 

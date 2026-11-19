@@ -17,8 +17,9 @@ static var _cache: Dictionary = {}
 
 
 ## `cutout` > 0 selects the alpha-tested variant with that threshold; `fx` adds hit flash and dissolve.
-static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: float = 0.0, vertex_color: bool = false, cutout: float = 0.0, fx: bool = false) -> ShaderMaterial:
-	var key: String = "%d|%s|%s|%.3f|%s|%.2f|%s" % [tex.get_instance_id() if tex else 0, color.to_html(), tint.to_html(), sway, vertex_color, cutout, fx]
+## `srgb_vertex`: the vertex colours are sRGB (MeshBaker's baked scenery).
+static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: float = 0.0, vertex_color: bool = false, cutout: float = 0.0, fx: bool = false, srgb_vertex: bool = false) -> ShaderMaterial:
+	var key: String = "%d|%s|%s|%.3f|%s|%.2f|%s|%s" % [tex.get_instance_id() if tex else 0, color.to_html(), tint.to_html(), sway, vertex_color, cutout, fx, srgb_vertex]
 	if _cache.has(key):
 		return _cache[key]
 	var path: String
@@ -38,6 +39,8 @@ static func material(tex: Texture2D, color: Color, tint: Color = NO_TINT, sway: 
 	m.set_shader_parameter("tint", tint)
 	m.set_shader_parameter("sway", sway)
 	m.set_shader_parameter("use_vertex_color", vertex_color)
+	if srgb_vertex:
+		m.set_shader_parameter("vertex_color_srgb", true)
 	_cache[key] = m
 	return m
 
