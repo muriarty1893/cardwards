@@ -34,6 +34,34 @@ func test_island_rolls_on_change() -> bool:
 	return true
 
 
+## During a land-change sweep the old land keeps painting its own look (its variant's crack strength and its
+## stream / rift / path zones), not the new look's.
+func test_sweep_paints_old_look() -> bool:
+	var b := Board.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(b)
+	b.build([[4, 4, 4, 4], [4, 4, 4, 4]], BoardLayout.make(31))
+	var isl: Island = b.island(0, 1)
+	var mat: ShaderMaterial = isl.material()
+	var differed: int = 0
+	var land: int = 0
+	for n: int in 24:
+		var old_land: int = isl.land
+		var old_variant: int = isl.variant
+		var old_box: Vector4 = mat.get_shader_parameter("corner_box")
+		var old_band: Vector4 = mat.get_shader_parameter("side_band")
+		isl.change_land(land, Vector2.ZERO, false)
+		assert_eq(mat.get_shader_parameter("prev_land"), old_land, "prev land")
+		assert_eq(mat.get_shader_parameter("prev_variant"), old_variant, "prev variant is the old look's")
+		assert_eq(mat.get_shader_parameter("prev_corner_box"), old_box, "prev corner box is the old look's")
+		assert_eq(mat.get_shader_parameter("prev_side_band"), old_band, "prev side band is the old look's")
+		if isl.variant != old_variant or mat.get_shader_parameter("corner_box") != old_box:
+			differed += 1
+		land = (land + 1) % 4
+	assert_true(differed > 0, "some changes rolled a different look (%d)" % differed)
+	b.free()
+	return true
+
+
 ## Tile-local no-go rects for player p's tile in lane l: roam zone, building, house and (yours) the boop plate.
 static func _no_go(lay: BoardLayout, p: int, l: int) -> Array[Rect2]:
 	var tx: float = lay.base_centre(l)

@@ -35,6 +35,10 @@ uniform int variant = 0;
 uniform float corner_side = -1.0;
 uniform vec4 corner_box = vec4(0.0);
 uniform vec4 side_band = vec4(0.0);
+// The old land's look while a land change sweeps the tile (so the unswept part keeps its own look).
+uniform int prev_variant = 0;
+uniform vec4 prev_corner_box = vec4(0.0);
+uniform vec4 prev_side_band = vec4(0.0);
 // Outer sides (against the tray frame) keep the painted rim and ink edge; inner sides meet the next lane.
 uniform float outer_left = 0.0;
 uniform float outer_right = 0.0;
@@ -122,12 +126,12 @@ float ember_cracks(int v) {
 	return v == 0 ? 0.8 : (v == 1 ? 0.4 : 0.25);
 }
 
-vec3 paint(int l, vec2 p, out vec3 emi) {
+vec3 paint(int l, int v, vec2 p, out vec3 emi) {
 	emi = vec3(0.0);
 	if (l == 0) {
 		return paint_forest(p);
 	} else if (l == 1) {
-		return paint_ember(p, ember_cracks(variant), emi);
+		return paint_ember(p, ember_cracks(v), emi);
 	} else if (l == 2) {
 		return paint_candy(p);
 	} else if (l == 3) {
@@ -136,10 +140,11 @@ vec3 paint(int l, vec2 p, out vec3 emi) {
 	return paint_meadow(p);
 }
 
-// Flat features of the land's look, painted in tile-local p (side_d = distance to the nearest side edge).
-vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 emi) {
-	vec2 bc = (corner_box.xy + corner_box.zw) * 0.5;
-	vec2 bs = max(corner_box.zw - corner_box.xy, vec2(0.05));
+// Flat features of land l's look v, painted in tile-local p (side_d = distance to the nearest side edge); `box` and
+// `band` are that look's corner box and side band.
+vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 emi, vec4 box, vec4 band) {
+	vec2 bc = (box.xy + box.zw) * 0.5;
+	vec2 bs = max(box.zw - box.xy, vec2(0.05));
 	if (l == 0) {
 		if (v == 0) {          // Pond Glade: a darker damp shore around the pond
 			float d = length((p - bc) / (bs * vec2(0.62, 0.55)));
@@ -162,11 +167,11 @@ vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 
 	} else if (l == 2) {
 		if (v == 0) {          // Chocolate River: a glossy stream flowing along the side band
 			// Wider than the band (paint may run under the roam zone): it hugs the side and bends inward a little.
-			float inward = sign(-(side_band.x + side_band.z));
-			float cx = (side_band.x + side_band.z) * 0.5 + inward * (0.08 + 0.05 * sin(p.y * 2.2 + 0.5));
+			float inward = sign(-(band.x + band.z));
+			float cx = (band.x + band.z) * 0.5 + inward * (0.08 + 0.05 * sin(p.y * 2.2 + 0.5));
 			float half_w = 0.17;
-			float z0 = side_band.y;
-			float z1 = side_band.w;
+			float z0 = band.y;
+			float z1 = band.w;
 			float taper = smoothstep(z0 - 0.05, z0 + 0.15, p.y) * smoothstep(z1 + 0.05, z1 - 0.15, p.y);
 			float dist = abs(p.x - cx);
 			float body = (1.0 - smoothstep(half_w - 0.01, half_w + 0.01, dist)) * taper;
@@ -204,9 +209,9 @@ vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 
 			col = mix(col, vec3(1.0, 0.45, 0.1), crack * scorch);
 			emi += vec3(1.0, 0.3, 0.05) * crack * scorch * 1.6 * pulse;
 		} else if (v == 1) {   // Lava Rift: a glowing crack along the side band
-			float cx = (side_band.x + side_band.z) * 0.5 + 0.03 * sin(p.y * 5.0 + 1.3) + 0.015 * sin(p.y * 13.0);
-			float z0 = side_band.y;
-			float z1 = side_band.w;
+			float cx = (band.x + band.z) * 0.5 + 0.03 * sin(p.y * 5.0 + 1.3) + 0.015 * sin(p.y * 13.0);
+			float z0 = band.y;
+			float z1 = band.w;
 			float taper = smoothstep(z0, z0 + 0.3, p.y) * smoothstep(z1, z1 - 0.3, p.y);
 			float dist = abs(p.x - cx);
 			float core = (1.0 - smoothstep(0.012, 0.03, dist)) * taper;
@@ -273,27 +278,22 @@ void fragment() {
 	vec3 emi = vec3(0.0);
 	// Paint in world space so neighbouring tiles of one land continue into each other.
 	vec2 pw = tile_origin + p;
-	vec3 col = paint(land, pw, emi);
-	float feat_k = 1.0;
+	vec3 col = paint(land, variant, pw, emi);
+	col = features(land, variant, p, pw, min(dl, dr), col, emi, corner_box, side_band);
 	if (morph < 1.0) {
-		// Land change: the new land spreads from the origin with a wobbly, glowing front.
+		// Land change: the new land spreads from the origin with a wobbly, glowing front; outside it the old land
+		// keeps its own look until the front passes.
 		float reach = morph * (length(size) + 0.6);
 		float d = length(p - morph_origin) + (fbm(p * 2.5) - 0.5) * 0.5;
 		vec3 old_emi;
-		vec3 old_col = paint(prev_land, pw, old_emi);
+		vec3 old_col = paint(prev_land, prev_variant, pw, old_emi);
+		old_col = features(prev_land, prev_variant, p, pw, min(dl, dr), old_col, old_emi, prev_corner_box, prev_side_band);
 		float inside = smoothstep(reach, reach - 0.12, d);
-		feat_k = inside;
 		col = mix(old_col, col, inside);
 		emi = mix(old_emi, emi, inside);
 		float front = smoothstep(0.25, 0.0, abs(d - reach)) * (1.0 - morph);
 		col = mix(col, vec3(1.0, 0.97, 0.8), front * 0.7);
 		emi += vec3(1.0, 0.9, 0.6) * front * 0.8;
-	}
-	{
-		vec3 f_emi = vec3(0.0);
-		vec3 f_col = features(land, variant, p, pw, min(dl, dr), col, f_emi);
-		col = mix(col, f_col, feat_k);
-		emi += f_emi * feat_k;
 	}
 	if (field_land >= 0 && field_amount > 0.0) {
 		col = weather(pw, col, emi);

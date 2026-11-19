@@ -85,6 +85,8 @@ func change_land(new_land: int, origin: Vector2 = Vector2.ZERO, animate: bool = 
 	if new_land == land:
 		return
 	var old: int = land
+	# The unswept part keeps painting the old look until the front passes.
+	_apply_look_uniforms(variant, corner, "prev_")
 	land = new_land
 	changes += 1
 	_roll()
@@ -156,14 +158,20 @@ func _roll() -> void:
 		_apply_look_uniforms()
 
 
-## The lane shader paints the look's flat features (lava trickles, streams, paths) from these.
-func _apply_look_uniforms() -> void:
-	_mat.set_shader_parameter("variant", variant)
-	_mat.set_shader_parameter("corner_side", -1.0 if corner == 0 else 1.0)
-	var box: Rect2 = SetPieces.corner_box(shape, _player, corner)
-	_mat.set_shader_parameter("corner_box", Vector4(box.position.x, box.position.y, box.end.x, box.end.y))
-	var band: Rect2 = SetPieces.edge_band(shape, _player, corner)
-	_mat.set_shader_parameter("side_band", Vector4(band.position.x, band.position.y, band.end.x, band.end.y))
+## The lane shader paints the look's flat features (lava trickles, streams, paths) from these. `prefix` "prev_" sets
+## the old look's copies, painted on the part of the tile a land change has not swept yet.
+func _apply_look_uniforms(variant_: int = -1, corner_: int = -1, prefix: String = "") -> void:
+	if variant_ < 0:
+		variant_ = variant
+	if corner_ < 0:
+		corner_ = corner
+	_mat.set_shader_parameter(prefix + "variant", variant_)
+	if prefix == "":
+		_mat.set_shader_parameter("corner_side", -1.0 if corner_ == 0 else 1.0)
+	var box: Rect2 = SetPieces.corner_box(shape, _player, corner_)
+	_mat.set_shader_parameter(prefix + "corner_box", Vector4(box.position.x, box.position.y, box.end.x, box.end.y))
+	var band: Rect2 = SetPieces.edge_band(shape, _player, corner_)
+	_mat.set_shader_parameter(prefix + "side_band", Vector4(band.position.x, band.position.y, band.end.x, band.end.y))
 
 
 ## A field's weather over the tile (`field_land` -1 clears it), faded in or out.
