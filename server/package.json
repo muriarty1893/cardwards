@@ -1,0 +1,29 @@
+{
+  "name": "dream-isles-online",
+  "version": "1.0.0",
+  "description": "Dream Isles online relay (Cloudflare Worker + Durable Objects)",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.23.0",
+    "@cloudflare/workers-types": "^5.20261119.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.165.0"
+  },
+  "allowScripts": {
+    "workerd@1.20260815.1": true,
+    "workerd@1.20261118.1": true,
+    "esbuild@0.28.1": true,
+    "esbuild@0.28.2": true
+  },
+  "private": true
+}
