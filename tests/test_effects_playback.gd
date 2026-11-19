@@ -153,7 +153,7 @@ func test_ai_attack_shows_arrow() -> bool:
 	var seen: bool = false
 	var done: Array[bool] = [false]
 	var run := func() -> void:
-		await m._ai_turn()
+		await (m.driver as AiRival).rival_turn()
 		done[0] = true
 	run.call()
 	for i: int in 3000:

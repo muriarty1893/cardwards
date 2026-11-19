@@ -35,8 +35,11 @@ var timing_bar: TimingBar
 var results: Results
 var overlay: UnitOverlay
 var attack_arrow: AttackArrow
-var ai: AIPlayer
 var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
+## The canonical match and what this seat sees of it (`state` is `seats.view`).
+var seats: SeatView
+## Who plays the other side (the AI, or a person online).
+var driver: RivalDriver
 const AI_PAUSE := 0.6
 ## Divides AI pauses (tests speed this up).
 var pace: float = 1.0
@@ -53,9 +56,13 @@ func _ready() -> void:
 	var deck_a: DeckData = CardDB.deck(Session.player_deck)
 	var deck_b: DeckData = CardDB.deck(Session.resolve_ai_deck(seed))
 	card_backs = [CardBacks.texture_for(deck_a), CardBacks.texture_for(deck_b)]
-	state = Rules.setup(deck_a, deck_b, seed)
-	ai = AIPlayer.new(AI, difficulty, seed + 7919)
-	var opening: Array[GameEvent] = Rules.start_turn(state)
+	seats = SeatView.new(Rules.setup(deck_a, deck_b, seed), HUMAN)
+	state = seats.view
+	driver = AiRival.new(AIPlayer.new(AI, difficulty, seed + 7919))
+	driver.m = self
+	var real_opening: Array[GameEvent] = Rules.start_turn(seats.real)
+	seats.sync()
+	var opening: Array[GameEvent] = seats.events_to_view(real_opening)
 	if "--demo-board" in OS.get_cmdline_user_args():
 		var ais: Array[AIPlayer] = [AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 11), AIPlayer.new(1, AIPlayer.Difficulty.MEDIUM, 12)]
 		AIRunner.play_match(state, ais, 6)
@@ -151,14 +158,15 @@ func _begin(opening: Array[GameEvent]) -> void:
 		board.reveal_split(false)
 		await get_tree().create_timer(0.4).timeout
 	await player.play(opening)
-	if state.active == AI:
-		await _ai_turn()
+	await driver.begin()
 	busy = false
 	refresh_ui()
 
 
 ## The ground cover leans away from every creature on the board.
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if driver:
+		driver.process(delta)
 	if board == null:
 		return
 	var pts := PackedVector3Array()
@@ -361,7 +369,8 @@ func refresh_ui() -> void:
 	var only_end: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and Rules.legal_actions(state).size() == 1
 	hud.set_end_turn_pulse(only_end and not busy)
 	var paused: bool = hud.is_paused()
-	var can_act: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and not busy and not paused
+	var can_act: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and not busy and not paused \
+		and not driver.blocks_input()
 	input.enabled = can_act
 	hand.enabled = can_act
 	hud.set_input_enabled(can_act or paused)
@@ -393,13 +402,24 @@ func hand_costs() -> Array[int]:
 	return costs
 
 
-## Validate, apply, and play the resulting events with input locked.
+## Validate, apply, and play the resulting events with input locked (view-space action).
 func perform(a: Action) -> void:
 	var err: String = Rules.validate(state, a)
 	if err != "":
 		toast.show_message(err)
 		return
-	var events: Array[GameEvent] = Rules.apply(state, a)
+	await play_events(apply_local(a))
+
+
+## Apply a view-space action to the canonical match; returns the events in view space.
+func apply_local(a: Action) -> Array[GameEvent]:
+	var events: Array[GameEvent] = Rules.apply(seats.real, seats.action_to_real(a))
+	seats.sync()
+	return seats.events_to_view(events)
+
+
+## Play view-space events; shows the results once the match is over.
+func play_events(events: Array[GameEvent]) -> void:
 	await player.play(events)
 	if state.phase == GameState.Phase.OVER and not results.visible:
 		await get_tree().create_timer(0.6 / pace).timeout
@@ -409,7 +429,7 @@ func perform(a: Action) -> void:
 func _on_action_requested(a: Action) -> void:
 	busy = true
 	refresh_ui()
-	await perform(a)
+	await driver.submit(a)
 	await _human_dream_up()
 	busy = false
 	refresh_ui()
@@ -419,7 +439,7 @@ func _on_action_requested(a: Action) -> void:
 func _human_dream_up() -> void:
 	if state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
 		toast.show_message("Dream Up: %s" % state.pending_choice[0].display_name, 1.5)
-		await perform(Action.choose(HUMAN, 0))
+		await driver.submit(Action.choose(HUMAN, 0))
 
 
 func _on_end_turn_pressed() -> void:
@@ -428,9 +448,7 @@ func _on_end_turn_pressed() -> void:
 	input.cancel()
 	busy = true
 	refresh_ui()
-	await perform(Action.end_turn(HUMAN))
-	if state.phase != GameState.Phase.OVER and state.active == AI:
-		await _ai_turn()
+	await driver.submit(Action.end_turn(HUMAN))
 	busy = false
 	refresh_ui()
 
@@ -446,7 +464,7 @@ func show_attack_arrow(p: int, lane: int, target_lane: int) -> void:
 	attack_arrow.clear()
 
 
-## Human attack: the attacker bar sets the hit, the AI may block a creature target.
+## Local attack: the attacker bar sets the hit; the driver handles the rival's block.
 func request_attack(lane: int, target_lane: int) -> void:
 	if busy or state.active != HUMAN:
 		return
@@ -458,35 +476,9 @@ func request_attack(lane: int, target_lane: int) -> void:
 	busy = true
 	refresh_ui()
 	var hit: Action.Hit = await timing_bar.run_attack()
-	var blocked: bool = false
-	if target_lane >= 0:
-		blocked = ai.roll_block()
-		await timing_bar.simulate_block(blocked)
-	await perform(Action.attack(HUMAN, lane, target_lane, hit, blocked))
+	await driver.attack(lane, target_lane, hit)
 	busy = false
 	refresh_ui()
-
-
-## The AI's whole turn, shown step by step. Ends after the AI's END_TURN (human's turn started).
-func _ai_turn() -> void:
-	for i: int in AIRunner.MAX_ACTIONS:
-		if state.phase == GameState.Phase.OVER or state.active != AI:
-			return
-		await get_tree().create_timer(AI_PAUSE / pace).timeout
-		var a: Action = ai.choose_action(state)
-		if a.type == Action.Type.ATTACK:
-			await show_attack_arrow(AI, a.lane, a.target_lane)
-			a.hit = ai.roll_hit()
-			await timing_bar.simulate_attack(a.hit)
-			if a.target_lane >= 0:
-				a.blocked = await timing_bar.run_block()
-		await perform(a)
-		if a.type == Action.Type.END_TURN:
-			return
-	if state.phase == GameState.Phase.CHOOSING:
-		await perform(Action.choose(state.pending_player, 0))
-	if state.phase != GameState.Phase.OVER and state.active == AI:
-		await perform(Action.end_turn(AI))
 
 
 ## If playback and state ever disagree, rebuild from the state.
