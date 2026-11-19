@@ -159,3 +159,39 @@ func clone() -> GameState:
 
 func opponent(p: int) -> int:
 	return 1 - p
+
+
+## md5 of every field of the match (cards by id, the random generator included). Two games that
+## agree on this are in the same state; online play compares it after every move.
+func digest() -> String:
+	return var_to_str(_dump(self)).md5_text()
+
+
+## Generic so fields added later are covered without touching this: script variables of the state
+## classes, cards as their id, the generator as seed + state.
+static func _dump(v: Variant) -> Variant:
+	if v is CardData:
+		return String((v as CardData).id)
+	if v is RandomNumberGenerator:
+		return [(v as RandomNumberGenerator).seed, (v as RandomNumberGenerator).state]
+	if v is Array:
+		var out: Array = []
+		for x: Variant in v:
+			out.append(_dump(x))
+		return out
+	if v is Dictionary:
+		var keys: Array = (v as Dictionary).keys()
+		keys.sort()
+		var pairs: Array = []
+		for k: Variant in keys:
+			pairs.append([k, _dump((v as Dictionary)[k])])
+		return pairs
+	if v is Object:
+		if v == null:
+			return null
+		var fields: Array = []
+		for prop: Dictionary in (v as Object).get_property_list():
+			if int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				fields.append([prop["name"], _dump((v as Object).get(prop["name"]))])
+		return fields
+	return v

@@ -5,7 +5,9 @@ extends RefCounted
 
 # --- Setup and turn flow -----------------------------------------------------
 
-static func setup(deck_a: DeckData, deck_b: DeckData, seed: int) -> GameState:
+## `first` >= 0 forces who goes first (online: the room decides). The coin flip is still rolled so the
+## random stream, and so every later shuffle, is the same either way.
+static func setup(deck_a: DeckData, deck_b: DeckData, seed: int, first: int = -1) -> GameState:
 	var s := GameState.new()
 	s.rng.seed = seed
 	for deck: DeckData in [deck_a, deck_b]:
@@ -21,7 +23,8 @@ static func setup(deck_a: DeckData, deck_b: DeckData, seed: int) -> GameState:
 	for p: int in 2:
 		for i: int in GameState.START_HAND:
 			s.players[p].hand.append(s.players[p].deck.pop_back())
-	s.first_player = s.rng.randi_range(0, 1)
+	var flip: int = s.rng.randi_range(0, 1)
+	s.first_player = first if first >= 0 else flip
 	# Going second: a Star Shard to make up for it (spec 3.1).
 	s.players[1 - s.first_player].hand.append(CardDB.card(&"star_shard"))
 	s.active = s.first_player
