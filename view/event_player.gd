@@ -302,7 +302,7 @@ func _land_changed(d: Dictionary) -> void:
 	elif v:
 		origin = v.global_position
 	m.board.change_land(p, l, land, origin)
-	var centre := Vector3(m.board.lane_x(l), Island.TOP_Y + 0.3, Board.STRIP_Z[p])
+	var centre := Vector3(m.board.lane_x(l, p), Island.TOP_Y + 0.3, Board.STRIP_Z[p])
 	Burst.spawn(m, LAND_BURSTS[land], origin if origin.is_finite() else centre, Color.WHITE, 1.4)
 	Audio.sfx(LAND_SOUNDS[land])
 	DamageNumber.spawn(m, centre + Vector3(0, 0.6, 0), Lands.lane_name(land) + "!", Palette.LAND_CARD[land], 64)

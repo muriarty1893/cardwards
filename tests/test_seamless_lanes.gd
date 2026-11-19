@@ -29,7 +29,7 @@ func test_tile_mesh_covers_lane() -> bool:
 	for p: int in 2:
 		for l: int in 4:
 			var isl: Island = b.island(p, l)
-			assert_true(absf(isl.position.x - lay.base_centre(l)) < 0.0001, "tile p%d l%d sits at the lane's base centre" % [p, l])
+			assert_true(absf(isl.position.x - lay.base_centre(l, p)) < 0.0001, "tile p%d l%d sits at the lane's base centre" % [p, l])
 			var half: float = isl.mesh_size().x / 2.0
 			for k: int in 11:
 				var z: float = lerpf(-Island.LENGTH / 2.0, Island.LENGTH / 2.0, k / 10.0) + Board.STRIP_Z[p]

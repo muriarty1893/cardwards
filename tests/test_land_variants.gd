@@ -64,7 +64,7 @@ func test_sweep_paints_old_look() -> bool:
 
 ## Tile-local no-go rects for player p's tile in lane l: roam zone, building, house and (yours) the boop plate.
 static func _no_go(lay: BoardLayout, p: int, l: int) -> Array[Rect2]:
-	var tx: float = lay.base_centre(l)
+	var tx: float = lay.base_centre(l, p)
 	var tz: float = Board.STRIP_Z[p]
 	var out: Array[Rect2] = []
 	var r: Rect2 = Board.roam_rect_for(lay, p, l)

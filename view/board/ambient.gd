@@ -12,20 +12,21 @@ const CANDY: Array[Color] = [Color("#ff5a5a"), Color("#ffd84a"), Color("#5ad1ff"
 var _emitters: Array[CPUParticles3D] = []
 var _base: Array[int] = []
 var _quality: int = 0
-var _xs: Array[float] = [-4.05, -1.35, 1.35, 4.05]
+## Lane centres per player half ([player][lane]).
+var _xs: Array[Array] = [[-4.05, -1.35, 1.35, 4.05], [-4.05, -1.35, 1.35, 4.05]]
 
 
-## `lane_xs`: the lanes' centres (Board.lane_x); today's even lanes when empty.
-static func build(lands: Array[Array], quality: int, lane_xs: Array[float] = []) -> Ambient:
+## `lane_xs`: each half's lane centres ([player][lane], Board.lane_x); even lanes when empty.
+static func build(lands: Array[Array], quality: int, lane_xs: Array[Array] = []) -> Ambient:
 	var a := Ambient.new()
 	a.name = "Ambient"
-	if lane_xs.size() == 4:
+	if lane_xs.size() == 2:
 		a._xs = lane_xs
 	for p: int in 2:
 		for l: int in 4:
 			var land: int = lands[p][l]
 			var e: CPUParticles3D = _emitter(land)
-			e.position = Vector3(a._xs[l], e.position.y, Board.STRIP_Z[p])
+			e.position = Vector3(a._xs[p][l], e.position.y, Board.STRIP_Z[p])
 			a.add_child(e)
 			a._emitters.append(e)
 			a._base.append(AMOUNTS[land])
@@ -38,7 +39,7 @@ func set_land(p: int, l: int, land: int) -> void:
 	var i: int = p * 4 + l
 	var old: CPUParticles3D = _emitters[i]
 	var e: CPUParticles3D = _emitter(land)
-	e.position = Vector3(_xs[l], e.position.y, Board.STRIP_Z[p])
+	e.position = Vector3(_xs[p][l], e.position.y, Board.STRIP_Z[p])
 	add_child(e)
 	_emitters[i] = e
 	_base[i] = AMOUNTS[land]

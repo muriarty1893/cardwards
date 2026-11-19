@@ -8,13 +8,16 @@ var lane: int = 0
 ## World position of the tile centre.
 var tile_x: float = 0.0
 var tile_z: float = 0.0
+## The board half the tile lies in (0 yours, 1 the rival's): its borders are that half's.
+var half: int = 0
 
 
 static func of(layout_: BoardLayout, lane_: int, tile_z_: float) -> TileShape:
 	var t := TileShape.new()
 	t.layout = layout_
 	t.lane = lane_
-	t.tile_x = layout_.base_centre(lane_)
+	t.half = BoardLayout.half_of(tile_z_)
+	t.tile_x = layout_.base_centre(lane_, t.half)
 	t.tile_z = tile_z_
 	return t
 
@@ -57,10 +60,10 @@ func max_half_extent() -> float:
 func left_curve() -> Array[Vector4]:
 	if lane == 0:
 		return [Vector4(-BoardLayout.HALF_W, 0, 0, 0), Vector4.ZERO]
-	return [layout.curve_params(lane - 1), layout.curve_params2(lane - 1)]
+	return [layout.curve_params(lane - 1, half), layout.curve_params2(lane - 1, half)]
 
 
 func right_curve() -> Array[Vector4]:
 	if lane == 3:
 		return [Vector4(BoardLayout.HALF_W, 0, 0, 0), Vector4.ZERO]
-	return [layout.curve_params(lane), layout.curve_params2(lane)]
+	return [layout.curve_params(lane, half), layout.curve_params2(lane, half)]

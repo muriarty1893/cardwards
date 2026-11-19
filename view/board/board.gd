@@ -58,7 +58,7 @@ func build(lands: Array[Array], layout_: BoardLayout = null) -> void:
 	for p: int in 2:
 		for l: int in 4:
 			var isl := Island.new()
-			isl.position = Vector3(lane_x(l), 0, STRIP_Z[p])
+			isl.position = Vector3(lane_x(l, p), 0, STRIP_Z[p])
 			add_child(isl)
 			isl.setup(lands[p][l], p, l, _density, TileShape.of(layout, l, STRIP_Z[p]))
 			_islands[p].append(isl)
@@ -72,9 +72,10 @@ func build(lands: Array[Array], layout_: BoardLayout = null) -> void:
 		plate.position.z = bp.z
 		add_child(plate)
 		_plates.append(plate)
-	var xs: Array[float] = []
-	for l: int in 4:
-		xs.append(lane_x(l))
+	var xs: Array[Array] = [[], []]
+	for p: int in 2:
+		for l: int in 4:
+			xs[p].append(lane_x(l, p))
 	ambient = Ambient.build(lands, Settings.quality, xs)
 	add_child(ambient)
 	apply_quality(Settings.quality)
@@ -149,7 +150,7 @@ func _on_settings_changed() -> void:
 func change_land(p: int, l: int, land: int, origin: Vector3 = Vector3.INF, animate: bool = true) -> void:
 	var o := Vector2.ZERO
 	if origin.is_finite():
-		o = Vector2(origin.x - lane_x(l), origin.z - STRIP_Z[p])
+		o = Vector2(origin.x - lane_x(l, p), origin.z - STRIP_Z[p])
 	island(p, l).change_land(land, o, animate)
 	ambient.set_land(p, l, land)
 
@@ -165,9 +166,9 @@ func island(player: int, lane: int) -> Island:
 	return _islands[player][lane]
 
 
-## The lane's centre ignoring the wobble (where its tiles sit).
-func lane_x(lane: int) -> float:
-	return layout.base_centre(lane)
+## The lane's centre on `player`'s half, ignoring the wobble (where its tiles sit). Halves differ.
+func lane_x(lane: int, player: int = 0) -> float:
+	return layout.base_centre(lane, player)
 
 
 ## Centre of the creature's roam zone, at a creature view's origin height.
@@ -238,7 +239,7 @@ func plate_at(pos: Vector3) -> int:
 ## World point a creature lunges to when attacking the hero behind `player`'s lane: just past
 ## the tray edge on that side.
 func hero_point(player: int, lane: int) -> Vector3:
-	return Vector3(lane_x(lane), CREATURE_Y, 6.6 if player == 0 else -6.6)
+	return Vector3(lane_x(lane, player), CREATURE_Y, 6.6 if player == 0 else -6.6)
 
 
 ## The point on the tile surface under `screen_pos` (Vector3.INF if the ray misses the plane).
