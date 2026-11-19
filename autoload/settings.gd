@@ -24,6 +24,8 @@ var quality: Quality = default_quality()
 var battle_closeups: bool = DEFAULT_CLOSEUPS
 ## Mouse-wheel / pinch zoom speed multiplier.
 var zoom_speed: float = DEFAULT_ZOOM_SPEED
+## The name shown to online rivals (kept by reset()).
+var player_name: String = ""
 var path: String = "user://settings.cfg"
 
 
@@ -64,8 +66,13 @@ static func default_quality() -> Quality:
 func load_settings() -> void:
 	reset()
 	var cfg := ConfigFile.new()
+	if player_name == "":
+		player_name = _default_name()
 	if cfg.load(path) != OK:
 		return
+	var pn: Variant = cfg.get_value(SECTION, "player_name", "")
+	if pn is String and clean_name(pn) != "":
+		player_name = clean_name(pn)
 	music_volume = _volume(cfg.get_value(SECTION, "music_volume", DEFAULT_MUSIC), DEFAULT_MUSIC)
 	sfx_volume = _volume(cfg.get_value(SECTION, "sfx_volume", DEFAULT_SFX), DEFAULT_SFX)
 	quality = _quality(cfg.get_value(SECTION, "quality", DEFAULT_QUALITY))
@@ -81,6 +88,7 @@ func save_settings() -> void:
 	cfg.set_value(SECTION, "quality", int(quality))
 	cfg.set_value(SECTION, "battle_closeups", battle_closeups)
 	cfg.set_value(SECTION, "zoom_speed", zoom_speed)
+	cfg.set_value(SECTION, "player_name", player_name)
 	var err: Error = cfg.save(path)
 	if err != OK:
 		push_warning("Settings: could not save %s (%s)" % [path, error_string(err)])
@@ -104,6 +112,28 @@ func set_value(key: StringName, value: Variant) -> void:
 	save_settings()
 	apply_audio()
 	changed.emit()
+
+
+## Cleaned like the server does it; nothing left → a fresh default name.
+func set_player_name(n: String) -> void:
+	var c: String = clean_name(n)
+	player_name = c if c != "" else _default_name()
+	save_settings()
+	changed.emit()
+
+
+## Control characters removed, trimmed, at most 16 characters (server/src/protocol.ts cleanName).
+static func clean_name(n: String) -> String:
+	var out: String = ""
+	for ch: String in n:
+		var u: int = ch.unicode_at(0)
+		if u >= 32 and not (u >= 127 and u < 160):
+			out += ch
+	return out.strip_edges().left(16).strip_edges()
+
+
+static func _default_name() -> String:
+	return "Dreamer%d" % randi_range(100, 999)
 
 
 func set_battle_closeups(on: bool) -> void:
