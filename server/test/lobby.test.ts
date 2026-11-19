@@ -9,10 +9,21 @@ describe("quick match lobby", () => {
     const mb = await b.next("matched");
     expect(ma.code).toBe(mb.code);
     expect(ma.code).toMatch(/^[A-Z]{3,5}-[0-9]{2}$/);
-    await a.waitClosed();
     const p1 = await connect(`/join/${ma.code}`);
     p1.send({ t: "hello", v: "n1-same", name: "A", deck: { name: "d", lands: [0, 0, 0, 0], cards: Array(30).fill("x") } });
     expect((await p1.next("welcome")).seat).toBe(0);
+  });
+
+  it("matched sockets stay open for the client to close and are never matched again", async () => {
+    const a = await connect("/queue?v=n1-again");
+    const b = await connect("/queue?v=n1-again");
+    await a.next("matched");
+    await b.next("matched");
+    const c = await connect("/queue?v=n1-again");
+    await new Promise((r) => setTimeout(r, 200));
+    expect(b.closed).toBeNull();
+    expect(c.msgs).toEqual([]);
+    for (const x of [a, b, c]) x.ws.close(1000);
   });
 
   it("different versions are not matched", async () => {
