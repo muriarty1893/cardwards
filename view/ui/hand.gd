@@ -43,11 +43,13 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-func show_hand(cards: Array[CardData], playable: Array[bool]) -> void:
-	# Same cards as shown: only update which are playable (rebuilding costs a hitch).
+## `costs`: each card's current cost (a spell discount lowers it); printed costs when empty.
+func show_hand(cards: Array[CardData], playable: Array[bool], costs: Array[int] = []) -> void:
+	# Same cards as shown: only update which are playable and their costs (rebuilding costs a hitch).
 	if cards == _shown and _cards.size() == cards.size():
 		for i: int in _cards.size():
 			_cards[i].set_playable(playable[i] if i < playable.size() else true)
+			_cards[i].set_cost(costs[i] if i < costs.size() else cards[i].cost)
 		return
 	_shown = cards.duplicate()
 	for w: CardWidget in _cards:
@@ -60,6 +62,8 @@ func show_hand(cards: Array[CardData], playable: Array[bool]) -> void:
 		var w := CardWidget.new()
 		w.setup(cards[i], i)
 		w.set_playable(playable[i] if i < playable.size() else true)
+		if i < costs.size() and costs[i] != cards[i].cost:
+			w.set_cost(costs[i])
 		# Scale and tilt around the bottom centre, like a card held from below.
 		w.pivot_offset = Vector2(CardWidget.SIZE.x / 2.0, CardWidget.SIZE.y)
 		w.mouse_entered.connect(_on_enter.bind(i))
@@ -218,7 +222,7 @@ func _follow(w: CardWidget, mouse: Vector2) -> void:
 	w.global_position = mouse - w.pivot_offset + Vector2(0, CardWidget.SIZE.y * s / 2.0)
 	w.modulate.a = 0.0 if three_d else 1.0
 	if three_d:
-		drag_card.show_card(w.card)
+		drag_card.show_card(w.card, w.shown_cost())
 		drag_card.follow(camera, mouse)
 	else:
 		_hide_3d()

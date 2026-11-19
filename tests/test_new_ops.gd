@@ -205,3 +205,53 @@ func test_discounted_spell_shows_playable() -> bool:
 	assert_true(m.hand_playable()[0], "with a 2 discount it is playable")
 	m.queue_free()
 	return true
+
+
+func test_card_widget_shows_given_cost() -> bool:
+	var w := CardWidget.new()
+	w.setup(CardDB.card(&"thorn_lash"), 0)
+	assert_eq(w.cost_label().text, "4", "printed cost by default")
+	assert_true(not w.is_discounted(), "not discounted by default")
+	w.set_cost(1)
+	assert_eq(w.cost_label().text, "1", "shows the lowered cost")
+	assert_true(w.is_discounted(), "marked as discounted")
+	assert_true(w.cost_label().get_theme_color("font_color") != Color.WHITE, "lowered cost is coloured")
+	w.set_cost(4)
+	assert_eq(w.cost_label().text, "4", "back to the printed cost")
+	assert_true(not w.is_discounted(), "no longer discounted")
+	assert_eq(w.cost_label().get_theme_color("font_color"), Color.WHITE, "printed cost is white")
+	w.free()
+	return true
+
+
+func test_hand_shows_discounted_spell_cost() -> bool:
+	var m: MatchController = await Fx.load_match()
+	var ps: GameState.PlayerState = m.state.players[0]
+	ps.hand.clear()
+	ps.hand.append(CardDB.card(&"thorn_lash"))   # 4-cost spell
+	ps.hand.append(CardDB.card(&"gumdrop"))      # creature: discounts never apply
+	ps.spell_discount = 3
+	m.refresh_ui()
+	assert_eq(m.hand_costs(), [1, CardDB.card(&"gumdrop").cost] as Array[int], "current costs")
+	var ws: Array = m.hand.get_children().filter(func(n: Node) -> bool: return n is CardWidget and not n.is_queued_for_deletion())
+	assert_eq((ws[0] as CardWidget).cost_label().text, "1", "spell gem shows the discounted cost")
+	assert_eq((ws[1] as CardWidget).cost_label().text, str(CardDB.card(&"gumdrop").cost), "creature gem unchanged")
+	# Same hand, discount used up: the gem goes back without rebuilding the hand.
+	ps.spell_discount = 0
+	m.refresh_ui()
+	ws = m.hand.get_children().filter(func(n: Node) -> bool: return n is CardWidget and not n.is_queued_for_deletion())
+	assert_eq((ws[0] as CardWidget).cost_label().text, "4", "printed cost again")
+	m.queue_free()
+	return true
+
+
+func test_drag_card_shows_discounted_cost() -> bool:
+	var dc := DragCard3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(dc)
+	var c: CardData = CardDB.card(&"thorn_lash")
+	dc.show_card(c, 2)
+	assert_eq(dc.face_widget().cost_label().text, "2", "3D card shows the given cost")
+	dc.show_card(c, 4)
+	assert_eq(dc.face_widget().cost_label().text, "4", "re-rendered when the cost changes")
+	dc.queue_free()
+	return true

@@ -357,7 +357,7 @@ func refresh_ui() -> void:
 			var d: Array[CardData] = state.players[p].discard
 			tops.append(d[d.size() - 1] if not d.is_empty() else null)
 		stacks.set_counts([state.players[0].deck.size(), state.players[1].deck.size()], [state.players[0].discard.size(), state.players[1].discard.size()], tops)
-	hand.show_hand(state.players[HUMAN].hand, hand_playable())
+	hand.show_hand(state.players[HUMAN].hand, hand_playable(), hand_costs())
 	var only_end: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and Rules.legal_actions(state).size() == 1
 	hud.set_end_turn_pulse(only_end and not busy)
 	var paused: bool = hud.is_paused()
@@ -368,7 +368,6 @@ func refresh_ui() -> void:
 	overlay.refresh(state)
 
 
-## Validate, apply, and play the resulting events with input locked.
 ## Which of the human's hand cards can be played now (spells: their current cost, after any spell discount).
 func hand_playable() -> Array[bool]:
 	var cards: Array[CardData] = state.players[HUMAN].hand
@@ -386,6 +385,15 @@ func hand_playable() -> Array[bool]:
 	return playable
 
 
+## What each of the human's hand cards costs right now (spells after any spell discount).
+func hand_costs() -> Array[int]:
+	var costs: Array[int] = []
+	for c: CardData in state.players[HUMAN].hand:
+		costs.append(Rules.card_cost(state, HUMAN, c))
+	return costs
+
+
+## Validate, apply, and play the resulting events with input locked.
 func perform(a: Action) -> void:
 	var err: String = Rules.validate(state, a)
 	if err != "":

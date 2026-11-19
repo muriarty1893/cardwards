@@ -18,6 +18,7 @@ const FLATTEN := 0.12
 var roll: float = 0.0
 var pitch: float = 0.0
 var _card: CardData
+var _cost: int = -1
 var _vp: SubViewport
 var _quad: MeshInstance3D
 var _shadow: MeshInstance3D
@@ -66,14 +67,18 @@ func _init() -> void:
 	set_process(false)
 
 
-## Starts showing `c` (renders its face once).
-func show_card(c: CardData) -> void:
-	if c != _card:
+## Starts showing `c` with `cost` on its gem (printed cost when -1); renders its face once per card and cost.
+func show_card(c: CardData, cost: int = -1) -> void:
+	if cost < 0:
+		cost = c.cost
+	if c != _card or cost != _cost:
 		_card = c
+		_cost = cost
 		for ch: Node in _vp.get_children():
 			ch.free()
 		var w := CardWidget.new()
 		w.setup(c, -1)
+		w.set_cost(cost)
 		w.scale = Vector2.ONE * 2.0
 		_vp.add_child(w)
 		_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
@@ -85,6 +90,11 @@ func show_card(c: CardData) -> void:
 		roll = 0.0
 		pitch = 0.0
 	set_process(true)
+
+
+## The CardWidget drawn on the card (tests), or null before show_card.
+func face_widget() -> CardWidget:
+	return _vp.get_child(0) as CardWidget if _vp.get_child_count() > 0 else null
 
 
 func hide_card() -> void:

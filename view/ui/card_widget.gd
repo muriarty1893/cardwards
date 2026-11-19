@@ -6,6 +6,8 @@ extends Control
 const SIZE := Vector2(140, 196)
 const ART := Rect2(8, 8, 124, 93)
 const KIND_NAMES: Array[String] = ["CREATURE", "BUILDING", "SPELL"]
+## Cost gem number while a discount lowers the cost.
+const DISCOUNT := Color("#7dff6a")
 
 
 ## "BEAST · L2" for creatures (the tribe says it's a creature), "FIELD SPELL", "BUILDING"...
@@ -21,6 +23,9 @@ var card: CardData
 var index: int = -1
 var _art: TextureRect
 var _text: Label
+var _cost: Label
+## Cost shown on the gem (the printed cost unless set_cost lowered it).
+var _shown_cost: int = 0
 
 
 func setup(c: CardData, i: int) -> void:
@@ -75,7 +80,10 @@ func setup(c: CardData, i: int) -> void:
 	_text.add_theme_constant_override("line_spacing", -2)
 	paper.add_child(_text)
 	paper.visible = rules != ""
-	add_child(_gem(Vector2(-8, -8), 36, Palette.MAGIC, str(c.cost), 18))
+	var gem := _gem(Vector2(-8, -8), 36, Palette.MAGIC, str(c.cost), 18)
+	add_child(gem)
+	_cost = gem.get_child(gem.get_child_count() - 1) as Label
+	_shown_cost = c.cost
 	if c.is_creature():
 		add_child(_gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, "⚔"))
 		add_child(_gem(Vector2(SIZE.x - 30, 166), 34, Palette.HP, str(c.health), 17, "♥"))
@@ -87,6 +95,25 @@ func art_texture() -> Texture2D:
 
 func text_label() -> Label:
 	return _text
+
+
+func cost_label() -> Label:
+	return _cost
+
+
+## Shows `n` on the cost gem: green when it is below the printed cost (a spell discount), white otherwise.
+func set_cost(n: int) -> void:
+	_shown_cost = n
+	_cost.text = str(n)
+	_cost.add_theme_color_override("font_color", DISCOUNT if n < card.cost else Color.WHITE)
+
+
+func shown_cost() -> int:
+	return _shown_cost
+
+
+func is_discounted() -> bool:
+	return _shown_cost < card.cost
 
 
 func set_playable(on: bool) -> void:
