@@ -159,7 +159,7 @@ export class Referee {
     const info = s.seats[seat] as SeatInfo;
     s.connected[seat] = true;
     s.reconnectDeadline[seat] = null;
-    s.cleanupAt = null;
+    if (s.status !== "over") s.cleanupAt = null;
     const out: Out[] = [{ to: seat, msg: { t: "welcome", seat, token: info.token, code: s.code } }];
     if (s.status === "waiting") {
       out.push({ to: seat, msg: { t: "waiting", code: s.code } });
@@ -169,6 +169,7 @@ export class Referee {
       if (p && seat === p.seat) out.push({ to: seat, msg: { t: "blocking" } });
       if (p && seat !== p.seat) out.push({ to: seat, msg: { t: "block_wanted", lane: p.lane, target: p.target, hit: p.hit } });
       if (s.status === "playing") out.push({ to: other(seat), msg: { t: "opponent", status: "back" } });
+      if (s.over) out.push({ to: seat, msg: { t: "over", winner: s.over.winner, reason: s.over.reason } });
     }
     return { seat, out };
   }
@@ -215,6 +216,16 @@ export class Referee {
         return this.attack(seat, msg.lane, msg.target, msg.hit, now);
       case "block":
         return this.block(seat, msg.blocked, now);
+      case "hash":
+        return this.hash(seat, msg.seq, msg.d, now);
+      case "desync":
+        return s.status === "playing" ? this.end(-1, "desync", now) : [];
+      case "result":
+        return this.result(seat, msg.winner, now);
+      case "concede":
+        return s.status === "playing" ? this.end(other(seat), "concede", now) : [];
+      case "rematch":
+        return this.rematch(seat, now);
       default:
         return [];
     }
@@ -273,6 +284,52 @@ export class Referee {
     return actionDict({ type: ActionType.ATTACK, player: seat, lane, target_lane: target, hit, blocked });
   }
 
+  private hash(seat: Seat, seq: number, d: string, now: number): Out[] {
+    const s = this.s;
+    if (s.status !== "playing") return [];
+    const key = String(seq);
+    const pair: [string | null, string | null] = s.hashes[key] ?? [null, null];
+    pair[seat] = d;
+    s.hashes[key] = pair;
+    for (const k of Object.keys(s.hashes)) if (Number(k) <= seq - 8) delete s.hashes[k];
+    if (pair[0] !== null && pair[1] !== null && pair[0] !== pair[1]) return this.end(-1, "desync", now);
+    return [];
+  }
+
+  private result(seat: Seat, winner: number, now: number): Out[] {
+    const s = this.s;
+    if (s.status !== "playing") return [];
+    s.results[seat] = winner;
+    const [a, b] = s.results;
+    if (a === null || b === null) return [];
+    return a === b ? this.end(a, "normal", now) : this.end(-1, "desync", now);
+  }
+
+  private end(winner: number, reason: OverReason, now: number): Out[] {
+    const s = this.s;
+    s.status = "over";
+    s.over = { winner, reason };
+    s.pending = null;
+    s.blockDeadline = null;
+    s.reconnectDeadline = [null, null];
+    s.rematch = [false, false];
+    s.cleanupAt = now + TIMES.overMs;
+    return both({ t: "over", winner, reason });
+  }
+
+  private rematch(seat: Seat, now: number): Out[] {
+    const s = this.s;
+    if (s.status !== "over" || !s.over) return this.reject(seat, "not over");
+    if (s.over.reason === "desync") return this.reject(seat, "no rematch");
+    if (!s.connected[other(seat)]) return this.reject(seat, "left");
+    s.rematch[seat] = true;
+    if (!s.rematch[other(seat)]) return [{ to: other(seat), msg: { t: "rematch_wanted" } }];
+    s.matchNo += 1;
+    s.cleanupAt = null;
+    this.begin(now);
+    return both(this.startMsg());
+  }
+
   /** Append a move to the log and send it to both players. */
   private record(a: ActionDict, now: number, auto = false): Out[] {
     const s = this.s;
@@ -287,14 +344,31 @@ export class Referee {
 
   // --- Connections and time ---------------------------------------------------------------
 
-  disconnect(seat: Seat, _now: number): Out[] {
-    this.s.connected[seat] = false;
-    return [];
+  disconnect(seat: Seat, now: number): Out[] {
+    const s = this.s;
+    s.connected[seat] = false;
+    const out: Out[] = [];
+    if (s.status === "playing") {
+      const until = now + TIMES.reconnectMs;
+      s.reconnectDeadline[seat] = until;
+      out.push({ to: other(seat), msg: { t: "opponent", status: "away", until } });
+    } else if (s.status === "over") {
+      out.push({ to: other(seat), msg: { t: "opponent", status: "left" } });
+    }
+    if (!s.connected[0] && !s.connected[1]) {
+      const empty = now + TIMES.emptyMs;
+      s.cleanupAt = s.cleanupAt === null ? empty : Math.min(s.cleanupAt, empty);
+    }
+    return out;
   }
 
   tick(now: number): Out[] {
     const s = this.s;
     const out: Out[] = [];
+    for (const seat of [0, 1] as Seat[]) {
+      const until = s.reconnectDeadline[seat];
+      if (s.status === "playing" && until !== null && now >= until) out.push(...this.end(other(seat), "forfeit", now));
+    }
     if (s.status === "playing" && s.pending && s.blockDeadline !== null && now >= s.blockDeadline) {
       out.push(...this.completeAttack(false, now));
     }
