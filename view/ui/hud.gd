@@ -276,9 +276,17 @@ func _open_pause() -> void:
 	pause_changed.emit(true)
 
 
+## Open or close the menu (II button, Esc).
+func toggle_pause() -> void:
+	if is_paused():
+		close_pause()
+	else:
+		_open_pause()
+
+
+## END TURN follows whether the local player may act; the menu button always works.
 func set_input_enabled(on: bool) -> void:
 	end_turn_button.disabled = not on
-	pause_button.disabled = not on
 
 
 func shake_hero(human_side: bool) -> void:

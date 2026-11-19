@@ -122,8 +122,15 @@ func _ready() -> void:
 	_begin(opening)
 
 
-## Clicking a discard pile on the table shows its cards.
+## Esc opens or closes the menu (not over the results). Clicking a discard pile on the table shows
+## its cards.
 func _unhandled_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key and key.pressed and not key.echo and key.keycode == KEY_ESCAPE:
+		if hud and not results.visible:
+			hud.toggle_pause()
+			get_viewport().set_input_as_handled()
+		return
 	var mb := event as InputEventMouseButton
 	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT or stacks == null or rig.in_cinematic:
 		return
@@ -333,7 +340,11 @@ func _build_ui() -> void:
 	timing_bar = TimingBar.new()
 	root.add_child(timing_bar)
 	hud.pause_overlay.reparent(root)
-	hud.pause_changed.connect(func(_open: bool) -> void: refresh_ui())
+	hud.pause_changed.connect(func(open: bool) -> void:
+		if open:
+			input.cancel()
+		driver.menu_changed(open)
+		refresh_ui())
 	results = Results.new()
 	root.add_child(results)
 	results.rematch.connect(func() -> void: get_tree().reload_current_scene())
@@ -373,7 +384,7 @@ func refresh_ui() -> void:
 		and not driver.blocks_input()
 	input.enabled = can_act
 	hand.enabled = can_act
-	hud.set_input_enabled(can_act or paused)
+	hud.set_input_enabled(can_act)
 	overlay.refresh(state)
 
 

@@ -132,6 +132,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mode == Mode.TARGETING:
 			cancel()
 			match_ctl.toast.show_message("Cancelled", 0.8)
+			if is_inside_tree():
+				get_viewport().set_input_as_handled()
 		return
 	if not (mb and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT):
 		return

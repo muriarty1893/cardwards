@@ -36,6 +36,9 @@ func rival_turn() -> void:
 		if s.phase == GameState.Phase.OVER or s.active != MatchController.AI:
 			return
 		await m.get_tree().create_timer(MatchController.AI_PAUSE / m.pace).timeout
+		await _wait_unpaused()
+		if s.phase == GameState.Phase.OVER or s.active != MatchController.AI:
+			return
 		var a: Action = ai.choose_action(s)
 		if a.type == Action.Type.ATTACK:
 			await m.show_attack_arrow(MatchController.AI, a.lane, a.target_lane)
@@ -46,7 +49,14 @@ func rival_turn() -> void:
 		await m.perform(a)
 		if a.type == Action.Type.END_TURN:
 			return
+	await _wait_unpaused()
 	if s.phase == GameState.Phase.CHOOSING:
 		await m.perform(Action.choose(s.pending_player, 0))
 	if s.phase != GameState.Phase.OVER and s.active == MatchController.AI:
 		await m.perform(Action.end_turn(MatchController.AI))
+
+
+## The menu really pauses a match against the AI: it makes no move while the menu is open.
+func _wait_unpaused() -> void:
+	while is_instance_valid(m) and m.hud.is_paused():
+		await m.get_tree().process_frame
