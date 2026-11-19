@@ -581,7 +581,7 @@ func _build_bottom() -> void:
 	add_child(end_turn_button)
 	_fuse = TurnFuse.new()
 	_fuse.name = "TurnFuse"
-	_fuse.position = Vector2(0, -11)
+	_fuse.position = Vector2(0, -2)
 	_fuse.size = Vector2(END_TURN_SIZE.x, 22)
 	end_turn_button.add_child(_fuse)
 

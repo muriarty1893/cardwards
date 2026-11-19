@@ -213,6 +213,9 @@ func _build() -> void:
 	join_b.pressed.connect(func() -> void: _request(&"join"))
 	join_row.add_child(join_b)
 	_starters = [quick, host_b, join_b]
+	# Greyed out while a request runs, but still readable.
+	for b: Button in _starters:
+		b.add_theme_color_override("font_disabled_color", Color(Palette.INK, 0.45))
 	_msg = UiStyle.label("", 18)
 	_msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
