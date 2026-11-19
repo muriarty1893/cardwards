@@ -25,6 +25,8 @@ func test_monster_models_used() -> bool:
 	for group: String in ["big", "blob", "flying"]:
 		for f: String in _files("res://assets/monsters/" + group, "gltf"):
 			assert_true(used.has("res://assets/monsters/%s/%s" % [group, f]), "monsters/%s/%s is used" % [group, f])
+	for f: String in _files("res://assets/monsters/cute", "fbx"):
+		assert_true(used.has("res://assets/monsters/cute/" + f), "monsters/cute/%s is used" % f)
 	return true
 
 

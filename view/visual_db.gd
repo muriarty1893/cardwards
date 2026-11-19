@@ -21,12 +21,7 @@ const TINTS: Dictionary = {
 	&"b_ember": Color("#ff7a3a", 0.25),
 	&"b_candy": Color("#ff9fcf", 0.25),
 	&"b_frost": Color("#9fd8ff", 0.25),
-	&"glow": Color("#c8ff6a", 0.55),
-	&"bruise": Color("#9a6ad8", 0.45),
 	&"gummy_red": Color("#ff4a5a", 0.5),
-	&"frost_white": Color("#eaf6ff", 0.6),
-	&"snow": Color("#ffffff", 0.75),
-	&"hot": Color("#ff3a2a", 0.5),
 	&"b_forge": Color("#ff5a1a", 0.35),
 	&"b_fairy": Color("#c8ff8a", 0.35),
 	&"b_ginger": Color("#c8853a", 0.4),
@@ -62,7 +57,7 @@ const ENTRIES: Dictionary = {
 	# Candy Hills
 	&"gumdrop": {"model": "blob/PinkBlob", "tint": &"none"},
 	&"taffy_snail": {"model": "blob/GreenBlob", "tint": &"taffy"},
-	&"lollibat": {"model": "flying/Demon", "tint": &"candy_purple"},
+	&"lollibat": {"model": "cute/Bat.fbx", "tint": &"candy_purple"},
 	&"sugar_sprite": {"model": "flying/Ghost", "tint": &"candy_cyan"},
 	&"jellywobble": {"model": "flying/Glub", "tint": &"candy_blue"},
 	&"bonbon_behemoth": {"model": "big/Bunny", "tint": &"candy_pink"},
@@ -81,20 +76,20 @@ const ENTRIES: Dictionary = {
 	&"frost_spire": {"tint": &"b_frost"},
 	&"cold_snap": {},
 	&"avalanche": {},
-	# Card expansion 2 (new creatures reuse the pack's models in new colours until more models can be fetched)
-	&"glowmoth": {"model": "flying/Armabee", "tint": &"glow"},
-	&"barkbeetle": {"model": "flying/Goleling_Evolved", "tint": &"bark"},
-	&"pain_shroom": {"model": "blob/Mushnub_Evolved", "tint": &"bruise"},
-	&"emberkit": {"model": "blob/Cat", "tint": &"ember"},
-	&"cinder_wisp": {"model": "flying/Ghost", "tint": &"ember"},
-	&"hot_head": {"model": "blob/Yeti", "tint": &"hot"},
-	&"gummy_cub": {"model": "blob/PinkBlob", "tint": &"gummy_red"},
-	&"cotton_puff": {"model": "flying/Glub", "tint": &"candy_pink"},
-	&"sugar_smuggler": {"model": "blob/Mushnub", "tint": &"candy_purple"},
-	&"frostwisp": {"model": "flying/Hywirl", "tint": &"frost_white"},
-	&"snow_pup": {"model": "blob/Dog", "tint": &"icy"},
-	&"ice_sage": {"model": "big/Bunny", "tint": &"frost_white"},
-	&"snowman": {"model": "blob/Yeti", "tint": &"snow"},
+	# Card expansion 2: free models of their own (Ultimate Monsters glTF; "cute/*.fbx" = Cute Animated Monsters)
+	&"glowmoth": {"model": "flying/Alpaking", "tint": &"none"},
+	&"barkbeetle": {"model": "cute/Tree.fbx", "tint": &"none"},
+	&"pain_shroom": {"model": "cute/Mushroom.fbx", "tint": &"none"},
+	&"emberkit": {"model": "cute/Demon.fbx", "tint": &"none"},
+	&"cinder_wisp": {"model": "cute/Skull.fbx", "tint": &"none"},
+	&"hot_head": {"model": "cute/YellowDragon.fbx", "tint": &"none"},
+	&"gummy_cub": {"model": "cute/Panda.fbx", "tint": &"gummy_red"},
+	&"cotton_puff": {"model": "flying/Squidle", "tint": &"none"},
+	&"sugar_smuggler": {"model": "cute/Alien.fbx", "tint": &"none"},
+	&"frostwisp": {"model": "cute/Alien_Tall.fbx", "tint": &"none"},
+	&"snow_pup": {"model": "cute/Yeti.fbx", "tint": &"none"},
+	&"ice_sage": {"model": "blob/Wizard", "tint": &"icy"},
+	&"snowman": {"model": "cute/Ghost.fbx", "tint": &"none"},
 	&"sporemoth": {"merge": [&"sporeling", &"glowmoth"]},
 	&"mossback_colossus": {"merge": [&"barkbeetle", &"mossback"]},
 	&"twinflame_hound": {"merge": [&"cinderpup", &"emberkit"]},
@@ -238,7 +233,8 @@ static func model_path(id: StringName) -> String:
 	if e.has("merge"):
 		return model_path(e["merge"][0])
 	if e.has("model"):
-		return "res://assets/monsters/%s.gltf" % e["model"]
+		var m: String = e["model"]
+		return "res://assets/monsters/%s" % (m if m.get_extension() != "" else m + ".gltf")
 	if e.has("building"):
 		return "res://assets/buildings/%s.gltf" % e["building"]
 	if e.has("tint"):

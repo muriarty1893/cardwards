@@ -10,10 +10,10 @@ const HEIGHTS: Array[float] = [0.55, 0.55, 0.72, 0.95]
 const MAX_WIDTH := 1.05
 const ATTACK_ANIMS: Array[StringName] = [&"Punch", &"Bite_Front", &"Headbutt"]
 const HIT_ANIMS: Array[StringName] = [&"HitReact", &"HitRecieve"]
-const IDLE_ANIMS: Array[StringName] = [&"Idle", &"Flying_Idle"]
+const IDLE_ANIMS: Array[StringName] = [&"Idle", &"Flying_Idle", &"Flying"]
 const FIDGET_ANIMS: Array[StringName] = [&"Wave", &"Yes", &"Dance"]
 ## Clips for walking around the lane, first found wins (flyers drift with their flying loops).
-const MOVE_ANIMS: Array[StringName] = [&"Walk", &"Fast_Flying", &"Flying_Idle", &"Run"]
+const MOVE_ANIMS: Array[StringName] = [&"Walk", &"Fast_Flying", &"Flying_Idle", &"Run", &"Flying"]
 
 var card: CardData
 ## Held by the event player (attacks, deaths...). Taking it pops the creature out of its house.
@@ -94,7 +94,7 @@ static func create(c: CardData, model_override: String = "") -> CreatureView:
 	v.base_height = v.height
 	v._base_k = v.body.scale.x
 	v._home_in = randf_range(2.0, 5.0)
-	v._hops = v._anim == null or not (v._anim.has_animation(&"Walk") or v._anim.has_animation(&"Run") or v._anim.has_animation(&"Fast_Flying"))
+	v._hops = v._anim == null or not (v._anim.has_animation(&"Walk") or v._anim.has_animation(&"Run") or v._anim.has_animation(&"Fast_Flying") or v._anim.has_animation(&"Flying"))
 	v._t = randf() * TAU
 	v.wanderer = Wanderer.new()
 	v.wanderer.name = "Wanderer"

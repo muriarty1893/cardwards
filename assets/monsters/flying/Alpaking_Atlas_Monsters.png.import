@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dili7hmrl3sd5"
-path="res://.godot/imported/Demon_Atlas_Monsters.png-0e32b5652e7525df683bdd3c8f761d4c.ctex"
+uid="uid://bhfk0tgatcubh"
+path="res://.godot/imported/Alpaking_Atlas_Monsters.png-08b381a58830a4bcf92b1a172e0637f5.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "19edfe03ec2ac473b0a20d5684c8b79c"
+"md5": "054bb17e36fa3a9e47edd4dba127caf0"
 }
 
 [deps]
 
-source_file="res://assets/monsters/flying/Demon_Atlas_Monsters.png"
-dest_files=["res://.godot/imported/Demon_Atlas_Monsters.png-0e32b5652e7525df683bdd3c8f761d4c.ctex"]
+source_file="res://assets/monsters/flying/Alpaking_Atlas_Monsters.png"
+dest_files=["res://.godot/imported/Alpaking_Atlas_Monsters.png-08b381a58830a4bcf92b1a172e0637f5.ctex"]
 
 [params]
 

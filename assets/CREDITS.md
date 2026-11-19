@@ -7,6 +7,8 @@ unless noted.
 ## Quaternius (https://quaternius.com), CC0 1.0
 
 - `monsters/`: "Ultimate Monsters" pack (creature models, Big / Blob / Flying).
+- `monsters/cute/`: "Cute Animated Monsters" (Aug 2020), from the OpenGameArt mirror
+  https://opengameart.org/content/textured-cute-monster-pack. Textures brightened x1.5 for the game's lighting.
 - `buildings/`: "Ultimate Fantasy RTS" pack (files renamed to card ids).
 - `nature/`: "Stylized Nature MegaKit" (Standard), https://quaternius.com/packs/stylizednaturemegakit.html,
   downloaded from the OpenGameArt mirror https://opengameart.org/content/stylized-nature-megakit.

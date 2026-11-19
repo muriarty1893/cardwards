@@ -68,7 +68,7 @@ static func _bounds(n: Node, xf: Transform3D, is_root: bool) -> AABB:
 	if n is Node3D and not is_root:
 		here = xf * (n as Node3D).transform
 	if n is MeshInstance3D:
-		out = here * (n as MeshInstance3D).get_aabb()
+		out = _mesh_box_xf(n as MeshInstance3D, xf, here) * (n as MeshInstance3D).get_aabb()
 		first = false
 	for c: Node in n.get_children():
 		var sub: AABB = _bounds(c, here, false)
@@ -77,6 +77,21 @@ static func _bounds(n: Node, xf: Transform3D, is_root: bool) -> AABB:
 		out = sub if first else out.merge(sub)
 		first = false
 	return out
+
+
+## Where a mesh's box is drawn: `here` (its own place), except for a mesh skinned to its parent skeleton, which is
+## drawn through its first bone's binding (some FBX rigs bind with a scale, e.g. the cute Mushroom at 0.58).
+## `parent_xf` is the skeleton's place.
+static func _mesh_box_xf(mi: MeshInstance3D, parent_xf: Transform3D, here: Transform3D) -> Transform3D:
+	var skel := mi.get_parent() as Skeleton3D
+	if mi.skin == null or skel == null or mi.skin.get_bind_count() == 0 or mi.get_node_or_null(mi.skeleton) != skel:
+		return here
+	var b: int = mi.skin.get_bind_bone(0)
+	if b < 0:
+		b = skel.find_bone(mi.skin.get_bind_name(0))
+	if b < 0:
+		return here
+	return parent_xf * skel.get_bone_global_rest(b) * mi.skin.get_bind_pose(0)
 
 
 ## Instance a model scene scaled to fit `height` (and `max_width` if > 0), base at y = 0, centred on x/z.

@@ -1,7 +1,7 @@
 extends Node
 ## Dev tool: renders every card's picture (and the two hero portraits) in the cartoon style
 ## and saves PNGs into res://assets/card_art/. Run windowed (it needs the GPU):
-##   godot --path . res://tools/bake_card_art.tscn [-- --only=<id>]
+##   godot --path . res://tools/bake_card_art.tscn [-- --only=<id>[,<id>...]]
 ## Creatures and buildings: their own model standing on a strip of their land.
 ## Spells: their icon over a glow in the land's colour. Heroes: KayKit Mage / Barbarian.
 
@@ -53,19 +53,19 @@ func _ready() -> void:
 
 
 func _bake_all() -> void:
-	var only: String = ""
+	var only: PackedStringArray = []
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--only="):
-			only = a.substr(7)
+			only = a.substr(7).split(",")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://assets/card_art"))
 	var n: int = 0
 	for c: CardData in CardDB.all_cards():
-		if only != "" and only != String(c.id):
+		if not only.is_empty() and not String(c.id) in only:
 			continue
 		await _bake_card(c)
 		n += 1
 	for h: Array in [["hero_you", "res://assets/heroes/Mage.glb", Color("#8fd3ff")], ["hero_rival", "res://assets/heroes/Barbarian.glb", Color("#ffb3dd")]]:
-		if only != "" and only != h[0]:
+		if not only.is_empty() and not String(h[0]) in only:
 			continue
 		await _bake_hero(h[0], h[1], h[2])
 		n += 1
