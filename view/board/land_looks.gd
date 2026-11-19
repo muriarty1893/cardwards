@@ -297,35 +297,66 @@ const MOSS := Color("#5aa84a")
 const BARK := Color("#7a5232")
 
 
-## A pond with ripples, lily pads and reeds in the back corner; long swaying grass along both sides.
+## A pond in the back corner: uneven shoreline, clear shallows over sand deepening to dark water, soft ripples; stones
+## and grass tufts along the bank, notched lily pads with a flower, a clump of cattails. Long swaying grass along both
+## sides.
 static func _pond_glade(ctx: Dictionary) -> void:
 	var box: Rect2 = ctx["box"]
 	var rng := _rng(ctx)
 	var rx: float = box.size.x * 0.5
 	var rz: float = minf(box.size.y * 0.42, rx * 1.9)
 	var c: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.3))
+	var seed: float = rng.randf() * TAU
 	var pond := Node3D.new()
 	pond.name = "Pond"
-	pond.add_child(SetPieces.pool(0, rx, rz))
-	for i: int in 3:
+	pond.add_child(SetPieces.pool(0, rx, rz, seed))
+	# Lily pads (notched, different sizes) and one pink flower, in the open water.
+	for i: int in 4:
 		var a: float = rng.randf() * TAU
-		var e: float = rng.randf_range(0.2, 0.6)
-		var pad := SetPieces.cyl(0.07, 0.07, 0.008, Color("#4fbf4a"), Vector3(cos(a) * rx * e, 0.014, sin(a) * rz * e), 12)
+		var e: float = rng.randf_range(0.15, 0.55) * SetPieces.pond_edge(a, seed)
+		var pad: MeshInstance3D = SetPieces.lily_pad(rng.randf_range(0.045, 0.085), rng.randf() * TAU)
+		pad.name = "LilyPad%d" % i
+		pad.position = Vector3(cos(a) * rx * e, 0.016, sin(a) * rz * e)
 		pond.add_child(pad)
 		if i == 0:
-			pond.add_child(SetPieces.sphere(0.03, Color("#ffd0e8"), Vector3(cos(a) * rx * e, 0.04, sin(a) * rz * e), Vector3(1, 0.7, 1), 8))
+			var f := SetPieces.flower(0.035, Color("#ffc4e1"))
+			f.position = pad.position + Vector3(0, 0.004, 0)
+			pond.add_child(f)
+	# Stones on part of the bank (an arc on the side away from the cattails), sitting on the shoreline.
+	var arc0: float = rng.randf() * TAU
+	for i: int in 7:
+		var a: float = arc0 + i * 0.42 + rng.randf_range(-0.1, 0.1)
+		var e: float = SetPieces.pond_edge(a, seed) * rng.randf_range(0.97, 1.06)
+		var sr: float = rng.randf_range(0.025, 0.05)
+		var stone := SetPieces.sphere(sr, Color("#8d8578") if i % 3 else Color("#a39a8b"), Vector3(cos(a) * rx * e, sr * 0.25, sin(a) * rz * e), Vector3(1.0, 0.55, rng.randf_range(0.8, 1.2)), 8)
+		stone.name = "Stone%d" % i
+		pond.add_child(stone)
+	# Grass tufts at the waterline, around the rest of the bank.
+	for i: int in 9:
+		var a: float = arc0 + 3.1 + i * 0.36 + rng.randf_range(-0.12, 0.12)
+		var e: float = SetPieces.pond_edge(a, seed) * rng.randf_range(0.98, 1.08)
+		var tuft := SetPieces.grass_tuft(rng.randf_range(0.06, 0.11) * float(ctx["scale"]), Color("#3f8f3a"), rng)
+		tuft.position = Vector3(cos(a) * rx * e, 0.0, sin(a) * rz * e)
+		pond.add_child(tuft)
 	SetPieces.add_piece(ctx, pond, c, Rect2(c.x - rx, c.z - rz, rx * 2.0, rz * 2.0), box)
-	# Reeds at the pond's far end.
+	# A clump of cattails at the pond's far end.
 	var reeds := Node3D.new()
 	reeds.name = "Reeds"
-	var rz0: float = c.z + rz * (1.0 if _back(ctx) > 0.5 else -1.0) * 0.75
-	for i: int in 5:
-		var x: float = c.x + rng.randf_range(-rx * 0.8, rx * 0.8)
-		var z: float = clampf(rz0 + rng.randf_range(-0.06, 0.06), box.position.y + 0.03, box.end.y - 0.03)
-		var hh: float = rng.randf_range(0.28, 0.45) * float(ctx["scale"])
-		reeds.add_child(SetPieces.cyl(0.008, 0.012, hh, Color("#5c8a3a"), Vector3(x, 0, z), 5))
-		reeds.add_child(SetPieces.cyl(0.022, 0.022, 0.07, Color("#7a4a2a"), Vector3(x, hh * 0.78, z), 6))
-	SetPieces.add_piece(ctx, reeds, Vector3.ZERO, Rect2(c.x - rx, rz0 - 0.1, rx * 2.0, 0.2), box)
+	var side: float = 1.0 if _back(ctx) > 0.5 else -1.0
+	var ca: float = PI / 2.0 * side + rng.randf_range(-0.5, 0.5)
+	var cx: float = c.x + cos(ca) * rx * SetPieces.pond_edge(ca, seed)
+	var cz: float = c.z + sin(ca) * rz * SetPieces.pond_edge(ca, seed)
+	for i: int in 8:
+		# Along the bank, half in the shallows, half on the shore.
+		var a: float = ca + rng.randf_range(-0.45, 0.45)
+		var e: float = SetPieces.pond_edge(a, seed) * rng.randf_range(0.9, 1.06)
+		var x: float = c.x + cos(a) * rx * e
+		var z: float = clampf(c.z + sin(a) * rz * e, box.position.y + 0.03, box.end.y - 0.03)
+		var hh: float = rng.randf_range(0.24, 0.46) * float(ctx["scale"])
+		reeds.add_child(SetPieces.cyl(0.007, 0.011, hh, Color("#5c8a3a"), Vector3(x, 0, z), 5))
+		if i % 3 != 2:
+			reeds.add_child(SetPieces.cyl(0.02, 0.02, 0.07, Color("#6e4426"), Vector3(x, hh * 0.76, z), 6))
+	SetPieces.add_piece(ctx, reeds, Vector3.ZERO, Rect2(cx - rx * 0.3, cz - 0.1, rx * 0.6, 0.2), box)
 	for key: String in ["band", "other_band"]:
 		var band: Rect2 = ctx[key]
 		var g := Node3D.new()

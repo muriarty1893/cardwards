@@ -16,19 +16,10 @@ const NEAR_SCALE := 0.9
 
 ## The pieces for `land`'s look `variant`; empty for Meadow. `corner` 0 = left back corner, 1 = right.
 static func build(land: int, variant: int, corner: int, player: int, shape: TileShape, density: float, rng: RandomNumberGenerator) -> Node3D:
-	var root := Node3D.new()
-	root.name = "SetPieces"
+	var ctx: Dictionary = context(land, variant, corner, player, shape, density, rng)
+	var root: Node3D = ctx["root"]
 	if land == Lands.MEADOW:
 		return root
-	var ctx := {
-		"land": land, "variant": variant, "corner": corner, "player": player, "shape": shape,
-		"density": density, "rng": rng, "root": root,
-		"box": corner_box(shape, player, corner),
-		"other_box": corner_box(shape, player, 1 - corner),
-		"band": edge_band(shape, player, corner),
-		"other_band": edge_band(shape, player, 1 - corner),
-		"scale": NEAR_SCALE if player == 0 else 1.0,
-	}
 	if not LandLooks.build(ctx):
 		rocks(ctx, ctx["box"], 3)
 	# Each piece's plain-coloured parts become one mesh (a full board drew ~250 of them one by one). Pieces stay
@@ -37,6 +28,21 @@ static func build(land: int, variant: int, corner: int, player: int, shape: Tile
 		if piece is Node3D:
 			MeshBaker.bake(piece)
 	return root
+
+
+## What a look's builder gets: the land, look and zones, and an empty "SetPieces" root to add pieces to.
+static func context(land: int, variant: int, corner: int, player: int, shape: TileShape, density: float, rng: RandomNumberGenerator) -> Dictionary:
+	var root := Node3D.new()
+	root.name = "SetPieces"
+	return {
+		"land": land, "variant": variant, "corner": corner, "player": player, "shape": shape,
+		"density": density, "rng": rng, "root": root,
+		"box": corner_box(shape, player, corner),
+		"other_box": corner_box(shape, player, 1 - corner),
+		"band": edge_band(shape, player, corner),
+		"other_band": edge_band(shape, player, 1 - corner),
+		"scale": NEAR_SCALE if player == 0 else 1.0,
+	}
 
 
 # --- zones (tile-local) ---------------------------------------------------------------------------
@@ -104,6 +110,9 @@ static func corner_sign(ctx: Dictionary) -> float:
 ## Adds `node` as a piece at tile-local `pos` with ground footprint `fp` (clamped into `within`).
 static func add_piece(ctx: Dictionary, node: Node3D, pos: Vector3, fp: Rect2, within: Rect2) -> Node3D:
 	node.position = pos
+	# Very narrow lanes can hand in boxes with a negative size: compare them as their positive equivalents.
+	fp = fp.abs()
+	within = within.abs()
 	node.set_meta("footprint", fp.intersection(within) if within.intersects(fp) else Rect2(within.get_center(), Vector2.ZERO))
 	(ctx["root"] as Node3D).add_child(node)
 	return node
@@ -141,8 +150,9 @@ static func model(path: String, height: float, tint: Color = Toon.NO_TINT, sway:
 	return mdl
 
 
-## A flat pool (0 water, 1 ice, 2 chocolate) filling an ellipse of radii (rx, rz) at y just above the ground.
-static func pool(kind: int, rx: float, rz: float) -> MeshInstance3D:
+## A flat pool (0 water, 1 ice, 2 chocolate) in an ellipse of radii (rx, rz) at y just above the ground. Water gets an
+## uneven shoreline from `shore_seed` (pond_edge).
+static func pool(kind: int, rx: float, rz: float, shore_seed: float = 0.0) -> MeshInstance3D:
 	var q := QuadMesh.new()
 	q.size = Vector2(rx * 2.0, rz * 2.0)
 	q.orientation = PlaneMesh.FACE_Y
@@ -150,8 +160,62 @@ static func pool(kind: int, rx: float, rz: float) -> MeshInstance3D:
 	m.shader = load("res://view/board/pond.gdshader") as Shader
 	m.set_shader_parameter("kind", kind)
 	m.set_shader_parameter("cell_tex", NoiseBank.cells())
+	m.set_shader_parameter("fbm_tex", NoiseBank.fbm())
+	m.set_shader_parameter("shape_seed", shore_seed)
+	m.set_shader_parameter("radii", Vector2(rx, rz))
 	var mi := Palette.mesh(q, m, Vector3(0, 0.012, 0), false)
 	return mi
+
+
+## A water pool's shoreline: its radius at angle `a` as a fraction of the pool's ellipse. Same formula as pond.gdshader.
+static func pond_edge(a: float, shore_seed: float) -> float:
+	var s: float = shore_seed
+	return clampf(0.84 + 0.07 * sin(2.0 * a + s) + 0.05 * sin(3.0 * a + s * 1.7) + 0.03 * sin(5.0 * a + s * 2.3), 0.62, 0.99)
+
+
+## A flat lily pad of radius `r` with its notch (a 40° wedge) facing angle `turn`.
+static func lily_pad(r: float, turn: float) -> MeshInstance3D:
+	const NOTCH := 0.7
+	const STEPS := 16
+	var verts := PackedVector3Array([Vector3.ZERO])
+	var idx := PackedInt32Array()
+	for k: int in STEPS + 1:
+		var a: float = turn + NOTCH / 2.0 + (TAU - NOTCH) * k / float(STEPS)
+		var wob: float = 1.0 + 0.05 * sin(a * 5.0 + turn)
+		verts.append(Vector3(cos(a) * r * wob, 0.0, sin(a) * r * wob))
+		if k > 0:
+			idx.append_array([0, k, k + 1])
+	var norms := PackedVector3Array()
+	norms.resize(verts.size())
+	norms.fill(Vector3.UP)
+	var arr: Array = []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_INDEX] = idx
+	var am := ArrayMesh.new()
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return mesh(am, Color("#4fae45"), Vector3.ZERO, false)
+
+
+## A small water-lily flower: five flattened petals round a yellow middle, base at y = 0.
+static func flower(r: float, petal: Color) -> Node3D:
+	var f := Node3D.new()
+	for i: int in 5:
+		var a: float = i * TAU / 5.0
+		f.add_child(sphere(r * 0.45, petal, Vector3(cos(a) * r * 0.5, r * 0.25, sin(a) * r * 0.5), Vector3(1.0, 0.45, 0.6), 8))
+	f.add_child(sphere(r * 0.3, Color("#ffd84a"), Vector3(0, r * 0.4, 0), Vector3(1.0, 0.7, 1.0), 8))
+	return f
+
+
+## A tuft of a few grass blades of height `h` leaning outward, base at y = 0.
+static func grass_tuft(h: float, color: Color, rng: RandomNumberGenerator) -> Node3D:
+	var t := Node3D.new()
+	for i: int in 4:
+		var blade := cone(h * 0.09, h * rng.randf_range(0.7, 1.0), color.lerp(Color("#6fbf4a"), rng.randf() * 0.5), Vector3.ZERO, 4)
+		blade.rotation = Vector3(rng.randf_range(-0.35, 0.35), rng.randf() * TAU, rng.randf_range(-0.35, 0.35))
+		t.add_child(blade)
+	return t
 
 
 ## Tall swaying grass (the cover's tuft, bending away from creatures) scattered in `area`.
