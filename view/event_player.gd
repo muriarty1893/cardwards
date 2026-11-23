@@ -108,7 +108,7 @@ func _play_one(e: GameEvent) -> void:
 			var v: CreatureView = _view(d["player"], d["lane"])
 			if v:
 				v.busy = true
-				var base: Vector3 = v.body.scale
+				var base: Vector3 = v.rest_scale()
 				var tw := v.create_tween()
 				tw.tween_property(v.body, "scale", base * Vector3(1.3, 0.7, 1.3), 0.1 / speed)
 				tw.tween_property(v.body, "scale", base, 0.2 / speed).set_trans(Tween.TRANS_ELASTIC)
@@ -117,7 +117,10 @@ func _play_one(e: GameEvent) -> void:
 				v.busy = false
 		&"creature_destroyed":
 			Audio.sfx(&"death")
+			var killer: int = int(_source.get("player", -1)) if _source.get("kind") == &"attack" else -1
 			await _death(d)
+			if killer >= 0 and killer != int(d["player"]):
+				_cheer(killer)
 		&"unfrozen":
 			var v: CreatureView = _view(d["player"], d["lane"])
 			if v:
@@ -443,6 +446,18 @@ func _reveal(c: CardData) -> void:
 	tw.chain().tween_property(w, "modulate:a", 0.0, 0.25 / speed)
 	tw.chain().tween_callback(w.queue_free)
 	await _wait(0.55)
+
+
+## Allies of `p` cheer, one after another.
+func _cheer(p: int) -> void:
+	var k: int = 0
+	for o: Variant in m.creature_views[p]:
+		if is_instance_valid(o):
+			var cv: CreatureView = o
+			get_tree().create_timer(0.08 * k).timeout.connect(func() -> void:
+				if is_instance_valid(cv):
+					cv.cheer())
+			k += 1
 
 
 ## Where the spell now resolving lands: the creatures and heroes its events touch, up to the next
@@ -827,6 +842,8 @@ func _play_creature(d: Dictionary) -> void:
 	tw.tween_property(v, "position", target, 0.4 / speed).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	await tw.finished
 	v.busy = false
+	v.spring(0.3)
+	v.hop_happy()
 	m.refresh_pieces()
 	Audio.sfx(&"creature_land")
 	var feet: Vector3 = target - Vector3(0, 0.4, 0)
@@ -918,6 +935,11 @@ func _attack(d: Dictionary) -> void:
 	var out_t: float = 0.3 / speed
 	var back_t: float = 0.4 / speed
 	m.rig.close_up(v.global_position, Vector3(target.x, home.y, target.z), (0.2 + 0.3 + 0.15 + 0.4 + (0.35 if hero else 0.0)) / speed)
+	# A big attacker makes the small creatures on that side duck.
+	if v.card and (v.card.attack >= 5 or v.height >= 0.9):
+		for o: Variant in m.creature_views[foe]:
+			if is_instance_valid(o) and o != tv and (o as CreatureView).height < 0.7:
+				(o as CreatureView).cower()
 	# Wind-up squash with a glint, the target bracing and turning to face it, then the run (the
 	# impact plays with the damage event that follows).
 	Burst.spawn(m, &"stars", v.global_position + Vector3(0, v.height + 0.2, 0), Palette.GOLD, 0.5)
@@ -926,11 +948,11 @@ func _attack(d: Dictionary) -> void:
 		if face.length() > 0.01:
 			tv.rotation.y = atan2(face.x, face.y)
 		if tv.body:
-			var tb: Vector3 = tv.body.scale
+			var tb: Vector3 = tv.rest_scale()
 			var brace := tv.create_tween()
 			brace.tween_property(tv.body, "scale", tb * Vector3(1.1, 0.88, 1.1), 0.12 / speed)
 			brace.tween_property(tv.body, "scale", tb, 0.3 / speed).set_delay(0.25 / speed)
-	var base: Vector3 = v.body.scale
+	var base: Vector3 = v.rest_scale()
 	var wind := v.create_tween()
 	wind.tween_property(v.body, "scale", base * Vector3(1.15, 0.8, 1.15), 0.12 / speed)
 	wind.tween_property(v.body, "scale", base, 0.08 / speed)
@@ -1016,7 +1038,7 @@ func knockback(v: CreatureView, from: Vector3, strength: float) -> void:
 	var away := Vector3(base.x - from.x, 0, base.z - from.z)
 	away = away.normalized() if away.length() > 0.01 else Vector3(0, 0, -1)
 	var push: Vector3 = away * clampf(strength, 0.05, 0.45)
-	var body_base: Vector3 = v.body.scale if v.body else Vector3.ONE
+	var body_base: Vector3 = v.rest_scale()
 	var tw := v.create_tween().set_parallel(true)
 	tw.tween_property(v, "position", base + push, 0.07 / speed).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	if v.body:
@@ -1031,7 +1053,7 @@ func knockback(v: CreatureView, from: Vector3, strength: float) -> void:
 func recoil(v: CreatureView) -> void:
 	if v.body == null:
 		return
-	var base: Vector3 = v.body.scale
+	var base: Vector3 = v.rest_scale()
 	var tw := v.create_tween()
 	tw.tween_property(v.body, "scale", base * Vector3(1.25, 0.75, 1.25), 0.07 / speed)
 	tw.tween_property(v.body, "scale", base, 0.18 / speed).set_trans(Tween.TRANS_ELASTIC)

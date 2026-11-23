@@ -212,6 +212,7 @@ func _process(delta: float) -> void:
 		driver.process(delta)
 	if picker and picker.is_open() and not human_choosing():
 		picker.force(-1)
+	_watch_drag()
 	if board == null:
 		return
 	var pts := PackedVector3Array()
@@ -679,6 +680,23 @@ func place_creature(p: int, l: int, c: CardData, drop: Vector3 = Vector3.INF) ->
 	return v
 
 
+## While a card is dragged, your creatures turn to watch it.
+func _watch_drag() -> void:
+	if input == null or rig == null or board == null:
+		return
+	var point := Vector3.INF
+	if input.mode == InputController.Mode.DRAGGING:
+		point = board.ground_at_screen(rig.camera, get_viewport().get_mouse_position())
+	watch(point)
+
+
+## Your creatures turn to face `point` (INF: back to wandering).
+func watch(point: Vector3) -> void:
+	for v: Variant in creature_views[HUMAN]:
+		if is_instance_valid(v):
+			(v as CreatureView).look_point = point
+
+
 ## Which way along z player p's enemies sit (-1: the rival's side is away from the camera).
 static func enemy_side_z(p: int) -> float:
 	return -1.0 if p == HUMAN else 1.0
@@ -735,6 +753,8 @@ func refresh_pieces() -> void:
 				v.set_home(Lands.home(state, p, l))
 				v.set_weather(state.field.land if state.field else -1)
 				KeywordFx.sync(v, UnitOverlay.shown_keywords(state, p, l), enemy_side_z(p))
+				var max_hp: int = Rules.effective_max_hp(state, p, l)
+				v.set_low_health(max_hp - cr.damage <= int(floor(max_hp * 0.3)) and max_hp - cr.damage > 0 and max_hp > 1)
 	_sync_houses()
 	overlay.refresh(state)
 

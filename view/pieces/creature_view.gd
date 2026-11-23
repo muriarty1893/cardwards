@@ -39,6 +39,11 @@ var _dying: bool = false
 ## Faded out while it can't be chosen as an attack target.
 var dimmed: bool = false
 var hidden_look: bool = false
+## A point the creature watches while standing (the card being dragged); INF for none.
+var look_point := Vector3.INF
+## Low health: sweats and wobbles.
+var sweaty: bool = false
+var _sweat_in: float = 0.0
 static var _shimmer_mat: ShaderMaterial
 ## Wanders the lane (cosmetic); set up by the match with the roam zone.
 var wanderer: Wanderer
@@ -498,6 +503,92 @@ func _weather_moment() -> void:
 			Burst.spawn(get_parent(), &"sprinkles", head, Color.WHITE, 0.35)
 
 
+## The body's scale at rest (grows with the level). Squashes always spring back to this.
+func rest_scale() -> Vector3:
+	return Vector3.ONE * _base_k * (1.0 + LEVEL_GROWTH * float(level - 1))
+
+
+## Squash-and-stretch spring on the body (landing, hits).
+func spring(amount: float = 0.25) -> void:
+	if body == null or _dying:
+		return
+	var base: Vector3 = rest_scale()
+	var tw := create_tween()
+	tw.tween_property(body, "scale", base * Vector3(1.0 + amount, 1.0 - amount, 1.0 + amount), 0.06)
+	tw.tween_property(body, "scale", base * Vector3(1.0 - amount * 0.4, 1.0 + amount * 0.5, 1.0 - amount * 0.4), 0.1)
+	tw.tween_property(body, "scale", base, 0.35).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+## Just played: a happy hop and a couple of hearts.
+func hop_happy() -> void:
+	if body == null or _dying:
+		return
+	var y: float = _body_y
+	var tw := create_tween()
+	tw.tween_property(body, "position:y", y + height * 0.45, 0.16).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(body, "position:y", y, 0.16).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	tw.tween_callback(func() -> void: spring(0.2))
+	heart()
+	var again := create_tween()
+	again.tween_interval(0.2)
+	again.tween_callback(func() -> void:
+		if not _dying:
+			heart())
+
+
+## An ally scored a kill: a cheer (the model's Yes / Dance) and a little jump.
+func cheer() -> void:
+	if body == null or _dying or busy:
+		return
+	_play_first([&"Yes", &"Dance", &"Wave"])
+	var y: float = _body_y
+	var tw := create_tween()
+	tw.tween_property(body, "position:y", y + height * 0.25, 0.12)
+	tw.tween_property(body, "position:y", y, 0.14)
+	Burst.spawn(get_parent(), &"stars", global_position + Vector3(0, Island.TOP_Y - BASE_Y + height + 0.1, 0), Palette.GOLD, 0.5)
+
+
+## A big enemy charges nearby: duck down and tremble for a moment.
+func cower() -> void:
+	if body == null or _dying or busy:
+		return
+	var base: Vector3 = rest_scale()
+	var tw := create_tween()
+	tw.tween_property(body, "scale", base * Vector3(1.12, 0.72, 1.12), 0.1)
+	for i: int in 4:
+		tw.tween_property(body, "rotation:z", 0.08 if i % 2 == 0 else -0.08, 0.06)
+	tw.tween_property(body, "rotation:z", 0.0, 0.06)
+	tw.tween_interval(0.25)
+	tw.tween_property(body, "scale", base, 0.3).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+func set_low_health(on: bool) -> void:
+	if on == sweaty:
+		return
+	sweaty = on
+	if not on and body:
+		body.rotation.z = 0.0
+
+
+func _sweat_drop() -> void:
+	var d := MeshInstance3D.new()
+	d.mesh = Palette.sphere(0.04, 6)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color("#8fd8ff", 0.9)
+	d.material_override = mat
+	d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(d)
+	var side: float = 1.0 if randf() < 0.5 else -1.0
+	var start := Vector3(0.18 * side, Island.TOP_Y - BASE_Y + height * 0.9, 0.05)
+	d.position = start
+	var tw := d.create_tween().set_parallel(true)
+	tw.tween_property(d, "position", start + Vector3(0.15 * side, -0.35, 0), 0.6).set_ease(Tween.EASE_IN)
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.6).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(d.queue_free)
+
+
 ## A pink heart floats up (greeting a neighbour).
 func heart() -> void:
 	var h := Sprite3D.new()
@@ -571,6 +662,12 @@ func _process(delta: float) -> void:
 		elif not _moving and readiness == Readiness.READY and not busy:
 			lift = absf(sin(_t * 5.0)) * height * 0.04
 		body.position.y = _body_y + lift
+	if sweaty and body and not _dying:
+		body.rotation.z = sin(_t * 7.0) * 0.06
+		_sweat_in -= delta
+		if _sweat_in <= 0.0:
+			_sweat_in = randf_range(0.7, 1.2)
+			_sweat_drop()
 	if readiness == Readiness.SLEEPING:
 		_zzz_in -= delta
 		if _zzz_in <= 0.0:

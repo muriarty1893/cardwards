@@ -87,6 +87,14 @@ func step(delta: float) -> void:
 			if d.length() > 0.01:
 				_turn_to(atan2(d.x, d.y), delta)
 		return
+	if view.look_point.is_finite() and state != State.INSIDE:
+		# Watching something (the card being dragged): stand still and face it.
+		if state == State.ROAM or state == State.TO_HOUSE:
+			_start_pause(0.5)
+		var w := Vector2(view.look_point.x - view.position.x, view.look_point.z - view.position.z)
+		if w.length() > 0.01:
+			_turn_to(atan2(w.x, w.y), delta)
+		return
 	if _resting and state != State.INSIDE:
 		if state != State.REST:
 			state = State.REST
