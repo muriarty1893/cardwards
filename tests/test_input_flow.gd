@@ -76,7 +76,7 @@ func test_click_boop() -> bool:
 	var up := click.duplicate() as InputEventMouseButton
 	up.pressed = false
 	m.input._input(up)  # a press and release in place is a click: boop, not an attack
-	assert_eq(s.players[1].hero_hp, 23, "magmaw boop hit the hero")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 2, "magmaw boop hit the hero")
 	m.queue_free()
 	return true
 

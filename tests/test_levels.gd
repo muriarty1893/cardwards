@@ -54,7 +54,7 @@ func test_level_up_ability() -> bool:
 	Fx.put(s, 1, 2, _mk(0, 30))
 	Rules.apply(s, Action.attack(0, 0, 2))
 	assert_eq(cr.level, 2, "levelled")
-	assert_eq(s.players[1].hero_hp, 24, "flarebeak's level-up ping")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 1, "flarebeak's level-up ping")
 	return true
 
 
