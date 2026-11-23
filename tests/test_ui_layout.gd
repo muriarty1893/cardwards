@@ -224,7 +224,7 @@ func test_card_text_bold_and_tooltip() -> bool:
 	var w := CardWidget.new()
 	w.setup(CardDB.card(&"mossback"), -1)
 	assert_true("[b]Guard[/b]" in w.text_label().text, "Guard in bold (%s)" % w.text_label().text)
-	assert_true("Guard:" in w.tooltip_text, "tooltip has the Guard rule")
+	assert_eq(w.tooltip_text, "", "no plain tooltip: the rules notes beside the card say it")
 	w.free()
 	return true
 

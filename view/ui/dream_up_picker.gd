@@ -119,7 +119,6 @@ func _build(cards: Array[CardData]) -> void:
 	# Hold PEEK to look at the board under the picker.
 	_peek = MenuButtons.big("PEEK", Color.WHITE, 18)
 	_peek.name = "Peek"
-	_peek.tooltip_text = "Hold to look at the board"
 	_peek.button_down.connect(func() -> void: set_peeking(true))
 	_peek.button_up.connect(func() -> void: set_peeking(false))
 	add_child(_peek)

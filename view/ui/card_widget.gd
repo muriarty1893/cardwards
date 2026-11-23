@@ -78,7 +78,7 @@ func setup(c: CardData, i: int) -> void:
 	var paper := _panel(text_rect, Palette.PAPER, 2, 6)
 	frame.add_child(paper)
 	var rules: String = CardText.render(c)
-	# Rich text so mechanic names are bold; the rules of each show as a tooltip and in KeywordNotes.
+	# Rich text so mechanic names are bold; their rules show in KeywordNotes beside an enlarged card.
 	var fs: int = 10 if rules.length() <= 34 else 9
 	_text = RichTextLabel.new()
 	_text.bbcode_enabled = true
@@ -96,7 +96,6 @@ func setup(c: CardData, i: int) -> void:
 	_text.position = Vector2(3, 0)
 	_text.size = text_rect.size - Vector2(6, 0)
 	paper.add_child(_text)
-	tooltip_text = CardText.tooltip(c)
 	paper.visible = rules != ""
 	var gem := _gem(Vector2(-8, -8), 36, Palette.MAGIC, str(c.cost), 18)
 	add_child(gem)
