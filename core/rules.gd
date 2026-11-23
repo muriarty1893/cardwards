@@ -403,6 +403,11 @@ static func _merge(s: GameState, p: int, lane: int, c: CardData, targets: Array[
 static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 	var p: int = s.active
 	_run_lane_triggers(s, p, &"end_of_turn", ev)
+	# Bask: creatures that didn't attack this turn grow +1/+1.
+	for l: int in GameState.LANES:
+		var bk: GameState.CreatureState = s.players[p].lanes[l].creature
+		if bk and bk.attacks_used == 0 and has_keyword(s, p, l, &"bask"):
+			buff(s, p, l, 1, 1, ev)
 	Fields.run(s, p, &"field_end", ev)
 	for l: int in GameState.LANES:
 		var mine: GameState.CreatureState = s.players[p].lanes[l].creature
@@ -436,6 +441,13 @@ static func _start_of_turn_lands(s: GameState, p: int, ev: Array[GameEvent]) -> 
 		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
 		if cr and cr.damage > 0 and Lands.home(s, p, l) == CardData.Land.MUSHROOM:
 			heal_creature(s, p, l, 2, ev)
+	# Sun-baked: 1 armour per creature at home on Sunny Dunes.
+	var baked: int = 0
+	for l: int in GameState.LANES:
+		if Lands.home(s, p, l) == CardData.Land.DUNES:
+			baked += 1
+	if baked > 0:
+		gain_armour(s, p, baked, ev)
 	var grove: int = Tribes.grove_heal(s, p)
 	if grove > 0 and s.players[p].hero_hp < GameState.MAX_HP:
 		ev.append(GameEvent.make(&"tribe_bonus", {"player": p, "tribe": &"sprout"}))
@@ -546,6 +558,9 @@ static func damage_creature(s: GameState, p: int, lane: int, amount: int, src: D
 	if cr == null:
 		return 0
 	var dealt: int = maxi(amount, 0)
+	# Sturdy: every hit is 1 smaller (it can be blocked completely).
+	if dealt > 0 and has_keyword(s, p, lane, &"sturdy"):
+		dealt -= 1
 	if dealt > 0 and cr.bubble:
 		cr.bubble = false
 		ev.append(GameEvent.make(&"bubble_popped", {"player": p, "lane": lane}))

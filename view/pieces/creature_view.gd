@@ -77,7 +77,7 @@ var _home_in: float = 0.0
 var weather: int = -1
 var _weather_in: float = 0.0
 const LEVEL_GROWTH := 0.12
-const HOME_PUFFS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow"]
+const HOME_PUFFS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow", &"stars", &"sand"]
 
 
 static func create(c: CardData, model_override: String = "") -> CreatureView:

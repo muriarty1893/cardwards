@@ -21,6 +21,7 @@ const PRESETS: Dictionary = {
 	&"caramel": ["circle_05", 14, 0.8, 1.0, 2.2, 0.16, -5.0, 120.0, "#c87a2a", false, false],
 	&"petals": ["dirt_01", 16, 1.0, 1.0, 2.4, 0.22, -1.5, 150.0, "#ffb3dd", false, false],
 	&"gold": ["star_04", 22, 0.9, 2.0, 4.0, 0.3, -2.0, 180.0, "#ffd84a", true, false],
+	&"sand": ["circle_05", 18, 0.7, 1.2, 2.8, 0.13, -4.0, 140.0, "#e8c27a", false, false],
 }
 
 

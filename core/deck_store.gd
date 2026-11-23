@@ -44,11 +44,11 @@ static func make(id: StringName, display_name: String, cards: Array[CardData]) -
 	d.id = id
 	d.display_name = display_name
 	d.cards = cards.duplicate()
-	var counts: Array[int] = [0, 0, 0, 0]
+	var counts: Array[int] = [0, 0, 0, 0, 0, 0]
 	for c: CardData in cards:
-		if c.land < 4:
+		if c.land != CardData.Land.NEUTRAL:
 			counts[c.land] += 1
-	var order: Array[int] = [0, 1, 2, 3]
+	var order: Array[int] = CardData.REAL_LANDS.duplicate()
 	order.sort_custom(func(a: int, b: int) -> bool: return counts[a] > counts[b] if counts[a] != counts[b] else a < b)
 	var main: int = order[0]
 	var second: int = order[1] if counts[order[1]] > 0 else main

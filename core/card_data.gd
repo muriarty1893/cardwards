@@ -4,10 +4,12 @@ extends Resource
 
 enum Kind { CREATURE, BUILDING, SPELL }
 ## NEUTRAL: cards of no land (Star Shard). On the board it is Meadow, the bare land every lane
-## starts as (Lands.MEADOW).
-enum Land { MUSHROOM, EMBER, CANDY, FROST, NEUTRAL }
+## starts as (Lands.MEADOW). DUNES came later and sits after NEUTRAL, so older data keeps its numbers.
+enum Land { MUSHROOM, EMBER, CANDY, FROST, NEUTRAL, DUNES }
 
-const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hills", "Frostpeak", "Neutral"]
+const LAND_NAMES: Array[String] = ["Mushroom Forest", "Ember Flats", "Candy Hills", "Frostpeak", "Neutral", "Sunny Dunes"]
+## The lands cards and lanes can have (all but NEUTRAL), in display order.
+const REAL_LANDS: Array[int] = [Land.MUSHROOM, Land.EMBER, Land.CANDY, Land.FROST, Land.DUNES]
 
 @export var id: StringName = &""
 @export var display_name: String = ""

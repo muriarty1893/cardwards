@@ -83,6 +83,12 @@ static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Ar
 			for l: int in GameState.LANES:
 				if s.players[q].lanes[l].creature:
 					out.append({"player": q, "lane": l})
+		&"all_away_creatures":
+			# Every creature on both sides that isn't at home (Heatwave).
+			for q: int in 2:
+				for l: int in GameState.LANES:
+					if s.players[q].lanes[l].creature and not Lands.is_home(s, q, l):
+						out.append({"player": q, "lane": l})
 		&"own_on_land":
 			for l: int in GameState.LANES:
 				if s.players[p].lanes[l].creature and s.players[p].lanes[l].land == filter_land:

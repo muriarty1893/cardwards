@@ -3,13 +3,13 @@ extends RefCounted
 ## Names and one-line rules of the keywords and card mechanics (spec section 4).
 
 ## Printed order on cards.
-const ORDER: Array[StringName] = [&"guard", &"bubble", &"dash", &"venom", &"leech", &"flurry", &"hidden", &"second_wind"]
+const ORDER: Array[StringName] = [&"guard", &"bubble", &"dash", &"venom", &"leech", &"flurry", &"hidden", &"second_wind", &"sturdy", &"bask"]
 
 const NAMES: Dictionary = {
 	&"guard": "Guard", &"bubble": "Bubble", &"dash": "Dash", &"venom": "Venom",
 	&"leech": "Leech", &"flurry": "Flurry", &"hidden": "Hidden", &"second_wind": "Second Wind",
 	&"hush": "Hush", &"dream_up": "Dream Up", &"combo": "Combo", &"spell_power": "Spell Power",
-	&"field": "Field", &"armour": "Armour", &"level_up": "Level up",
+	&"field": "Field", &"armour": "Armour", &"level_up": "Level up", &"sturdy": "Sturdy", &"bask": "Bask",
 }
 
 const RULES: Dictionary = {
@@ -27,5 +27,7 @@ const RULES: Dictionary = {
 	&"spell_power": "Your spells deal that much extra damage.",
 	&"field": "Stays in play for both players until another field replaces it.",
 	&"armour": "Soaks damage to your hero before its HP does.",
+	&"sturdy": "Takes 1 less damage from every hit.",
+	&"bask": "At the end of your turn, if it didn't attack, it gets +1/+1.",
 	&"level_up": "A creature gains XP for each attack it survives (+1 more for a kill): Lv 2 at 2 XP, Lv 3 at 4 XP, +1/+1 each.",
 }

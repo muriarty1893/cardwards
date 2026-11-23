@@ -121,6 +121,21 @@ vec3 paint_meadow(vec2 p) {
 	return mix(col, petal, dot_);
 }
 
+vec3 paint_dunes(vec2 p) {
+	float f = fbm(p * 0.8 + 1.7);
+	vec3 col = mix(vec3(0.941, 0.812, 0.525), vec3(0.969, 0.871, 0.651), smoothstep(0.4, 0.7, f));  // #f0cf86 / #f7dea6
+	col = mix(col, vec3(0.851, 0.706, 0.416), smoothstep(0.62, 0.78, fbm(p * 1.6 + 5.0)) * 0.55);   // darker drifts #d9b46a
+	// Wind ripples: soft wavy bands across the lane.
+	float rip = sin(p.y * 11.0 + p.x * 2.0 + fbm(p * 2.0) * 5.0);
+	col *= 0.95 + 0.05 * smoothstep(-0.2, 0.9, rip);
+	col = mix(col, col * 0.86, smoothstep(0.82, 0.98, rip) * 0.6);
+	// Pebbles.
+	vec2 cell = floor(p * 8.0);
+	vec2 c = fract(p * 8.0) - 0.5;
+	float pb = step(0.93, hash(cell)) * (1.0 - smoothstep(0.06, 0.1, length(c)));
+	return mix(col, vec3(0.86, 0.82, 0.74), pb);
+}
+
 // How strong the Ember base cracks are for a look: full around the volcano, faint under the rift and the ash.
 float ember_cracks(int v) {
 	return v == 0 ? 0.8 : (v == 1 ? 0.4 : 0.25);
@@ -136,6 +151,8 @@ vec3 paint(int l, int v, vec2 p, out vec3 emi) {
 		return paint_candy(p);
 	} else if (l == 3) {
 		return paint_frost(p, emi);
+	} else if (l == 5) {
+		return paint_dunes(p);
 	}
 	return paint_meadow(p);
 }
@@ -199,6 +216,23 @@ vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 
 			float d = length((p - bc) / (bs * vec2(0.9, 0.7)));
 			col = mix(col, vec3(0.97, 0.99, 1.0), (1.0 - smoothstep(0.7, 1.2, d)) * 0.5);
 		}
+	} else if (l == 5) {
+		if (v == 0) {          // Dune Sea: a soft shadow at the foot of the big dune
+			float d = length((p - bc) / (bs * vec2(0.9, 0.7)));
+			col = mix(col, col * vec3(0.86, 0.8, 0.72), (1.0 - smoothstep(0.7, 1.2, d)) * 0.6);
+		} else if (v == 1) {   // Sandstone Ruins: old paving stones around the pillars
+			float d = length((p - bc) / (bs * vec2(1.0, 0.8)));
+			vec2 tile = fract(pw * 3.2);
+			float grout = (1.0 - smoothstep(0.03, 0.07, min(min(tile.x, 1.0 - tile.x), min(tile.y, 1.0 - tile.y))));
+			float paved = (1.0 - smoothstep(0.75, 1.1, d + (fbm(pw * 3.0) - 0.5) * 0.4));
+			col = mix(col, vec3(0.88, 0.74, 0.52), paved * 0.7);
+			col = mix(col, vec3(0.62, 0.48, 0.32), grout * paved * 0.6);
+		} else {               // Oasis: damp dark sand and a ring of grass round the water
+			float d = length((p - bc) / (bs * vec2(0.62, 0.55)));
+			col = mix(col, vec3(0.62, 0.52, 0.34), (1.0 - smoothstep(0.85, 1.05, d)) * 0.7);
+			float grass = smoothstep(0.95, 1.05, d) * (1.0 - smoothstep(1.15, 1.45, d + (fbm(pw * 3.0) - 0.5) * 0.3));
+			col = mix(col, vec3(0.45, 0.72, 0.32), grass * 0.85);
+		}
 	} else if (l == 1) {
 		if (v == 0) {          // Volcano: scorched ground with glowing cracks around its foot
 			float d = length((p - bc) / (bs * vec2(1.1, 0.75)));
@@ -254,6 +288,11 @@ vec3 weather(vec2 p, vec3 col, inout vec3 emi) {
 		float spr = step(0.8, h) * step(abs(c.x), 0.18) * step(abs(c.y), 0.05);
 		vec3 sc = h > 0.93 ? vec3(1.0, 0.35, 0.45) : (h > 0.87 ? vec3(0.4, 0.85, 1.0) : vec3(1.0, 0.9, 0.3));
 		col = mix(col, sc, spr * k);
+	} else if (field_land == 5) {   // Heatwave: baked warm ground with shimmering hot spots
+		float heat = smoothstep(0.4, 0.75, fbm(p * 1.4 + vec2(0.0, TIME * 0.06)));
+		col = mix(col, col * vec3(1.12, 0.95, 0.75), 0.45 * k);
+		float shimmer = 0.5 + 0.5 * sin(TIME * 3.0 + p.y * 6.0 + p.x * 2.0);
+		emi += vec3(1.0, 0.55, 0.15) * heat * shimmer * 0.18 * k;
 	}
 	return col;
 }

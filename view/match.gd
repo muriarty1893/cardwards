@@ -109,6 +109,13 @@ func _ready() -> void:
 	rival.setup(RIVAL_MODEL)
 	rival.set_back(card_backs[1])
 	rival.set_hand_count(state.players[AI].hand.size(), false)
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--demo-lands="):
+			# Dev view: every lane of both halves set to these lands (e.g. 5,5,5,5).
+			var ls: PackedStringArray = arg.substr(13).split(",")
+			for p: int in 2:
+				for l: int in mini(4, ls.size()):
+					state.players[p].lanes[l].land = int(ls[l])
 	board = Board.new()
 	add_child(board)
 	var lands: Array[Array] = []

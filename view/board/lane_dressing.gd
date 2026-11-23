@@ -14,10 +14,11 @@ const PROPS: Array[Array] = [
 	[["candy/lollypop.glb", 0.44], ["candy/cupcake.glb", 0.26], ["candy/donut-sprinkles.glb", 0.14], ["candy/ice-cream.glb", 0.36], ["candy/popsicle.glb", 0.36], ["candy/candy-bar.glb", 0.1], ["candy/sundae.glb", 0.3]],
 	[["crystal", 0.42], ["nature/Rock_Medium_2", 0.24], ["crystal", 0.32], ["nature/Rock_Medium_3", 0.2]],
 	[["nature/Flower_3_Group", 0.24], ["nature/Flower_4_Group", 0.22], ["nature/Grass_Common_Tall", 0.3], ["nature/Clover_1", 0.18]],
+	[["cactus", 0.42], ["cactus", 0.32], ["nature/Rock_Medium_1", 0.22], ["nature/Rock_Medium_3", 0.18]],
 ]
 ## Rock and crystal tints per land (alpha = strength).
-const TINTS: Array[Color] = [Color(1, 1, 1, 0), Color("#3a2626", 0.75), Color(1, 1, 1, 0), Color("#e4f3ff", 0.65), Color(1, 1, 1, 0)]
-const SWAY: Array[float] = [0.05, 0.0, 0.0, 0.0, 0.06]
+const TINTS: Array[Color] = [Color(1, 1, 1, 0), Color("#3a2626", 0.75), Color(1, 1, 1, 0), Color("#e4f3ff", 0.65), Color(1, 1, 1, 0), Color("#f2d6a0", 0.6)]
+const SWAY: Array[float] = [0.05, 0.0, 0.0, 0.0, 0.06, 0.02]
 const HALF := Vector2(Island.WIDTH / 2.0 - 0.06, Island.LENGTH / 2.0 - 0.12)
 ## Cover and props keep this far in from the tile's side edges.
 const MARGIN := 0.06
@@ -27,8 +28,8 @@ const VARIANTS := 3
 ## Ground cover share on tiles with set pieces.
 const LOOK_COVER := 0.65
 ## Cover pieces per half-lane at High (Low passes density 0.5): Mushroom, Ember, Candy, Frost,
-## Meadow.
-const DENSITY: Array[int] = [160, 90, 120, 110, 120]
+## Meadow, Dunes.
+const DENSITY: Array[int] = [160, 90, 120, 110, 120, 80]
 ## Tall cover keeps within this distance of the lane's long edges.
 const EDGE_BAND := 0.35
 ## Per land: [mesh kind, share of DENSITY, min size, max size, flexibility, edge only, colours].
@@ -47,6 +48,10 @@ const KINDS: Array = [
 		[&"tuft", 0.44, 0.12, 0.2, 0.9, false, ["#cfe8f2", "#e6f4fa", "#b7dbe8"]]],
 	[[&"tuft", 0.72, 0.13, 0.24, 1.0, false, ["#9ad66a", "#aee27a", "#86c95a"]],
 		[&"flower", 0.28, 0.12, 0.2, 0.7, false, ["#ffffff", "#fff2a0", "#e6d4ff", "#ffd0e0"]]],
+	[[&"drift", 0.22, 0.1, 0.2, 0.0, false, ["#f2d394", "#eccb88", "#f5d9a0"]],
+		[&"rock", 0.2, 0.05, 0.13, 0.0, false, ["#efe6d2", "#d9cbb0", "#c9b48f"]],
+		[&"tuft", 0.28, 0.1, 0.2, 0.7, false, ["#c9b46a", "#b8a050", "#d6c27a"]],
+		[&"cactus", 0.12, 0.16, 0.28, 0.08, true, ["#5aa84a", "#4e9a42"]]],
 ]
 
 static var _material: ShaderMaterial
@@ -206,6 +211,10 @@ static func prop_positions(root: Node3D) -> Array[Vector3]:
 static func _make(path: String, height: float, land: int) -> Node3D:
 	if path == "crystal":
 		return _crystal(height)
+	if path == "cactus":
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(height * 1000.0)
+		return LandLooks.cactus(height, rng)
 	var full: String = "res://assets/%s" % (path if path.contains(".") else path + ".gltf")
 	var mdl: Node3D = Palette.model(full, height)
 	Toon.apply(mdl, TINTS[land], SWAY[land])
@@ -287,6 +296,13 @@ static func _mesh(kind: StringName) -> Mesh:
 			_append(st, Palette.cylinder(0.03, 0.04, 0.6, 4), Transform3D(Basis(), Vector3(0, 0.3, 0)), Color(0.32, 0.62, 0.24))
 			_append(st, Palette.cylinder(0.24, 0.2, 0.05, 7), Transform3D(Basis(), Vector3(0, 0.63, 0)), Color(1, 1, 1))
 			_append(st, Palette.cylinder(0.07, 0.09, 0.08, 6), Transform3D(Basis(), Vector3(0, 0.67, 0)), Color(1.0, 0.75, 0.15))
+		&"cactus":
+			# A column and two short arms (cover-sized), vertex-coloured white so the instance colour tints it.
+			_append(st, Palette.cylinder(0.12, 0.13, 1.0, 6), Transform3D(Basis(), Vector3(0, 0.5, 0)), Color(1, 1, 1))
+			_append(st, Palette.cylinder(0.08, 0.08, 0.35, 5), Transform3D(Basis(), Vector3(0.2, 0.6, 0)), Color(0.9, 0.9, 0.9))
+			_append(st, Palette.cylinder(0.08, 0.08, 0.3, 5), Transform3D(Basis(), Vector3(-0.2, 0.45, 0)), Color(0.9, 0.9, 0.9))
+			_append(st, Palette.cylinder(0.06, 0.06, 0.2, 5), Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(0.12, 0.45, 0)), Color(0.9, 0.9, 0.9))
+			_append(st, Palette.cylinder(0.06, 0.06, 0.2, 5), Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(-0.12, 0.32, 0)), Color(0.9, 0.9, 0.9))
 		&"crystal":
 			for i: int in 3:
 				var h: float = [1.0, 0.7, 0.55][i]

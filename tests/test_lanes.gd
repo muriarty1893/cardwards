@@ -3,7 +3,7 @@ extends TestCase
 
 
 func test_props_clear_of_pieces() -> bool:
-	for land: int in 4:
+	for land: int in CardData.REAL_LANDS:
 		for p: int in 2:
 			var root: Node3D = LaneDressing.build(land, p, p * 4 + land, 1.0)
 			var pos: Array[Vector3] = LaneDressing.prop_positions(root)
@@ -24,7 +24,7 @@ static func _spots(player: int) -> Array[Vector2]:
 
 
 func test_dressing_avoids_spots() -> bool:
-	for land: int in 4:
+	for land: int in CardData.REAL_LANDS:
 		for p: int in 2:
 			var root: Node3D = LaneDressing.build(land, p, p * 4 + land, 1.0)
 			var spots: Array[Vector2] = _spots(p)
@@ -55,7 +55,7 @@ static func _cover_count(root: Node) -> int:
 
 
 func test_low_density_halves() -> bool:
-	for land: int in 4:
+	for land: int in CardData.REAL_LANDS:
 		var hi: Node3D = LaneDressing.build(land, 0, land, 1.0)
 		var lo: Node3D = LaneDressing.build(land, 0, land, 0.5)
 		assert_true(_cover_count(lo) <= int(_cover_count(hi) * 0.55), "land %d low %d <= 55%% of %d" % [land, _cover_count(lo), _cover_count(hi)])

@@ -8,7 +8,7 @@ extends Control
 signal closed
 signal deck_chosen(id: StringName)
 
-const FILTERS: Array[String] = ["ALL", "MUSHROOM", "EMBER", "CANDY", "FROST", "SPELLS"]
+const FILTERS: Array[String] = ["ALL", "MUSHROOM", "EMBER", "CANDY", "FROST", "DUNES", "SPELLS"]
 const THUMB := 0.72
 const COLUMNS := 6
 
@@ -115,7 +115,7 @@ func _build_middle() -> Control:
 		b.toggle_mode = true
 		b.add_theme_font_size_override("font_size", 14)
 		UiStyle.title(b)
-		var base: Color = Palette.LAND_CARD[i - 1] if i >= 1 and i <= 4 else UiStyle.PARCHMENT.darkened(0.08)
+		var base: Color = Palette.LAND_CARD[CardData.REAL_LANDS[i - 1]] if i >= 1 and i <= CardData.REAL_LANDS.size() else UiStyle.PARCHMENT.darkened(0.08)
 		for st: String in ["normal", "hover", "pressed", "focus"]:
 			var sb := UiStyle.panel(base.lerp(Color.WHITE, 0.35) if st == "normal" else base, 10)
 			sb.set_border_width_all(3 if st != "pressed" else 5)
@@ -319,7 +319,8 @@ func set_filter(i: int) -> void:
 		_filter_buttons[j].set_pressed_no_signal(j == i)
 	for id: StringName in _thumbs:
 		var c: CardData = _thumbs[id]["card"]
-		var show: bool = i == 0 or (i <= 4 and c.land == i - 1) or (i == 5 and c.kind == CardData.Kind.SPELL)
+		var lands: int = CardData.REAL_LANDS.size()
+		var show: bool = i == 0 or (i <= lands and c.land == CardData.REAL_LANDS[i - 1]) or (i == lands + 1 and c.kind == CardData.Kind.SPELL)
 		(_thumbs[id]["holder"] as Control).visible = show
 
 

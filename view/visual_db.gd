@@ -149,9 +149,9 @@ const SPELL_ICONS: Dictionary = {
 	&"snowmanify": "res://assets/icons/snowman.svg",
 }
 ## Glow behind spell icons, by land.
-const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff"), Color("#ffe07a")]
+const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff"), Color("#ffe07a"), Color("#ffd27a")]
 ## Background sky behind card pictures, by land.
-const ART_SKY: Array[Color] = [Color("#bfe9a8"), Color("#ffc59a"), Color("#ffd3ec"), Color("#d6efff"), Color("#fff1c2")]
+const ART_SKY: Array[Color] = [Color("#bfe9a8"), Color("#ffc59a"), Color("#ffd3ec"), Color("#d6efff"), Color("#fff1c2"), Color("#ffe2a8")]
 
 
 ## What a card's ability looks like when it fires (FxDirector.KINDS). Spells have their own.

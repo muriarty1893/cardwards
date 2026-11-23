@@ -5,23 +5,26 @@ extends RefCounted
 ## their target.
 
 const MEADOW := CardData.Land.NEUTRAL
-## Home quirk per land (MUSHROOM, EMBER, CANDY, FROST).
-const QUIRKS: Array[String] = ["Rooted", "Fired up", "Plump", "Ice skin"]
+## Home quirk per land, indexed by CardData.Land (NEUTRAL/Meadow has none).
+const QUIRKS: Array[String] = ["Rooted", "Fired up", "Plump", "Ice skin", "", "Sun-baked"]
 const QUIRK_RULES: Array[String] = [
 	"Heals 2 at the start of your turn.",
 	"+1 ATK.",
 	"+1 ATK and +1 HP.",
 	"Takes 1 less damage from attacks and hit-back (minimum 1).",
+	"",
+	"Your hero gains 1 armour at the start of your turn.",
 ]
 ## Spell land → lane land → reaction (spec 4).
 const REACTIONS: Dictionary = {
-	CardData.Land.EMBER: {CardData.Land.FROST: &"melt", CardData.Land.MUSHROOM: &"wildfire", CardData.Land.CANDY: &"caramel"},
+	CardData.Land.EMBER: {CardData.Land.FROST: &"melt", CardData.Land.MUSHROOM: &"wildfire", CardData.Land.CANDY: &"caramel", CardData.Land.DUNES: &"scorch"},
 	CardData.Land.FROST: {CardData.Land.EMBER: &"quench"},
 	CardData.Land.MUSHROOM: {CardData.Land.MUSHROOM: &"bloom", CardData.Land.NEUTRAL: &"sprout"},
+	CardData.Land.DUNES: {CardData.Land.FROST: &"thaw"},
 }
 const REACTION_NAMES: Dictionary = {
 	&"melt": "Melt", &"wildfire": "Wildfire", &"caramel": "Caramel", &"quench": "Quench",
-	&"bloom": "Bloom", &"sprout": "Sprout",
+	&"bloom": "Bloom", &"sprout": "Sprout", &"scorch": "Scorch", &"thaw": "Thaw",
 }
 const REACTION_RULES: Dictionary = {
 	&"melt": "Fire on Frostpeak: +1 damage, and the lane thaws",
@@ -30,6 +33,8 @@ const REACTION_RULES: Dictionary = {
 	&"quench": "Frost on Ember Flats: the lava cools to Meadow",
 	&"bloom": "Spores on Mushroom Forest: heals 2 more",
 	&"sprout": "Spores on Meadow: it grows into Mushroom Forest",
+	&"scorch": "Fire on Sunny Dunes: the hot sand adds +1 damage",
+	&"thaw": "Sun on Frostpeak: unfreezes and heals 2",
 }
 
 
@@ -103,7 +108,7 @@ static func react_before(s: GameState, card: CardData, op: StringName, t: Dictio
 	# Each reaction answers to the kind of step it fits: damage for fire, heal for spores, any
 	# step for frost (freeze or damage).
 	match r:
-		&"melt", &"wildfire", &"caramel":
+		&"melt", &"wildfire", &"caramel", &"scorch":
 			if op != &"damage":
 				return {}
 		&"bloom", &"sprout":
@@ -114,7 +119,7 @@ static func react_before(s: GameState, card: CardData, op: StringName, t: Dictio
 				return {}
 	ev.append(GameEvent.make(&"land_reaction", {"player": p, "lane": lane, "reaction": r, "card": card.id}))
 	var extra: int = 0
-	if r == &"melt":
+	if r == &"melt" or r == &"scorch":
 		extra = 1
 	elif r == &"bloom":
 		extra = 2
@@ -134,6 +139,13 @@ static func react_after(s: GameState, src_player: int, info: Dictionary, t: Dict
 			set_land(s, p, lane, CardData.Land.MUSHROOM, &"sprout", ev)
 		&"caramel":
 			Rules.freeze(s, p, lane, ev)
+		&"thaw":
+			var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+			if cr:
+				if cr.freeze_turn >= 0:
+					cr.freeze_turn = -1
+					ev.append(GameEvent.make(&"unfrozen", {"player": p, "lane": lane}))
+				Rules.heal_creature(s, p, lane, 2, ev)
 		&"wildfire":
 			for n: int in [lane - 1, lane + 1]:
 				if n >= 0 and n < GameState.LANES and s.players[p].lanes[n].creature:

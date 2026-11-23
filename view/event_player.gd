@@ -14,14 +14,14 @@ const EFFECT_EVENTS: Array[StringName] = [
 ]
 const HIT_STOP := 0.07
 ## Landing / death burst preset per CardData.Land (NEUTRAL last).
-const LAND_BURSTS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow", &"stars"]
+const LAND_BURSTS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow", &"stars", &"sand"]
 const HIT_STOP_SCALE := 0.05
 const HIT_STOP_CRIT := 0.16
 ## After a crit's freeze: this time scale for this long (real seconds).
 const SLOW_MO := 0.3
 const SLOW_MO_TIME := 0.18
 ## Sound when a lane turns into a land (CardData.Land order, Meadow last).
-const LAND_SOUNDS: Array[StringName] = [&"heal", &"fire_whoosh", &"candy_pop", &"freeze", &"card_draw"]
+const LAND_SOUNDS: Array[StringName] = [&"heal", &"fire_whoosh", &"candy_pop", &"freeze", &"card_draw", &"building_rise"]
 ## How each event changes the hand of the player it names (the rival's fan follows it live).
 const HAND_DELTA: Dictionary = {
 	&"card_drawn": 1, &"card_returned": 1, &"dream_up_chosen": 1,
@@ -378,6 +378,14 @@ func _land_reaction(d: Dictionary) -> void:
 		&"caramel":
 			Burst.spawn(m, &"caramel", pos + Vector3(0, 0.5, 0), Color.WHITE, 1.4)
 			Audio.sfx(&"candy_pop")
+		&"scorch":
+			Burst.spawn(m, &"flames", pos, Color.WHITE, 1.2)
+			Burst.spawn(m, &"sand", pos, Color("#ffcf7a"), 1.4)
+			Audio.sfx(&"fire_whoosh")
+		&"thaw":
+			Burst.spawn(m, &"steam", pos, Color.WHITE, 1.3)
+			Burst.spawn(m, &"heal", pos, Color("#ffd27a"), 1.2)
+			Audio.sfx(&"heal")
 		&"bloom", &"sprout":
 			Burst.spawn(m, &"petals", pos + Vector3(0, 0.3, 0), Color.WHITE, 1.5)
 			Burst.spawn(m, &"heal", pos, Color.WHITE, 1.2)

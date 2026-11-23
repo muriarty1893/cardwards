@@ -82,7 +82,7 @@ static func _no_go(lay: BoardLayout, p: int, l: int) -> Array[Rect2]:
 func test_set_pieces_clear() -> bool:
 	for seed: int in [3, 58, 404]:
 		var lay: BoardLayout = BoardLayout.make(seed)
-		for land: int in 4:
+		for land: int in CardData.REAL_LANDS:
 			for v: int in LaneDressing.VARIANTS:
 				for p: int in 2:
 					for corner: int in 2:
@@ -110,7 +110,7 @@ func test_meadow_single_look() -> bool:
 
 func test_cover_avoids_set_pieces() -> bool:
 	var lay: BoardLayout = BoardLayout.make(9)
-	for land: int in 4:
+	for land: int in CardData.REAL_LANDS:
 		for v: int in LaneDressing.VARIANTS:
 			var shape: TileShape = TileShape.of(lay, 1, Board.STRIP_Z[0])
 			var root: Node3D = LaneDressing.build(land, 0, 1, 1.0, shape, v, 1)

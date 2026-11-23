@@ -10,7 +10,7 @@ extends Node3D
 const PROP_AT := Vector3(-8.2, 0.0, -1.0)
 const TEX := "res://assets/fx/particles/%s.png"
 ## Sun / ambient tint per land (MUSHROOM, EMBER, CANDY, FROST).
-const SUN_TINT: Array[Color] = [Color("#e2ffd2"), Color("#ffbf94"), Color("#ffdcf0"), Color("#d4e6ff")]
+const SUN_TINT: Array[Color] = [Color("#e2ffd2"), Color("#ffbf94"), Color("#ffdcf0"), Color("#d4e6ff"), Color.WHITE, Color("#ffd89a")]
 const CANDY: Array[Color] = [Color("#ff5a7a"), Color("#ffd84a"), Color("#5ad1ff"), Color("#7aff7a"), Color("#ffffff")]
 
 var land: int = -1
@@ -156,6 +156,17 @@ func _make_weather(l: int) -> CPUParticles3D:
 			e.initial_velocity_min = 0.1
 			e.initial_velocity_max = 0.3
 			e.lifetime = 8.0
+		CardData.Land.DUNES:  # heat motes drifting up off the hot sand
+			e = _particles("circle_05", 0.07, 45)
+			(e.mesh.material as StandardMaterial3D).blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+			e.color = Color("#ffb04a")
+			e.position = Vector3(0, 0.3, 0)
+			e.direction = Vector3(0.2, 1, 0)
+			e.spread = 25.0
+			e.gravity = Vector3(0, 0.12, 0)
+			e.initial_velocity_min = 0.15
+			e.initial_velocity_max = 0.35
+			e.lifetime = 6.0
 		_:  # sugar rain: sprinkles
 			e = _particles("circle_05", 0.08, 70)
 			var ramp := Gradient.new()
@@ -251,6 +262,19 @@ func _make_prop(l: int) -> Node3D:
 					var b := Palette.mesh(Palette.cylinder(0.07, 0.07, 0.04, 8), Toon.plain(Color.WHITE), Vector3(cos(j * 1.7) * cap.radius * 0.55, h + cap.radius * 0.62, sin(j * 1.7) * cap.radius * 0.55))
 					m.add_child(b)
 				root.add_child(m)
+		CardData.Land.DUNES:
+			# A blazing sun hangs over the table, its rays slowly turning.
+			var sun := Node3D.new()
+			sun.position.y = 3.4
+			sun.add_child(Palette.mesh(Palette.sphere(0.55, 16), _glow(Color("#ffd04a")), Vector3.ZERO, false))
+			for i: int in 8:
+				var a: float = TAU * float(i) / 8.0
+				var ray := Palette.mesh(Palette.cylinder(0.0, 0.14, 0.5, 4), _glow(Color("#ffb03a")), Vector3(cos(a) * 0.85, sin(a) * 0.85, 0), false)
+				ray.rotation.z = a - PI / 2.0
+				sun.add_child(ray)
+			root.add_child(sun)
+			var spin := sun.create_tween().set_loops()
+			spin.tween_property(sun, "rotation:z", TAU, 12.0).from(0.0)
 		_:
 			var cloud := _cloud(Color("#ffb3dd"))
 			cloud.position.y = 3.0

@@ -71,4 +71,5 @@ Change: the black background square was removed so the icons are white on transp
 - `icons/heart.svg`, `icons/sparkle.svg`: simple shapes drawn for this game.
 
 - `card_backs/`: card back designs made for this game by the project owner (backs_v4 set: Ember Reign,
-  Frostbound, Verdant Bloom, Candy Realm), resized to 256x358.
+  Frostbound, Verdant Bloom, Candy Realm), resized to 256x358. `card_backs/dunes.png` is Frostbound recoloured to sand gold
+  (tools/make_dunes_back.gd).

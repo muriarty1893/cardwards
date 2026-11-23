@@ -29,8 +29,10 @@ func test_creature_state_clone_copies_new_fields() -> bool:
 
 func test_land_arrays_cover_neutral() -> bool:
 	var n: int = CardData.Land.size()
-	assert_eq(n, 5, "five lands incl. neutral")
-	for arr: Array in [Palette.LAND_TOP, Palette.LAND_SIDE, Palette.LAND_CARD, VisualDB.ART_SKY, VisualDB.SPELL_GLOW, FxDirector.ELEMENT_BY_LAND]:
+	assert_eq(n, 6, "five lands plus neutral")
+	for arr: Array in [Palette.LAND_TOP, Palette.LAND_SIDE, Palette.LAND_CARD, VisualDB.ART_SKY, VisualDB.SPELL_GLOW, FxDirector.ELEMENT_BY_LAND,
+			EventPlayer.LAND_BURSTS, EventPlayer.LAND_SOUNDS, Lands.QUIRKS, Lands.QUIRK_RULES, LaneDressing.PROPS, LaneDressing.TINTS,
+			LaneDressing.SWAY, LaneDressing.DENSITY, LaneDressing.KINDS, Ambient.AMOUNTS, FieldFx.SUN_TINT, CreatureView.HOME_PUFFS, CardBacks.PATHS]:
 		assert_eq(arr.size(), n, "land array size")
 	return true
 

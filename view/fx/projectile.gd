@@ -5,7 +5,7 @@ extends Node3D
 
 signal arrived
 
-const ELEMENTS: Array[StringName] = [&"spore", &"fire", &"candy", &"ice", &"boulder"]
+const ELEMENTS: Array[StringName] = [&"spore", &"fire", &"candy", &"ice", &"boulder", &"sand"]
 const ARC := 1.2
 ## element -> [core colour, trail preset, impact presets]
 const LOOK: Dictionary = {
@@ -14,6 +14,7 @@ const LOOK: Dictionary = {
 	&"candy": ["#ff8ad8", &"sprinkles", [&"sprinkles"]],
 	&"ice": ["#bfe8ff", &"snow", [&"snow", &"sparks"]],
 	&"boulder": ["#9a8a7a", &"smoke", [&"dust_ring", &"smoke"]],
+	&"sand": ["#ffc04a", &"sand", [&"sand", &"sparks"]],
 }
 
 var element: StringName = &"fire"

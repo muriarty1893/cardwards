@@ -10,7 +10,7 @@ const KINDS: Array[StringName] = [
 	&"attack_hit", &"plain", &"armour", &"field", &"spell_hit",
 ]
 ## Indexed by CardData.Land (NEUTRAL last).
-const ELEMENT_BY_LAND: Array[StringName] = [&"spore", &"fire", &"candy", &"ice", &"magic"]
+const ELEMENT_BY_LAND: Array[StringName] = [&"spore", &"fire", &"candy", &"ice", &"magic", &"sand"]
 ## Which event types each kind draws itself; anything else falls back to plain.
 const OWNS: Dictionary = {
 	&"fireball": [&"creature_damaged"],
@@ -329,7 +329,7 @@ static func _wait(m: MatchController, seconds: float) -> void:
 
 
 ## Launch sound per projectile element.
-const SHOT_SOUND: Dictionary = {&"fire": &"fire_whoosh", &"ice": &"freeze", &"candy": &"candy_pop", &"spore": &"candy_pop", &"boulder": &"attack_whoosh"}
+const SHOT_SOUND: Dictionary = {&"fire": &"fire_whoosh", &"ice": &"freeze", &"candy": &"candy_pop", &"spore": &"candy_pop", &"boulder": &"attack_whoosh", &"sand": &"attack_whoosh"}
 
 
 static func _shot(m: MatchController, element: StringName, from: Vector3, to: Vector3, duration: float) -> void:

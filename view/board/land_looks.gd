@@ -39,6 +39,12 @@ static func build(ctx: Dictionary) -> bool:
 			_lollipop_grove(ctx)
 		Vector2i(2, 2):
 			_sundae_peak(ctx)
+		Vector2i(5, 0):
+			_dune_sea(ctx)
+		Vector2i(5, 1):
+			_sandstone_ruins(ctx)
+		Vector2i(5, 2):
+			_oasis(ctx)
 		_:
 			return false
 	return true
@@ -724,3 +730,170 @@ static func _sundae_peak(ctx: Dictionary) -> void:
 		d.rotation = Vector3(0.25 if i == 2 else 0.0, rng.randf() * TAU, 0)
 		donuts.add_child(d)
 	SetPieces.add_piece(ctx, donuts, Vector3.ZERO, other, other)
+
+
+# --- Sunny Dunes ------------------------------------------------------------------------------------
+
+const SAND := Color("#f0cf86")
+const SAND_DARK := Color("#d9b46a")
+const SANDSTONE := Color("#e2b878")
+const SANDSTONE_DARK := Color("#b98a52")
+const CACTUS := Color("#5aa84a")
+const CACTUS_DARK := Color("#43873a")
+const PALM_LEAF := Color("#4fae48")
+const PALM_TRUNK := Color("#a8774a")
+
+
+## A storybook saguaro: a ribbed column with one or two raised arms, base at y = 0.
+static func cactus(h: float, rng: RandomNumberGenerator) -> Node3D:
+	var c := Node3D.new()
+	var r: float = h * 0.13
+	c.add_child(SetPieces.cyl(r, r * 1.05, h, CACTUS, Vector3.ZERO, 8))
+	c.add_child(SetPieces.sphere(r, CACTUS, Vector3(0, h, 0), Vector3.ONE, 8))
+	var arms: int = 1 + int(rng.randf() < 0.6)
+	for i: int in arms:
+		var side: float = -1.0 if i == 0 else 1.0
+		var ay: float = h * rng.randf_range(0.35, 0.55)
+		var ah: float = h * rng.randf_range(0.25, 0.4)
+		var ar: float = r * 0.7
+		var stub := SetPieces.mesh(Palette.cylinder(ar, ar, r * 1.6, 6), CACTUS_DARK, Vector3(side * r * 1.2, ay, 0))
+		stub.rotation.z = PI / 2.0
+		c.add_child(stub)
+		c.add_child(SetPieces.cyl(ar, ar, ah, CACTUS, Vector3(side * r * 2.0, ay, 0), 6))
+		c.add_child(SetPieces.sphere(ar, CACTUS, Vector3(side * r * 2.0, ay + ah, 0), Vector3.ONE, 6))
+	if rng.randf() < 0.5:
+		c.add_child(SetPieces.sphere(r * 0.55, Color("#ff7aa8"), Vector3(0, h + r * 0.8, 0), Vector3(1, 0.6, 1), 6))
+	return c
+
+
+## A sandstone pillar of height `h` (broken pillars are shorter with a ragged top), base at y = 0.
+static func pillar(r: float, h: float, broken: bool) -> Node3D:
+	var p := Node3D.new()
+	p.add_child(SetPieces.cyl(r * 1.35, r * 1.4, r * 0.6, SANDSTONE_DARK, Vector3.ZERO, 10))
+	p.add_child(SetPieces.cyl(r, r, h, SANDSTONE, Vector3(0, r * 0.6, 0), 10))
+	if broken:
+		p.add_child(SetPieces.cone(r * 1.05, r * 0.9, SANDSTONE, Vector3(r * 0.2, r * 0.6 + h, 0), 5))
+	else:
+		p.add_child(SetPieces.box(Vector3(r * 2.8, r * 0.5, r * 2.8), SANDSTONE_DARK, Vector3(0, r * 0.6 + h, 0)))
+	return p
+
+
+## A palm tree: a curved trunk of tapering segments and drooping fronds, base at y = 0.
+static func palm(h: float, rng: RandomNumberGenerator) -> Node3D:
+	var t := Node3D.new()
+	var segs: int = 5
+	var lean: float = rng.randf_range(0.12, 0.25) * h
+	var top := Vector3.ZERO
+	for i: int in segs:
+		var k0: float = float(i) / segs
+		var k1: float = float(i + 1) / segs
+		var a := Vector3(lean * k0 * k0, h * k0, 0)
+		var b := Vector3(lean * k1 * k1, h * k1, 0)
+		var w: float = h * 0.05 * (1.0 - k0 * 0.35)
+		var seg := SetPieces.mesh(Palette.cylinder(w * 0.9, w, a.distance_to(b) * 1.05, 6), PALM_TRUNK if i % 2 == 0 else PALM_TRUNK.darkened(0.15), (a + b) / 2.0)
+		seg.rotation.z = -atan2(b.x - a.x, b.y - a.y)
+		t.add_child(seg)
+		top = b
+	for i: int in 6:
+		var ang: float = TAU * i / 6.0 + rng.randf_range(-0.2, 0.2)
+		var leaf := SetPieces.mesh(_leaf_box(h), PALM_LEAF, top + Vector3(cos(ang), -0.25, sin(ang)) * h * 0.18)
+		leaf.rotation = Vector3(0, -ang, -0.45)
+		t.add_child(leaf)
+	t.add_child(SetPieces.sphere(h * 0.06, Color("#7a5a32"), top + Vector3(0, -h * 0.04, 0), Vector3.ONE, 6))
+	return t
+
+
+static func _leaf_box(h: float) -> BoxMesh:
+	var b := BoxMesh.new()
+	b.size = Vector3(h * 0.42, h * 0.02, h * 0.1)
+	return b
+
+
+## A big rolling dune in the back corner with cacti on its flank; bleached rocks in the other corner.
+static func _dune_sea(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var rx: float = box.size.x * 0.5
+	var rz: float = minf(box.size.y * 0.45, rx * 2.4)
+	var c: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.3))
+	var dune := Node3D.new()
+	dune.name = "Dune"
+	dune.add_child(SetPieces.sphere(1.0, SAND, Vector3(0, -0.02, 0), Vector3(rx, 0.28 * sc, rz), 18))
+	dune.add_child(SetPieces.sphere(1.0, Color("#f7dea6"), Vector3(rx * 0.15, 0.02, -rz * 0.1), Vector3(rx * 0.6, 0.3 * sc, rz * 0.55), 14))
+	for i: int in 2:
+		var cac: Node3D = cactus(rng.randf_range(0.42, 0.6) * sc, rng)
+		cac.position = Vector3(rx * (0.35 if i == 0 else -0.4), 0.12 * sc, rz * (0.3 if i == 0 else -0.35))
+		cac.rotation.y = rng.randf() * TAU
+		dune.add_child(cac)
+	SetPieces.add_piece(ctx, dune, c, Rect2(c.x - rx, c.z - rz, rx * 2.0, rz * 2.0), box)
+	var other: Rect2 = ctx["other_box"]
+	var rocks := Node3D.new()
+	rocks.name = "BleachedRocks"
+	for i: int in 3:
+		var br: float = minf(other.size.x * 0.3, 0.15) * rng.randf_range(0.6, 1.0)
+		var bp := Vector3(clampf(other.get_center().x + rng.randf_range(-0.05, 0.05), other.position.x + br, other.end.x - br), 0.0, lerpf(other.position.y + br, other.end.y - br, (i + 0.5) / 3.0))
+		rocks.add_child(SetPieces.sphere(br, Color("#efe6d2"), bp + Vector3(0, br * 0.3, 0), Vector3(1.0, 0.6, 0.9), 8))
+	SetPieces.add_piece(ctx, rocks, Vector3.ZERO, other, other)
+
+
+## Old sandstone pillars (one standing with its capital, two broken) in the back corner, a toppled drum and blocks
+## in the other corner.
+static func _sandstone_ruins(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var ruins := Node3D.new()
+	ruins.name = "Ruins"
+	var r: float = clampf(box.size.x * 0.12, 0.05, 0.09)
+	var heights: Array[float] = [0.7, 0.4, 0.26]
+	for i: int in 3:
+		var pp: Vector3 = _at(box, 0.3 + 0.4 * float(i % 2), lerpf(0.2, 0.8, float(i) / 2.0))
+		var col: Node3D = pillar(r, heights[i] * sc, i > 0)
+		col.position = pp
+		col.rotation.y = rng.randf() * TAU
+		ruins.add_child(col)
+	SetPieces.add_piece(ctx, ruins, Vector3.ZERO, box, box)
+	var other: Rect2 = ctx["other_box"]
+	var fallen := Node3D.new()
+	fallen.name = "Fallen"
+	var fp: Vector3 = _at(other, 0.5, 0.5)
+	var drum := SetPieces.mesh(Palette.cylinder(r, r, minf(other.size.y * 0.5, 0.4), 10), SANDSTONE, fp + Vector3(0, r, 0))
+	drum.rotation.x = PI / 2.0
+	fallen.add_child(drum)
+	for i: int in 2:
+		var b := r * rng.randf_range(1.2, 1.6)
+		fallen.add_child(SetPieces.box(Vector3(b, b * 0.8, b), SANDSTONE_DARK, _at(other, 0.5, 0.15 + 0.7 * i)))
+	SetPieces.add_piece(ctx, fallen, Vector3.ZERO, other, other)
+
+
+## A small oasis: a pond with reeds and a palm in the back corner, cacti along one side.
+static func _oasis(ctx: Dictionary) -> void:
+	var box: Rect2 = ctx["box"]
+	var rng := _rng(ctx)
+	var sc: float = ctx["scale"]
+	var rx: float = box.size.x * 0.46
+	var rz: float = minf(box.size.y * 0.4, rx * 1.8)
+	var c: Vector3 = _at(box, 0.5, lerpf(0.5, _back(ctx), 0.3))
+	var oasis := Node3D.new()
+	oasis.name = "Oasis"
+	oasis.add_child(SetPieces.pool(0, rx, rz, rng.randf() * 10.0))
+	var p: Node3D = palm(0.85 * sc, rng)
+	p.position = Vector3(rx * 0.75, 0, -rz * 0.6 * (1.0 if _back(ctx) > 0.5 else -1.0))
+	p.rotation.y = rng.randf() * TAU
+	oasis.add_child(p)
+	for i: int in 4:
+		var ang: float = rng.randf() * TAU
+		var tuft: Node3D = SetPieces.grass_tuft(0.16, Color("#5aa84a"), rng)
+		tuft.position = Vector3(cos(ang) * rx * 1.05, 0, sin(ang) * rz * 1.05)
+		oasis.add_child(tuft)
+	SetPieces.add_piece(ctx, oasis, c, Rect2(c.x - rx, c.z - rz, rx * 2.0, rz * 2.0), box)
+	var band: Rect2 = ctx["other_band"]
+	var cacti := Node3D.new()
+	cacti.name = "Cacti"
+	for i: int in 2:
+		var cac: Node3D = cactus(rng.randf_range(0.3, 0.45) * sc, rng)
+		cac.position = Vector3(band.get_center().x, 0, lerpf(band.position.y + 0.15, band.end.y - 0.15, (i + 0.5) / 2.0))
+		cac.rotation.y = rng.randf() * TAU
+		cacti.add_child(cac)
+	SetPieces.add_piece(ctx, cacti, Vector3.ZERO, band, band)

@@ -5,7 +5,7 @@ extends Node3D
 ## emitter. A lane's emitter is swapped when its land changes.
 
 ## Particles per lane at High quality, by land.
-const AMOUNTS: Array[int] = [6, 10, 6, 12, 4]
+const AMOUNTS: Array[int] = [6, 10, 6, 12, 4, 7]
 const TEX := "res://assets/fx/particles/%s.png"
 const CANDY: Array[Color] = [Color("#ff5a5a"), Color("#ffd84a"), Color("#5ad1ff"), Color("#7aff7a"), Color("#ffffff")]
 
@@ -118,6 +118,18 @@ static func _emitter(land: int) -> CPUParticles3D:
 			e.spread = 180.0
 			e.initial_velocity_min = 0.02
 			e.initial_velocity_max = 0.1
+		5:  # sand motes blowing across the dunes
+			quad.size = Vector2(0.05, 0.05)
+			mat.albedo_texture = load(TEX % "circle_05")
+			mat.blend_mode = BaseMaterial3D.BLEND_MODE_MIX
+			e.color = Color("#f3d08a")
+			e.position.y = 0.25
+			e.lifetime = 2.5
+			e.gravity = Vector3(0, -0.05, 0)
+			e.direction = Vector3(1, 0.1, 0)
+			e.spread = 15.0
+			e.initial_velocity_min = 0.3
+			e.initial_velocity_max = 0.6
 		4:  # pollen drifting over the meadow
 			quad.size = Vector2(0.06, 0.06)
 			mat.albedo_texture = load(TEX % "circle_05")

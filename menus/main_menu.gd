@@ -27,8 +27,8 @@ func _ready() -> void:
 	rival.setup(MatchController.RIVAL_MODEL)
 	var board := Board.new()
 	add_child(board)
-	var a: Array[int] = [0, 1, 2, 3]
-	var b: Array[int] = [3, 2, 1, 0]
+	var a: Array[int] = [0, 1, 5, 3]
+	var b: Array[int] = [3, 5, 1, 0]
 	board.build([a, b])
 	var demo: Array[StringName] = [&"elder_shroomhulk", &"inferno_drake", &"bonbon_behemoth", &"blizzard_titan"]
 	for l: int in 4:
