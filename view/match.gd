@@ -139,6 +139,9 @@ func _ready() -> void:
 		return
 	if "--demo-keywords" in OS.get_cmdline_user_args():
 		_demo_keywords()
+		for act: String in OS.get_cmdline_user_args():
+			if act.begins_with("--demo-act="):
+				_demo_act(act.substr(11))
 		return
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--demo-living"):
@@ -320,6 +323,18 @@ func _demo_act(act: String) -> void:
 			await perform(Action.attack(HUMAN, 3, 3, Action.Hit.NORMAL, false))
 		"field":
 			await perform(Action.play(HUMAN, Fx_give(&"snowstorm"), -1))
+		"pop":
+			# (--demo-keywords) the venom gumdrop attacks a bubbled rival.
+			state.players[1].lanes[2].creature.gained.append(&"bubble")
+			state.players[1].lanes[2].creature.bubble = true
+			refresh_pieces()
+			await perform(Action.attack(HUMAN, 2, 2, Action.Hit.NORMAL, false))
+		"venom":
+			await perform(Action.attack(HUMAN, 2, 2, Action.Hit.NORMAL, false))
+		"leech":
+			state.players[0].lanes[0].creature.gained.append(&"leech")
+			state.players[0].hero_hp = 30
+			await perform(Action.attack(HUMAN, 0, -1, Action.Hit.NORMAL, false))
 
 
 func Fx_give(id: StringName) -> int:
