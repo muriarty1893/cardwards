@@ -29,6 +29,8 @@ var speed: float = 1.0
 var _skip_move: Dictionary = {}
 ## {} | {"kind": &"ability", "player", "lane", "card"} | {"kind": &"attack", "player", "lane", "hit"}
 var _source: Dictionary = {}
+## "p:l" of creatures damaged by a Venom creature in this batch (their death turns green).
+var _venomed: Dictionary = {}
 
 
 func _wait(seconds: float) -> void:
@@ -37,6 +39,7 @@ func _wait(seconds: float) -> void:
 
 func play(events: Array[GameEvent]) -> void:
 	_source = {}
+	_venomed = {}
 	if m.action_log:
 		m.action_log.add_action(events, m.state)
 	for e: GameEvent in events:
@@ -55,6 +58,8 @@ func _play_one(e: GameEvent) -> void:
 	_rival_react(e)
 	if e.type in [&"creature_played", &"building_played", &"spell_cast", &"creature_merged"] and int(d.get("player", -1)) == MatchController.AI:
 		await _reveal(CardDB.card(d["card"]))
+	if e.type == &"creature_damaged" and _dealt_by_venom(d):
+		_venomed["%d:%d" % [d["player"], d["lane"]]] = true
 	if e.type in EFFECT_EVENTS:
 		var kind: StringName = FxDirector.choose(_source, e)
 		await FxDirector.play(kind, _source, e, m)
@@ -66,7 +71,7 @@ func _play_one(e: GameEvent) -> void:
 		&"ability_triggered":
 			_source = {"kind": &"ability", "player": d["player"], "lane": d["lane"], "card": d["card"]}
 		&"attack":
-			_source = {"kind": &"attack", "player": d["player"], "lane": d["lane"], "hit": d["hit"]}
+			_source = {"kind": &"attack", "player": d["player"], "lane": d["lane"], "hit": d["hit"], "target_lane": int(d.get("target_lane", -1))}
 			Audio.sfx(&"attack_whoosh")
 			await _attack(d)
 		&"creature_played":
@@ -149,6 +154,18 @@ func _play_one(e: GameEvent) -> void:
 			await _level_up(d)
 		&"field_set":
 			await _field_set(d)
+		&"bubble_popped":
+			await _bubble_popped(d)
+		&"revealed":
+			await _revealed(d)
+		&"hushed":
+			await _hushed(d)
+		&"keyword_gained":
+			await _keyword_gained(d)
+		&"buffed":
+			await _buffed(d)
+		&"leeched":
+			await _leeched(d)
 		&"tribe_bonus":
 			var pos: Vector3 = FxDirector._hero_pos(m, d["player"])
 			DamageNumber.spawn(m, pos + Vector3(0, 0.5, 0), "%s!" % Tribes.BONUS[d["tribe"]].to_upper(), Color("#8fe07a"), 52)
@@ -279,6 +296,7 @@ func _second_wind(d: Dictionary) -> void:
 	v.scale = Vector3.ONE * 0.05
 	v.busy = true
 	Burst.spawn(m, &"heal", v.global_position + Vector3(0, 0.3, 0), Color.WHITE, 1.4)
+	Burst.spawn(m, &"gold", v.global_position + Vector3(0, 0.5, 0), Color.WHITE, 1.2)
 	Audio.sfx(&"heal")
 	DamageNumber.stamp(m, v.global_position + Vector3(0, v.height + 0.7, 0.2), "SECOND WIND!")
 	var tw := v.create_tween()
@@ -401,6 +419,187 @@ func _reveal(c: CardData) -> void:
 	await _wait(0.55)
 
 
+# --- Keyword moments (keywords spec 4) -------------------------------------------------------
+
+## True when the creature damaged in `d` was hit by a creature with Venom (an attacker, or a
+## defender hitting back, or an ability's source).
+func _dealt_by_venom(d: Dictionary) -> bool:
+	if _source.is_empty() or not _source.has("lane"):
+		return false
+	var sp: int = _source["player"]
+	var sl: int = _source["lane"]
+	if _source["kind"] == &"attack" and int(d["player"]) == sp and int(d["lane"]) == sl:
+		# Hit-back: the defender dealt this damage.
+		sp = 1 - sp
+		sl = int(_source.get("target_lane", -1))
+	if sl < 0:
+		return false
+	if Rules.has_keyword(m.state, sp, sl, &"venom"):
+		return true
+	var fx: KeywordFx = KeywordFx.of(_view(sp, sl))
+	return fx != null and fx.has_part(&"venom")
+
+
+func _bubble_popped(d: Dictionary) -> void:
+	var v: CreatureView = _view(d["player"], d["lane"])
+	Audio.sfx(&"candy_pop")
+	if v == null:
+		return
+	var fx: KeywordFx = KeywordFx.of(v)
+	var pos: Vector3 = v.global_position + Vector3(0, v.height * 0.5, 0)
+	if fx and fx.has_part(&"bubble"):
+		var b: Node3D = fx.part(&"bubble")
+		pos = b.global_position
+		b.set_meta(&"settled", false)
+		var tw := b.create_tween()
+		tw.tween_property(b, "scale", b.scale * 1.35, 0.09 / speed)
+		await tw.finished
+		fx.detach(&"bubble")
+	Burst.spawn(m, &"sprinkles", pos, VisualDB.KEYWORD_COLORS[&"bubble"].lightened(0.4), 1.2)
+	Burst.spawn(m, &"snow", pos, Color("#e8f8ff"), 1.0)
+	DamageNumber.stamp(m, pos + Vector3(0, v.height * 0.5 + 0.4, 0.2), "POP!")
+	m.overlay.refresh(m.state)
+	await _wait(0.2)
+
+
+func _revealed(d: Dictionary) -> void:
+	var v: CreatureView = _view(d["player"], d["lane"])
+	if v == null:
+		return
+	var fx: KeywordFx = KeywordFx.of(v)
+	if fx:
+		fx.detach(&"hidden")
+	var pos: Vector3 = v.global_position + Vector3(0, v.height * 0.5, 0)
+	Burst.spawn(m, &"stars", pos, VisualDB.KEYWORD_COLORS[&"hidden"].lightened(0.5), 1.2)
+	Burst.spawn(m, &"smoke", pos, Color("#b9a8ff"), 0.8)
+	Audio.sfx(&"magic_gain")
+	DamageNumber.stamp(m, pos + Vector3(0, v.height * 0.5 + 0.4, 0.2), "REVEALED!")
+	m.overlay.refresh(m.state)
+	await _wait(0.25)
+
+
+func _hushed(d: Dictionary) -> void:
+	var v: CreatureView = _view(d["player"], d["lane"])
+	if v == null:
+		return
+	var fx: KeywordFx = KeywordFx.of(v)
+	if fx:
+		fx.set_keywords([] as Array[StringName])
+	_ring_wave(v.global_position + Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + 0.05, 0), Color("#cfd3dc"))
+	Audio.sfx(&"ui_click")
+	DamageNumber.stamp(m, v.global_position + Vector3(0, v.height + 0.7, 0.2), "HUSHED")
+	m.overlay.refresh(m.state)
+	await _wait(0.35)
+
+
+func _keyword_gained(d: Dictionary) -> void:
+	var p: int = d["player"]
+	var l: int = d["lane"]
+	var kw: StringName = d["keyword"]
+	var v: CreatureView = _view(p, l)
+	m.overlay.refresh(m.state)
+	if v == null:
+		return
+	KeywordFx.sync(v, UnitOverlay.shown_keywords(m.state, p, l), MatchController.enemy_side_z(p))
+	var col: Color = VisualDB.KEYWORD_COLORS.get(kw, Palette.GOLD)
+	Burst.spawn(m, &"stars", v.global_position + Vector3(0, v.height * 0.6, 0), col, 1.0)
+	DamageNumber.spawn(m, v.global_position + Vector3(0, v.height + 0.45, 0), "+%s" % Keywords.NAMES.get(kw, String(kw)).to_upper(), col, 44)
+	await _wait(0.25)
+
+
+func _buffed(d: Dictionary) -> void:
+	m.hud.refresh(m.state, MatchController.HUMAN)
+	m.overlay.refresh(m.state)
+	var v: CreatureView = _view(d["player"], d["lane"])
+	if v == null:
+		return
+	var atk: int = d.get("atk", 0)
+	var hp: int = d.get("hp", 0)
+	if atk == 0 and hp == 0:
+		return
+	var tag: Control = m.overlay.tag(d["player"], d["lane"])
+	var tw := tag.create_tween()
+	tw.tween_property(tag, "modulate", Color(1.6, 1.5, 0.8), 0.08 / speed)
+	tw.tween_property(tag, "modulate", Color.WHITE, 0.3 / speed)
+	var txt: String = "%+d/%+d" % [atk, hp] if atk != 0 and hp != 0 else ("%+d ATK" % atk if atk != 0 else "%+d HP" % hp)
+	DamageNumber.spawn(m, v.global_position + Vector3(0, v.height + 0.4, 0), txt, Palette.GOLD if atk + hp > 0 else Palette.HP, 40)
+	await _wait(0.12)
+
+
+## Leech: red wisps fly from the creature to its hero, whose heal follows.
+func _leeched(d: Dictionary) -> void:
+	var v: CreatureView = _view(d["player"], d["lane"])
+	var from: Vector3 = v.global_position + Vector3(0, v.height * 0.6, 0) if v else FxDirector.spot(m, d["player"], d["lane"])
+	var to: Vector3 = FxDirector._hero_pos(m, d["player"])
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color("#ff3a5a", 0.9)
+	var count: int = clampi(int(d.get("amount", 1)) + 2, 3, 5)
+	var dur: float = 0.5 / speed
+	for i: int in count:
+		var w := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.07
+		sm.height = 0.14
+		sm.radial_segments = 8
+		sm.rings = 4
+		w.mesh = sm
+		w.material_override = mat
+		w.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		m.add_child(w)
+		w.global_position = from
+		var bend := Vector3(randf_range(-1.2, 1.2), randf_range(0.8, 1.6), randf_range(-0.4, 0.4))
+		var delay: float = i * 0.06 / speed
+		var tw := w.create_tween()
+		tw.tween_interval(delay)
+		tw.tween_method(func(k: float) -> void:
+			if is_instance_valid(w):
+				var a: Vector3 = from.lerp(from + bend, k)
+				var b: Vector3 = (from + bend).lerp(to, k)
+				w.global_position = a.lerp(b, k)
+				w.scale = Vector3.ONE * (1.0 - k * 0.5), 0.0, 1.0, dur)
+		tw.tween_callback(w.queue_free)
+	Audio.sfx(&"heal")
+	await _wait(0.5 + count * 0.06)
+	Burst.spawn(m, &"heal", to, Color("#ff6a8a"), 1.0)
+
+
+## A flat ring that spreads out and fades (Hush).
+func _ring_wave(at: Vector3, col: Color) -> void:
+	var ring := MeshInstance3D.new()
+	var t := TorusMesh.new()
+	t.inner_radius = 0.42
+	t.outer_radius = 0.5
+	t.rings = 32
+	t.ring_segments = 6
+	ring.mesh = t
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(col, 0.85)
+	ring.material_override = mat
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ring.scale = Vector3(0.3, 0.2, 0.3)
+	m.add_child(ring)
+	ring.global_position = at
+	var tw := ring.create_tween().set_parallel(true)
+	tw.tween_property(ring, "scale", Vector3(2.2, 0.2, 2.2), 0.45 / speed).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.45 / speed)
+	tw.chain().tween_callback(ring.queue_free)
+
+
+## Flurry: two quick slashes of sparks where the attack lands, with a second whoosh.
+func _flurry_swoosh(v: CreatureView, target: Vector3) -> void:
+	var col: Color = VisualDB.KEYWORD_COLORS[&"flurry"].lightened(0.4)
+	var at: Vector3 = target + Vector3(0, v.height * 0.6, 0)
+	for i: int in 2:
+		get_tree().create_timer((0.22 + i * 0.1) / speed).timeout.connect(func() -> void:
+			if is_instance_valid(m):
+				Burst.spawn(m, &"sparks", at + Vector3(0.15 * (1 - 2 * i), 0.1 * i, 0), col, 1.1)
+				Audio.sfx(&"attack_whoosh"))
+
+
 func _view(p: int, l: int) -> CreatureView:
 	var v: Variant = m.creature_views[p][l]
 	return v as CreatureView if is_instance_valid(v) else null
@@ -434,6 +633,11 @@ func _play_creature(d: Dictionary) -> void:
 	Burst.spawn(m, &"dust_ring", feet)
 	Burst.spawn(m, LAND_BURSTS[c.land], feet + Vector3(0, 0.3, 0), Color.WHITE, 1.2)
 	m.rig.kick(0.08)
+	if &"dash" in c.keywords:
+		# Dash: a skid of dust and speed sparks, ready to go.
+		Burst.spawn(m, &"dust_ring", feet, Color.WHITE, 1.6)
+		Burst.spawn(m, &"sparks", feet + Vector3(0, 0.25, 0), VisualDB.KEYWORD_COLORS[&"dash"], 1.3)
+		DamageNumber.stamp(m, target + Vector3(0, v.height + 0.5, 0.2), "DASH!")
 
 
 func _play_building(d: Dictionary) -> void:
@@ -462,7 +666,13 @@ func _death(d: Dictionary) -> void:
 	if not is_instance_valid(v):
 		return
 	var at: Vector3 = v.global_position + Vector3(0, 0.3, 0)
-	Burst.spawn(m, &"smoke", at, Color.WHITE, 1.2)
+	if _venomed.has("%d:%d" % [d["player"], d["lane"]]):
+		# Venom: the creature melts away in green.
+		Burst.spawn(m, &"smoke", at, KeywordFx.VENOM_GREEN, 1.3)
+		Burst.spawn(m, &"caramel", at + Vector3(0, 0.2, 0), KeywordFx.VENOM_GREEN, 1.1)
+		DamageNumber.stamp(m, at + Vector3(0, v.height + 0.4, 0.2), "VENOM!")
+	else:
+		Burst.spawn(m, &"smoke", at, Color.WHITE, 1.2)
 	if v.card:
 		Burst.spawn(m, LAND_BURSTS[v.card.land], at, Color.WHITE, 1.2)
 	await v.dissolve(0.35 / speed)
@@ -508,6 +718,8 @@ func _attack(d: Dictionary) -> void:
 	if flat.length() > 0.01:
 		v.rotation.y = atan2(flat.x, flat.y)
 	v.play_attack()
+	if Rules.has_keyword(m.state, p, lane, &"flurry"):
+		_flurry_swoosh(v, target)
 	var trail := Burst.spawn(v, &"dust_ring", v.global_position, Color(1, 1, 1, 0.6), 0.4)
 	trail.one_shot = false
 	var out := v.create_tween()
