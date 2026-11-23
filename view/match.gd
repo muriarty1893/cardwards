@@ -137,6 +137,9 @@ func _ready() -> void:
 	if "--demo-expansion" in OS.get_cmdline_user_args():
 		_demo_expansion()
 		return
+	if "--demo-keywords" in OS.get_cmdline_user_args():
+		_demo_keywords()
+		return
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--demo-living"):
 			_demo_living(arg.substr(14) if arg.length() > 14 else "volcano")
@@ -322,6 +325,22 @@ func _demo_act(act: String) -> void:
 func Fx_give(id: StringName) -> int:
 	state.players[HUMAN].hand.append(CardDB.card(id))
 	return state.players[HUMAN].hand.size() - 1
+
+
+## Dev view (screenshots): one creature per keyword, with Bubble and Hidden up, plus Spell Power.
+func _demo_keywords() -> void:
+	var ids: Array[StringName] = [&"sporeling", &"flarebeak", &"gumdrop", &"ashmite", &"taffy_snail", &"cinderpup", &"magmaw", &"iceling"]
+	var kws: Array[StringName] = [&"guard", &"bubble", &"venom", &"second_wind", &"hidden", &"leech", &"flurry", &"dash"]
+	for p: int in 2:
+		for l: int in 4:
+			_demo_put(p, l, ids[p * 4 + l])
+			var cr: GameState.CreatureState = state.players[p].lanes[l].creature
+			cr.gained.append(kws[p * 4 + l])
+			cr.bubble = kws[p * 4 + l] == &"bubble"
+			cr.hidden = kws[p * 4 + l] == &"hidden"
+	sync_all()
+	board.reveal_split(false)
+	refresh_ui()
 
 
 func _demo_put(p: int, l: int, id: StringName) -> void:

@@ -114,3 +114,54 @@ func test_readiness_states() -> bool:
 	assert_eq((m.creature_views[0][0] as CreatureView).readiness, CreatureView.Readiness.SPENT, "after attacking: spent")
 	m.queue_free()
 	return true
+
+
+func test_tag_keyword_chips_follow_state() -> bool:
+	var m: MatchController = await Fx.load_match()
+	Fx.put_creature(m.state, 1, 2, &"mossback")
+	m.sync_all()
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	assert_true("guard" in m.overlay.keyword_chips(1, 2), "Guard chip (%s)" % [m.overlay.keyword_chips(1, 2)])
+	m.state.players[1].lanes[2].creature.hushed = true
+	m.sync_all()
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	assert_eq(m.overlay.keyword_chips(1, 2), [] as Array[String], "hush clears the chips")
+	m.state.players[1].lanes[2].creature.gained.append(&"venom")
+	m.sync_all()
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	assert_eq(m.overlay.keyword_chips(1, 2), ["venom"] as Array[String], "gained keyword shows")
+	m.queue_free()
+	return true
+
+
+func test_popped_bubble_and_revealed_hidden_not_shown() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put(s, 0, 0, Fx.card(&"b", CardData.Kind.CREATURE, 1, 1, 3, [&"bubble", &"hidden"]))
+	var cr: GameState.CreatureState = s.players[0].lanes[0].creature
+	cr.bubble = true
+	cr.hidden = true
+	assert_eq(UnitOverlay.shown_keywords(s, 0, 0), [&"bubble", &"hidden"] as Array[StringName], "both up")
+	cr.bubble = false
+	cr.hidden = false
+	assert_eq(UnitOverlay.shown_keywords(s, 0, 0), [] as Array[StringName], "popped and revealed")
+	return true
+
+
+func test_tag_grows_and_shows_name() -> bool:
+	var m: MatchController = await Fx.load_match()
+	Fx.put_creature(m.state, 1, 1, &"mossback")
+	m.sync_all()
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	m.overlay.pin_grown = "1:1"
+	await (Engine.get_main_loop() as SceneTree).create_timer(0.3).timeout
+	var bar: Control = m.overlay.tag(1, 1)
+	assert_true(bar.get_node("Info").visible, "grown tag shows its plate")
+	assert_eq((bar.get_node("Info/Box/Name") as Label).text, "Mossback", "with the name")
+	assert_true("Guard" in (bar.get_node("Info/Box/Words") as Label).text, "and the keyword names")
+	assert_true(bar.scale.x > 1.2, "grown")
+	m.overlay.pin_grown = ""
+	m.overlay.set_grown("")
+	await (Engine.get_main_loop() as SceneTree).create_timer(0.3).timeout
+	assert_true(not bar.get_node("Info").visible and bar.scale.x < 1.01, "back to small")
+	m.queue_free()
+	return true

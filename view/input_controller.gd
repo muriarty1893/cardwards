@@ -21,6 +21,8 @@ var _card: CardData
 var _targets: Array[Dictionary] = []
 var _needed: int = 0
 var _aim_lane: int = -1
+## While aiming: the enemy lane under the pointer (-1 hero, -2 nothing); its creature's tag grows.
+var aim_target: int = -2
 var _press_pos := Vector2.ZERO
 
 
@@ -247,6 +249,7 @@ func _update_aim(pos: Vector2) -> void:
 		if g.is_finite():
 			v.aim_at = g
 	var t: int = _target_at(pos)
+	aim_target = t
 	var ok: bool = t != -2 and t in Rules.attack_targets(_state(), _human(), _aim_lane)
 	match_ctl.attack_arrow.aim(_aim_origin(), pos, ok)
 
@@ -321,6 +324,7 @@ func cancel() -> void:
 	mode = Mode.IDLE
 	_targets = []
 	_aim_lane = -1
+	aim_target = -2
 	_clear_highlights()
 	match_ctl.hand.cancel_drag()
 

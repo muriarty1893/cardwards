@@ -22,6 +22,8 @@ var _rcpu: float = 0.0
 var _rgpu: float = 0.0
 var _frames: int = 60
 var _vp: SubViewport
+## --pin-tag=<p>:<lane>: grow that creature's tag (as if hovered).
+var _pin_tag: String = ""
 
 
 func _ready() -> void:
@@ -34,6 +36,8 @@ func _ready() -> void:
 			_fps_secs = float(arg.substr(10))
 		elif arg.begins_with("--hover-card="):
 			_hover_card = int(arg.substr(13))
+		elif arg.begins_with("--pin-tag="):
+			_pin_tag = arg.substr(10)
 		elif arg == "--hover-log":
 			_hover_log = true
 		elif arg.begins_with("--drag-card="):
@@ -58,6 +62,10 @@ func _process(delta: float) -> void:
 		scene.reparent(_vp, false)
 		return
 	_frames -= 1
+	if _pin_tag != "" and _frames == 20:
+		for n: Node in _vp.find_children("*", "", true, false):
+			if n is MatchController:
+				(n as MatchController).overlay.pin_grown = _pin_tag
 	if _hover_card >= 0 and _frames == 10:
 		var hand: Node = _vp.find_child("Hand", true, false)
 		if hand == null:

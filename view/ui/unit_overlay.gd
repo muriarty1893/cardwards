@@ -12,6 +12,9 @@ const DRAIN := 0.3
 ## Where your building's badge sits relative to the building (front-right foot).
 const BADGE_NEAR := Vector3(0.6, 0.25, 0.35)
 const HOVER_SCALE := 1.6
+## A hovered or targeted creature's tag grows this much and shows its name and keywords.
+const GROW := 1.3
+const CHIP := 20.0
 
 var _m: MatchController
 var _entries: Array[Array] = []
@@ -19,6 +22,10 @@ var _bars: Array[Array] = []
 var _badges: Array[Array] = []
 var _hover: CardWidget
 var _hover_notes: KeywordNotes
+## "p:l" of the tag shown grown, "" for none.
+var _grown_key: String = ""
+## Tests and screenshots: keep this tag grown whatever the mouse does ("" = follow the mouse).
+var pin_grown: String = ""
 var _hover_key: String = ""
 ## The enlarged card lives on its own layer above the HUD so nothing covers it.
 var _hover_layer: CanvasLayer
@@ -141,7 +148,8 @@ func refresh(s: GameState) -> void:
 				var max_hp: int = Rules.effective_max_hp(s, p, l)
 				var hp: int = max_hp - cr.damage
 				_entries[p][l] = {"visible": true, "atk": Rules.effective_attack(s, p, l), "hp": hp, "max": max_hp, "bar_color": bar_color(hp, max_hp),
-					"level": cr.level, "xp": cr.xp, "home": Lands.home(s, p, l)}
+					"level": cr.level, "xp": cr.xp, "home": Lands.home(s, p, l), "name": cr.card.display_name,
+					"keywords": shown_keywords(s, p, l), "spell_power": 0 if cr.hushed else cr.card.spell_power}
 			_update_bar(_bars[p][l], _entries[p][l])
 			var badge: Control = _badges[p][l]
 			badge.visible = lane.building != null
@@ -153,6 +161,62 @@ func refresh(s: GameState) -> void:
 		var st: BoopPlate.State = plate_state(l)
 		if st != BoopPlate.State.HIDDEN:
 			_m.board.boop_plate(l).set_state(st)
+
+
+## The keywords a creature's tag shows: what Rules.keywords_of says, minus a popped Bubble and a
+## Hidden that has been revealed (those only count while they are up).
+static func shown_keywords(s: GameState, p: int, l: int) -> Array[StringName]:
+	var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+	var out: Array[StringName] = []
+	if cr == null:
+		return out
+	for k: StringName in Rules.keywords_of(s, p, l):
+		if (k == &"bubble" and not cr.bubble) or (k == &"hidden" and not cr.hidden):
+			continue
+		out.append(k)
+	return out
+
+
+## "p:l" of the creature whose tag is grown ("" for none): the one under the mouse (or its half-lane)
+## when idle, the enemy being aimed at while attacking.
+func grown_key() -> String:
+	return _grown_key
+
+
+func _pick_grown() -> String:
+	if _m.input.mode == InputController.Mode.AIMING:
+		var t: int = _m.input.aim_target
+		return "%d:%d" % [MatchController.AI, t] if t >= 0 and bool(entry(MatchController.AI, t)["visible"]) else ""
+	if _m.input.mode != InputController.Mode.IDLE or _m.hud.is_paused() or _m.results.visible:
+		return ""
+	var mouse: Vector2 = get_viewport().get_mouse_position()
+	if _m.hand.hovered_rect().size != Vector2.ZERO:
+		return ""
+	for panel: Control in _m.hud.panels():
+		if panel.get_global_rect().has_point(mouse):
+			return ""
+	var hit: Dictionary = piece_at(mouse)
+	if hit.is_empty() or hit["kind"] != &"creature":
+		var lane: Dictionary = _m.board.lane_at_screen(_m.rig.camera, mouse)
+		if lane.is_empty():
+			return ""
+		hit = {"player": int(lane["player"]), "lane": int(lane["lane"])}
+	return "%d:%d" % [hit["player"], hit["lane"]] if bool(entry(hit["player"], hit["lane"])["visible"]) else ""
+
+
+## Grows tag `key` (and shrinks the others).
+func set_grown(key: String) -> void:
+	if key == _grown_key:
+		return
+	_grown_key = key
+	for p: int in 2:
+		for l: int in 4:
+			var on: bool = key == "%d:%d" % [p, l]
+			var bar: Control = _bars[p][l]
+			bar.get_node("Info").visible = on
+			bar.z_index = 5 if on else 0
+			var tw := bar.create_tween()
+			tw.tween_property(bar, "scale", Vector2.ONE * (GROW if on else 1.0), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## The piece under a screen point: {"player", "lane", "kind"} or {}.
@@ -198,6 +262,7 @@ func _process(_delta: float) -> void:
 				badge.position = cam.unproject_position((bv as Node3D).global_position + off) - badge.size / 2.0
 	_hover_plates(cam)
 	_update_hover()
+	set_grown(pin_grown if pin_grown != "" else _pick_grown())
 
 
 func _update_hover() -> void:
@@ -329,6 +394,42 @@ func _make_bar() -> Control:
 	home.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	home.visible = false
 	root.add_child(home)
+	# Keyword icons in a row above the health bar (Spell Power chip says "+N").
+	var keys := HBoxContainer.new()
+	keys.name = "Keys"
+	keys.position = Vector2(40, -CHIP + 9)
+	keys.add_theme_constant_override("separation", 1)
+	keys.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(keys)
+	# Grown: name and the keyword names on a parchment plate above the tag.
+	var info := PanelContainer.new()
+	info.name = "Info"
+	info.visible = false
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var isb := StyleBoxFlat.new()
+	isb.bg_color = UiStyle.PARCHMENT
+	isb.border_color = UiStyle.WOOD_INK
+	isb.set_border_width_all(2)
+	isb.set_corner_radius_all(7)
+	isb.set_content_margin_all(4)
+	info.add_theme_stylebox_override("panel", isb)
+	var ib := VBoxContainer.new()
+	ib.name = "Box"
+	ib.add_theme_constant_override("separation", 1)
+	ib.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.add_child(ib)
+	var nm := UiStyle.title(UiStyle.label("", 13, UiStyle.WOOD_INK)) as Label
+	nm.name = "Name"
+	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ib.add_child(nm)
+	var kl := UiStyle.bold(UiStyle.label("", 10, Palette.INK))
+	kl.name = "Words"
+	kl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	kl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	kl.custom_minimum_size = Vector2(BAR_SIZE.x, 0)
+	ib.add_child(kl)
+	root.add_child(info)
+	root.pivot_offset = Vector2(BAR_SIZE.x / 2.0, BAR_SIZE.y)
 	return root
 
 
@@ -357,12 +458,66 @@ func _update_bar(bar: Control, e: Dictionary) -> void:
 		hsb.set_border_width_all(2)
 		hsb.set_corner_radius_all(8)
 		home.add_theme_stylebox_override("panel", hsb)
+	_update_keys(bar, e)
 	(bar.get_node("Back/Text") as Label).text = "%d/%d" % [e["hp"], e["max"]]
 	var fill := bar.get_node("Back/Fill") as ColorRect
 	var w: float = 68.0 * clampf(float(e["hp"]) / float(maxi(e["max"], 1)), 0.0, 1.0)
 	var tw := fill.create_tween().set_parallel(true)
 	tw.tween_property(fill, "size:x", w, DRAIN)
 	tw.tween_property(fill, "color", e["bar_color"] as Color, DRAIN)
+
+
+## Keyword chips and the grown plate's text; rebuilt only when the keywords change.
+func _update_keys(bar: Control, e: Dictionary) -> void:
+	var kws: Array = e.get("keywords", [])
+	var sp: int = e.get("spell_power", 0)
+	var sig: String = "%s|%d" % [kws, sp]
+	var keys := bar.get_node("Keys") as HBoxContainer
+	var info := bar.get_node("Info") as PanelContainer
+	(info.get_node("Box/Name") as Label).text = e.get("name", "")
+	var words: Array[String] = []
+	for k: StringName in kws:
+		words.append(Keywords.NAMES[k])
+	if sp > 0:
+		words.append("Spell Power +%d" % sp)
+	var wl := info.get_node("Box/Words") as Label
+	wl.text = " · ".join(words)
+	wl.visible = not words.is_empty()
+	info.reset_size()
+	info.position = Vector2((BAR_SIZE.x - info.size.x) / 2.0, -CHIP - info.size.y + 4)
+	if keys.get_meta(&"sig", "") == sig:
+		return
+	keys.set_meta(&"sig", sig)
+	for c: Node in keys.get_children():
+		keys.remove_child(c)
+		c.queue_free()
+	for k: StringName in kws:
+		var chip := KeywordNotes.icon_chip(VisualDB.keyword_icon(k), VisualDB.KEYWORD_COLORS[k], CHIP)
+		chip.name = String(k)
+		keys.add_child(chip)
+	if sp > 0:
+		var chip := KeywordNotes.icon_chip(VisualDB.keyword_icon(&"spell_power"), VisualDB.KEYWORD_COLORS[&"spell_power"], CHIP)
+		chip.name = "spell_power"
+		var n := UiStyle.title(UiStyle.label("+%d" % sp, 11, Color.WHITE)) as Label
+		n.add_theme_color_override("font_outline_color", Palette.INK)
+		n.add_theme_constant_override("outline_size", 4)
+		n.position = Vector2(CHIP - 6, -4)
+		chip.add_child(n)
+		keys.add_child(chip)
+
+
+## Creature p/l's tag (attack, health bar, keyword chips, grown plate).
+func tag(p: int, l: int) -> Control:
+	return _bars[p][l]
+
+
+## The keyword chips shown on creature p/l's tag (names = keyword ids), for tests.
+func keyword_chips(p: int, l: int) -> Array[String]:
+	var out: Array[String] = []
+	for c: Node in (_bars[p][l] as Control).get_node("Keys").get_children():
+		if not c.is_queued_for_deletion():
+			out.append(String(c.name))
+	return out
 
 
 func _make_badge() -> Control:
