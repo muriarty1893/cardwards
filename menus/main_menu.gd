@@ -8,6 +8,7 @@ const FLAVOUR: Dictionary = {
 	&"blaze_rush": "Burn fast, hit hard.",
 	&"sugar_storm": "Draw, trick, overwhelm.",
 	&"deep_freeze": "Lock the board down.",
+	&"sun_fortress": "Stand firm and grow in the sun.",
 }
 
 var _cam: Camera3D
