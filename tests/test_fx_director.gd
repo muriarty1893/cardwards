@@ -20,3 +20,21 @@ func test_every_card_has_known_effect() -> bool:
 	for id: StringName in VisualDB.ids():
 		assert_true(VisualDB.effect(id) in FxDirector.KINDS, "effect for %s" % id)
 	return true
+
+
+func test_spell_fx_recipes_are_valid() -> bool:
+	var kinds: Array[StringName] = [&"comet", &"beam", &"rain", &"vines", &"slash", &"spike", &"blizzard", &"circle", &"hero", &"swirl"]
+	for id: StringName in VisualDB.SPELL_FX:
+		var c: CardData = CardDB.card(id)
+		assert_true(c != null and c.kind == CardData.Kind.SPELL, "%s is a spell" % id)
+		var r: Dictionary = VisualDB.SPELL_FX[id]
+		assert_true(r.get("kind", &"") in kinds, "%s has a known recipe kind" % id)
+		assert_true(r.has("color"), "%s has a colour" % id)
+	return true
+
+
+func test_kit_spells_skip_the_generic_travel() -> bool:
+	var src: Dictionary = {"kind": &"ability", "player": 0, "lane": -1, "card": &"fireball", "kit": true}
+	assert_eq(FxDirector.choose(src, GameEvent.make(&"creature_damaged", {"player": 1, "lane": 0, "amount": 3})), &"spell_hit", "damage plays as a plain spell hit")
+	assert_eq(FxDirector.choose(src, GameEvent.make(&"creature_healed", {"player": 0, "lane": 0, "amount": 2})), &"heal", "heals stay heals")
+	return true

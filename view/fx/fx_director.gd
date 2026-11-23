@@ -7,7 +7,7 @@ extends RefCounted
 const KINDS: Array[StringName] = [
 	&"fireball", &"ember_rain", &"rain_of_spores", &"regrowth", &"sugar_rush", &"swap_trick", &"cold_snap", &"avalanche",
 	&"damage", &"heal", &"draw", &"magic", &"move", &"return_building", &"freeze", &"smoke_puff", &"spore_puff", &"gem_pop", &"none",
-	&"attack_hit", &"plain", &"armour", &"field",
+	&"attack_hit", &"plain", &"armour", &"field", &"spell_hit",
 ]
 ## Indexed by CardData.Land (NEUTRAL last).
 const ELEMENT_BY_LAND: Array[StringName] = [&"spore", &"fire", &"candy", &"ice", &"magic"]
@@ -34,6 +34,7 @@ const OWNS: Dictionary = {
 	&"attack_hit": [&"creature_damaged", &"hero_damaged"],
 	&"armour": [&"armour_gained"],
 	&"field": [&"creature_damaged", &"card_drawn"],
+	&"spell_hit": [&"creature_damaged", &"hero_damaged", &"frozen"],
 }
 const ARMOUR := Color("#7ac8ff")
 const HEAL := Color("#6aff7a")
@@ -42,6 +43,12 @@ const HEAL := Color("#6aff7a")
 static func choose(source: Dictionary, e: GameEvent) -> StringName:
 	if source.is_empty():
 		return &"plain"
+	# A SpellKit recipe already showed the spell reaching its targets: just the results now.
+	if source.get("kit", false):
+		if e.type in [&"creature_damaged", &"hero_damaged", &"frozen"]:
+			return &"spell_hit"
+		if e.type in [&"creature_healed", &"hero_healed"]:
+			return &"heal"
 	var kind: StringName = &"plain"
 	if source.get("kind") == &"attack":
 		kind = &"attack_hit"

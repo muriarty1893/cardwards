@@ -37,6 +37,9 @@ var _source: Dictionary = {}
 var _venomed: Dictionary = {}
 ## "p:l" → the last hit a creature took in this batch: {"big", "fire", "from"} (picks its death).
 var _last_hit: Dictionary = {}
+## The batch being played and the index of the current event (spells look ahead at their targets).
+var _batch: Array[GameEvent] = []
+var _at: int = 0
 
 
 func _wait(seconds: float) -> void:
@@ -49,8 +52,11 @@ func play(events: Array[GameEvent]) -> void:
 	_last_hit = {}
 	if m.action_log:
 		m.action_log.add_action(events, m.state)
-	for e: GameEvent in events:
-		await _play_one(e)
+	_batch = events
+	for i: int in events.size():
+		_at = i
+		await _play_one(events[i])
+	_batch = []
 	_source = {}
 	if m.rival:
 		m.rival.set_hand_count(m.state.players[MatchController.AI].hand.size())
@@ -63,7 +69,7 @@ func play(events: Array[GameEvent]) -> void:
 func _play_one(e: GameEvent) -> void:
 	var d: Dictionary = e.data
 	_rival_react(e)
-	if e.type in [&"creature_played", &"building_played", &"spell_cast", &"creature_merged"] and int(d.get("player", -1)) == MatchController.AI:
+	if e.type in [&"creature_played", &"building_played", &"creature_merged"] and int(d.get("player", -1)) == MatchController.AI:
 		await _reveal(CardDB.card(d["card"]))
 	if e.type == &"creature_damaged" and _dealt_by_venom(d):
 		_venomed["%d:%d" % [d["player"], d["lane"]]] = true
@@ -79,6 +85,10 @@ func _play_one(e: GameEvent) -> void:
 	match e.type:
 		&"ability_triggered":
 			_source = {"kind": &"ability", "player": d["player"], "lane": d["lane"], "card": d["card"]}
+			var sc: CardData = CardDB.card(d["card"])
+			if sc and sc.kind == CardData.Kind.SPELL and VisualDB.SPELL_FX.has(sc.id):
+				_source["kit"] = true
+				await SpellKit.play(m, VisualDB.SPELL_FX[sc.id], d["player"], _spell_targets(), speed)
 		&"attack":
 			_source = {"kind": &"attack", "player": d["player"], "lane": d["lane"], "hit": d["hit"], "target_lane": int(d.get("target_lane", -1))}
 			Audio.sfx(&"attack_whoosh")
@@ -92,9 +102,8 @@ func _play_one(e: GameEvent) -> void:
 			Audio.sfx(&"card_play")
 			if VisualDB.sound(c.id) != &"":
 				Audio.sfx(VisualDB.sound(c.id))
-			m.toast.show_message("%s cast %s" % ["You" if d["player"] == MatchController.HUMAN else "Rival", c.display_name], 1.0)
+			await _cast_card(c, int(d["player"]) == MatchController.HUMAN)
 			Burst.spawn(m, &"stars", FxDirector._hero_pos(m, d["player"]), Palette.LAND_CARD[c.land], 1.4)
-			await _wait(0.3)
 		&"booped":
 			var v: CreatureView = _view(d["player"], d["lane"])
 			if v:
@@ -434,6 +443,82 @@ func _reveal(c: CardData) -> void:
 	tw.chain().tween_property(w, "modulate:a", 0.0, 0.25 / speed)
 	tw.chain().tween_callback(w.queue_free)
 	await _wait(0.55)
+
+
+## Where the spell now resolving lands: the creatures and heroes its events touch, up to the next
+## ability, attack or turn change.
+func _spell_targets() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var seen: Dictionary = {}
+	for i: int in range(_at + 1, _batch.size()):
+		var e: GameEvent = _batch[i]
+		if e.type in [&"ability_triggered", &"attack", &"spell_cast", &"turn_started", &"creature_played"]:
+			break
+		var d: Dictionary = e.data
+		var key: String = ""
+		var at := Vector3.INF
+		if e.type in [&"creature_damaged", &"creature_healed", &"frozen", &"buffed", &"creature_destroyed", &"creature_bounced", &"creature_transformed", &"doomed", &"keyword_gained"]:
+			key = "c%d:%d" % [d["player"], d["lane"]]
+			at = FxDirector.spot(m, d["player"], d["lane"]) + Vector3(0, 0.4, 0)
+		elif e.type in [&"hero_damaged", &"hero_healed", &"armour_gained"]:
+			key = "h%d" % d["player"]
+			at = FxDirector._hero_pos(m, d["player"])
+		if key != "" and not seen.has(key):
+			seen[key] = true
+			out.append(at)
+	return out
+
+
+## Casting a spell: the card flies to the middle (the rival's flips face up on the way), glows in
+## its land's colour, then bursts into the spell.
+func _cast_card(c: CardData, human: bool) -> void:
+	var vp: Vector2 = m.hud.get_viewport_rect().size
+	var w := Control.new()
+	w.size = CardWidget.SIZE
+	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	w.pivot_offset = CardWidget.SIZE / 2.0
+	var glow := Panel.new()
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.position = Vector2(-10, -10)
+	glow.size = CardWidget.SIZE + Vector2(20, 20)
+	var gsb := StyleBoxFlat.new()
+	gsb.bg_color = Color(Palette.LAND_CARD[c.land], 0.0)
+	gsb.set_corner_radius_all(18)
+	gsb.shadow_color = Color(Palette.LAND_CARD[c.land].lightened(0.3), 0.9)
+	gsb.shadow_size = 26
+	glow.add_theme_stylebox_override("panel", gsb)
+	glow.modulate.a = 0.0
+	w.add_child(glow)
+	var face := CardWidget.new()
+	face.setup(c, -1)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	w.add_child(face)
+	var back: Control = null
+	if not human and m.card_backs[MatchController.AI]:
+		back = FlyingCard.back_rect(m.card_backs[MatchController.AI])
+		w.add_child(back)
+		face.visible = false
+	m.hud.add_child(w)
+	var from: Vector2 = m.hand.last_drop_pos if human and m.hand.last_drop_pos != Vector2.ZERO else (Vector2(vp.x * 0.5, vp.y - 60.0) if human else m.rival_hand_screen())
+	var centre := Vector2(vp.x * 0.5, vp.y * 0.42)
+	w.position = from - CardWidget.SIZE / 2.0
+	w.scale = Vector2.ONE * 0.6
+	var tw := w.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(w, "position", centre - CardWidget.SIZE / 2.0, 0.24 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(w, "scale", Vector2.ONE * 1.3, 0.24 / speed)
+	if back:
+		tw.chain().tween_property(w, "scale:x", 0.0, 0.08 / speed)
+		tw.chain().tween_callback(func() -> void:
+			back.visible = false
+			face.visible = true)
+		tw.chain().tween_property(w, "scale:x", 1.3, 0.09 / speed)
+	tw.chain().tween_property(glow, "modulate:a", 1.0, 0.12 / speed)
+	tw.chain().tween_interval(0.18 / speed)
+	tw.chain().tween_property(w, "scale", Vector2.ONE * 1.75, 0.14 / speed).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(w, "modulate", Color(2.0, 2.0, 2.0, 0.0), 0.14 / speed)
+	tw.chain().tween_callback(w.queue_free)
+	await tw.finished
 
 
 # --- Deaths by cause (look & feel spec 1) ----------------------------------------------------

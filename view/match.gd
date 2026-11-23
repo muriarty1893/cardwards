@@ -311,6 +311,16 @@ func _demo_act(act: String) -> void:
 	state.active = HUMAN
 	state.players[HUMAN].magic = 9
 	await get_tree().create_timer(0.8).timeout
+	if act.begins_with("cast:"):
+		# Any spell, aimed at the first valid targets.
+		var c: CardData = CardDB.card(StringName(act.substr(5)))
+		var who: StringName = Targeting.chosen_who(c, &"on_play")
+		var valid: Array[Dictionary] = Targeting.valid(state, HUMAN, who)
+		var targets: Array[Dictionary] = []
+		for t: int in mini(0 if who == &"" else Targeting.needed(who), valid.size()):
+			targets.append(valid[t])
+		await perform(Action.play(HUMAN, Fx_give(c.id), -1, targets))
+		return
 	match act:
 		"melt":
 			state.players[1].lanes[3].land = CardData.Land.FROST

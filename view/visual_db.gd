@@ -178,6 +178,38 @@ const EFFECTS: Dictionary = {
 }
 
 
+## Spell looks (look & feel spec 2): a SpellKit recipe per spell — kind (comet, beam, rain,
+## vines, slash, spike, blizzard, circle, hero, swirl), colour, and for comets/rain a trail preset
+## and size. Spells without an entry keep their FxDirector kind.
+const SPELL_FX: Dictionary = {
+	&"rain_of_spores": {"kind": &"circle", "color": Color("#8dff6a")},
+	&"regrowth": {"kind": &"hero", "color": Color("#6adf5a")},
+	&"bark_shield": {"kind": &"hero", "color": Color("#c89a5a")},
+	&"bark_coat": {"kind": &"circle", "color": Color("#c89a5a")},
+	&"deep_roots": {"kind": &"hero", "color": Color("#5ad16a")},
+	&"grove_roar": {"kind": &"circle", "color": Color("#ffb03a")},
+	&"thorn_lash": {"kind": &"vines", "color": Color("#4f9a3a")},
+	&"stoke": {"kind": &"beam", "color": Color("#ff8a2a")},
+	&"overheat": {"kind": &"circle", "color": Color("#ff4a2a")},
+	&"ember_pact": {"kind": &"hero", "color": Color("#c8302a")},
+	&"fireball": {"kind": &"comet", "color": Color("#ff7a1a"), "trail": &"embers", "size": 1.5, "sound": &"fire_whoosh"},
+	&"finish_off": {"kind": &"slash", "color": Color("#ff5a3a")},
+	&"ember_rain": {"kind": &"rain", "color": Color("#ff7a1a"), "trail": &"embers"},
+	&"sugar_shiv": {"kind": &"slash", "color": Color("#ff8ad8")},
+	&"sugar_high": {"kind": &"hero", "color": Color("#ff9fe0")},
+	&"sugar_rush": {"kind": &"hero", "color": Color("#ffd84a")},
+	&"jawbreaker": {"kind": &"comet", "color": Color("#ff5ab0"), "trail": &"sprinkles", "size": 1.2, "sound": &"candy_pop"},
+	&"taffy_pull": {"kind": &"beam", "color": Color("#ff9fcf")},
+	&"candy_shell": {"kind": &"hero", "color": Color("#ff9fe0")},
+	&"cold_snap": {"kind": &"beam", "color": Color("#bfe8ff")},
+	&"icicle": {"kind": &"spike", "color": Color("#bfe8ff")},
+	&"crack_the_ice": {"kind": &"slash", "color": Color("#d6f2ff")},
+	&"whiteout": {"kind": &"blizzard", "color": Color("#e8f6ff")},
+	&"snowmanify": {"kind": &"swirl", "color": Color("#ffffff")},
+	&"star_shard": {"kind": &"hero", "color": Color("#ffd84a")},
+}
+
+
 ## Extra sound when a spell is cast (Audio.SETS names).
 const SOUNDS: Dictionary = {
 	&"fireball": &"fire_whoosh", &"ember_rain": &"fire_whoosh", &"rain_of_spores": &"heal", &"regrowth": &"card_draw",
