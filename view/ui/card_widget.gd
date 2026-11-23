@@ -22,7 +22,9 @@ static func type_line(c: CardData) -> String:
 var card: CardData
 var index: int = -1
 var _art: TextureRect
-var _text: Label
+var _text: RichTextLabel
+var _combo: Panel
+static var _bold: FontVariation
 var _cost: Label
 ## Cost shown on the gem (the printed cost unless set_cost lowered it).
 var _shown_cost: int = 0
@@ -37,6 +39,11 @@ func setup(c: CardData, i: int) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var land: Color = Palette.LAND_CARD[c.land]
 	var frame := _panel(Rect2(Vector2.ZERO, SIZE), land, 4, 12)
+	if c.land == CardData.Land.NEUTRAL:
+		# Neutral cards (Star Shard) get a gold rim.
+		var fsb := frame.get_theme_stylebox("panel") as StyleBoxFlat
+		fsb.border_color = Palette.GOLD.darkened(0.35)
+		fsb.set_border_width_all(6)
 	add_child(frame)
 	# Picture window.
 	var art_back := _panel(ART.grow(2), Palette.INK, 0, 8)
@@ -71,14 +78,25 @@ func setup(c: CardData, i: int) -> void:
 	var paper := _panel(text_rect, Palette.PAPER, 2, 6)
 	frame.add_child(paper)
 	var rules: String = CardText.render(c)
-	_text = UiStyle.label(rules, 10 if rules.length() <= 34 else 9, Palette.INK)
+	# Rich text so mechanic names are bold; the rules of each show as a tooltip and in KeywordNotes.
+	var fs: int = 10 if rules.length() <= 34 else 9
+	_text = RichTextLabel.new()
+	_text.bbcode_enabled = true
+	_text.scroll_active = false
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_text.add_theme_font_size_override("normal_font_size", fs)
+	_text.add_theme_font_size_override("bold_font_size", fs)
+	_text.add_theme_font_override("bold_font", bold_font())
+	_text.add_theme_color_override("default_color", Palette.INK)
+	_text.add_theme_constant_override("line_separation", -2)
+	_text.text = CardText.render_bbcode(c)
 	_text.position = Vector2(3, 0)
 	_text.size = text_rect.size - Vector2(6, 0)
-	_text.add_theme_constant_override("line_spacing", -2)
 	paper.add_child(_text)
+	tooltip_text = CardText.tooltip(c)
 	paper.visible = rules != ""
 	var gem := _gem(Vector2(-8, -8), 36, Palette.MAGIC, str(c.cost), 18)
 	add_child(gem)
@@ -93,8 +111,48 @@ func art_texture() -> Texture2D:
 	return _art.texture
 
 
-func text_label() -> Label:
+func text_label() -> RichTextLabel:
 	return _text
+
+
+## The default font, emboldened (works on the web too, where there are no system fonts).
+static func bold_font() -> FontVariation:
+	if _bold == null:
+		_bold = FontVariation.new()
+		_bold.base_font = ThemeDB.fallback_font
+		_bold.variation_embolden = 0.9
+	return _bold
+
+
+## Gold glow around a Combo card while its Combo is on (you already played a card this turn).
+func set_combo(on: bool) -> void:
+	if not on and _combo == null:
+		return
+	if _combo == null:
+		_combo = Panel.new()
+		_combo.name = "ComboGlow"
+		_combo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_combo.position = Vector2(-5, -5)
+		_combo.size = SIZE + Vector2(10, 10)
+		_combo.show_behind_parent = false
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0, 0, 0, 0)
+		sb.border_color = Palette.GOLD
+		sb.set_border_width_all(4)
+		sb.set_corner_radius_all(15)
+		sb.shadow_color = Color(Palette.GOLD, 0.8)
+		sb.shadow_size = 10
+		_combo.add_theme_stylebox_override("panel", sb)
+		add_child(_combo)
+		move_child(_combo, 0)
+		var tw := _combo.create_tween().set_loops()
+		tw.tween_property(_combo, "modulate:a", 0.55, 0.6).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(_combo, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
+	_combo.visible = on
+
+
+func combo_on() -> bool:
+	return _combo != null and _combo.visible
 
 
 func cost_label() -> Label:

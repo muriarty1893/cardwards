@@ -62,7 +62,7 @@ func test_card_faces() -> bool:
 		w.setup(c, 0)
 		assert_true(w.art_texture() != null, "art for %s" % c.id)
 		if CardText.render(c) != "":
-			assert_eq(w.text_label().text, CardText.render(c), "rules text on %s" % c.id)
+			assert_eq(w.text_label().get_parsed_text(), CardText.render(c), "rules text on %s" % c.id)
 		w.free()
 	return true
 
@@ -217,4 +217,57 @@ func test_board_clear_of_hud() -> bool:
 					for r: Rect2 in rects:
 						assert_true(not r.has_point(s), "tile p%d l%d corner clear of HUD panel %s (%s)" % [p, l, r, s])
 	m.queue_free()
+	return true
+
+
+func test_card_text_bold_and_tooltip() -> bool:
+	var w := CardWidget.new()
+	w.setup(CardDB.card(&"mossback"), -1)
+	assert_true("[b]Guard[/b]" in w.text_label().text, "Guard in bold (%s)" % w.text_label().text)
+	assert_true("Guard:" in w.tooltip_text, "tooltip has the Guard rule")
+	w.free()
+	return true
+
+
+func test_hand_notes_beside_hovered_card() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	var hand := Hand.new()
+	tree.root.add_child(hand)
+	hand.size = Vector2(1280, 720)
+	var cards: Array[CardData] = [CardDB.card(&"mossback"), CardDB.card(&"fireball"), CardDB.card(&"gumdrop")]
+	hand.show_hand(cards, [true, true, true] as Array[bool])
+	hand.hover(0)
+	await tree.process_frame
+	var n: KeywordNotes = hand.notes()
+	assert_true(n != null, "notes for Mossback")
+	if n:
+		var r := Rect2(n.global_position, n.size)
+		assert_true(Rect2(Vector2.ZERO, hand.size).encloses(r), "notes on screen (%s)" % r)
+		assert_true(not r.intersects(hand.hovered_rect()), "notes beside the card, not over it")
+	hand.hover(-1)
+	await tree.process_frame
+	assert_true(hand.notes() == null, "notes gone when nothing is hovered")
+	hand.queue_free()
+	await tree.process_frame
+	return true
+
+
+func test_combo_glow_only_on_combo_cards() -> bool:
+	var combo: CardData = null
+	for c: CardData in CardDB.collectible_cards():
+		if CardText.has_combo(c):
+			combo = c
+			break
+	assert_true(combo != null, "some card has Combo")
+	var hand := Hand.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(hand)
+	hand.size = Vector2(1280, 720)
+	hand.show_hand([combo, CardDB.card(&"mossback")] as Array[CardData], [true, true] as Array[bool])
+	var ws: Array = hand.get_children().filter(func(x: Node) -> bool: return x is CardWidget)
+	hand.set_combo(true)
+	assert_true((ws[0] as CardWidget).combo_on(), "combo card glows")
+	assert_true(not (ws[1] as CardWidget).combo_on(), "other card doesn't")
+	hand.set_combo(false)
+	assert_true(not (ws[0] as CardWidget).combo_on(), "glow off")
+	hand.queue_free()
 	return true

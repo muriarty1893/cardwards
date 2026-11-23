@@ -35,6 +35,24 @@ static func render_bbcode(c: CardData) -> String:
 
 ## One "Name: rule" line per mechanic the card uses; empty if none.
 static func tooltip(c: CardData) -> String:
+	var lines: Array[String] = []
+	for k: StringName in mechanics(c):
+		lines.append("%s: %s" % [Keywords.NAMES[k], Keywords.RULES[k]])
+	if c.tribe != &"":
+		lines.append("%s: %s" % [Tribes.NAMES[c.tribe], Tribes.rules_text(c.tribe)])
+	return "\n".join(lines)
+
+
+## True when one of the card's effects needs Combo.
+static func has_combo(c: CardData) -> bool:
+	for e: EffectData in c.effects:
+		if e.combo:
+			return true
+	return false
+
+
+## The mechanics (Keywords.NAMES keys) the card uses, in the order its notes list them.
+static func mechanics(c: CardData) -> Array[StringName]:
 	var used: Array[StringName] = []
 	for k: StringName in Keywords.ORDER:
 		if k in c.keywords:
@@ -57,12 +75,7 @@ static func tooltip(c: CardData) -> String:
 			used.append(&"level_up")
 	if c.field:
 		used.push_front(&"field")
-	var lines: Array[String] = []
-	for k: StringName in used:
-		lines.append("%s: %s" % [Keywords.NAMES[k], Keywords.RULES[k]])
-	if c.tribe != &"":
-		lines.append("%s: %s" % [Tribes.NAMES[c.tribe], Tribes.rules_text(c.tribe)])
-	return "\n".join(lines)
+	return used
 
 
 static func _render(c: CardData, bold: bool) -> String:

@@ -34,6 +34,9 @@ var camera: Camera3D
 var _shown: Array[CardData] = []
 var _hover: int = -1
 var _drag: int = -1
+## Rules notes beside the hovered card (null when none is hovered or it has no mechanics).
+var _notes: KeywordNotes
+var _notes_for: int = -1
 var enabled: bool = true
 ## Where the last dragged card was released (playback flies the card from here).
 var last_drop_pos: Vector2 = Vector2.ZERO
@@ -57,6 +60,7 @@ func show_hand(cards: Array[CardData], playable: Array[bool], costs: Array[int] 
 	_cards.clear()
 	_hover = -1
 	_drag = -1
+	_notes_for = -2
 	_hide_3d()
 	for i: int in cards.size():
 		var w := CardWidget.new()
@@ -137,6 +141,45 @@ func _layout(animated: bool = true) -> void:
 			w.position = pos
 			w.scale = sc
 			w.rotation = rot
+	_update_notes()
+
+
+## Shows the keyword notes beside the hovered card (not while dragging).
+func _update_notes() -> void:
+	var want: int = _hover if _drag < 0 and _hover >= 0 and _hover < _cards.size() else -1
+	if want == _notes_for:
+		if is_instance_valid(_notes):
+			_place_notes()
+		return
+	_notes_for = want
+	if is_instance_valid(_notes):
+		_notes.queue_free()
+	_notes = null
+	if want < 0:
+		return
+	_notes = KeywordNotes.make(_cards[want].card)
+	if _notes == null:
+		return
+	_notes.z_index = 12
+	add_child(_notes)
+	_notes.reset_size()
+	_place_notes()
+
+
+func _place_notes() -> void:
+	_notes.reset_size()
+	_notes.position = KeywordNotes.place(_hover_rect(_notes_for), _notes.size, size)
+
+
+## The notes shown beside the hovered card, or null.
+func notes() -> KeywordNotes:
+	return _notes if is_instance_valid(_notes) else null
+
+
+## Lights Combo cards while Combo is on (the player already played a card this turn).
+func set_combo(on: bool) -> void:
+	for w: CardWidget in _cards:
+		w.set_combo(on and CardText.has_combo(w.card))
 
 
 func _notification(what: int) -> void:

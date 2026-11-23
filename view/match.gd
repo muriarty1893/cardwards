@@ -413,6 +413,7 @@ func refresh_ui() -> void:
 			tops.append(d[d.size() - 1] if not d.is_empty() else null)
 		stacks.set_counts([state.players[0].deck.size(), state.players[1].deck.size()], [state.players[0].discard.size(), state.players[1].discard.size()], tops)
 	hand.show_hand(state.players[HUMAN].hand, hand_playable(), hand_costs())
+	hand.set_combo(state.active == HUMAN and state.players[HUMAN].cards_played > 0)
 	var only_end: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and Rules.legal_actions(state).size() == 1
 	hud.set_end_turn_pulse(only_end and not busy)
 	var paused: bool = hud.is_paused()

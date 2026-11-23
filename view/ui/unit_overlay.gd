@@ -18,6 +18,7 @@ var _entries: Array[Array] = []
 var _bars: Array[Array] = []
 var _badges: Array[Array] = []
 var _hover: CardWidget
+var _hover_notes: KeywordNotes
 var _hover_key: String = ""
 ## The enlarged card lives on its own layer above the HUD so nothing covers it.
 var _hover_layer: CanvasLayer
@@ -216,6 +217,9 @@ func _update_hover() -> void:
 	if _hover:
 		_hover.queue_free()
 		_hover = null
+	if _hover_notes:
+		_hover_notes.queue_free()
+		_hover_notes = null
 	if hit.is_empty():
 		return
 	var lane: GameState.LaneState = _m.state.players[hit["player"]].lanes[hit["lane"]]
@@ -233,6 +237,16 @@ func _update_hover() -> void:
 		return
 	var at: Vector2 = _m.rig.camera.unproject_position((view as Node3D).global_position + Vector3(0, 0.6, 0))
 	_hover.position = hover_rect(at, size, _m.hud.corner_rects(), size.y - Hud.HAND_STRIP_H).position
+	_hover_notes = KeywordNotes.make(c)
+	if _hover_notes:
+		_hover_layer.add_child(_hover_notes)
+		_hover_notes.reset_size()
+		_hover_notes.position = KeywordNotes.place(Rect2(_hover.position, CardWidget.SIZE * HOVER_SCALE), _hover_notes.size, size)
+
+
+## The notes beside the enlarged board card, or null.
+func hover_notes() -> KeywordNotes:
+	return _hover_notes
 
 
 # --- Widgets -----------------------------------------------------------------
