@@ -104,7 +104,7 @@ func test_hushed_source_runs_nothing() -> bool:
 
 func test_heal_variants() -> bool:
 	var s: GameState = Fx.blank()
-	s.players[0].hero_hp = 24
+	s.players[0].hero_hp = GameState.MAX_HP - 1
 	var me: CardData = Fx.card(&"me", C, 1, 1, 9, [], [
 		Fx.eff(&"on_boop", &"heal", 2, &"self"), Fx.eff(&"on_boop", &"heal", 2, &"own_hero"), Fx.eff(&"on_boop", &"heal", 1, &"all_own_creatures")])
 	Fx.put(s, 0, 0, me).damage = 5
@@ -113,7 +113,7 @@ func test_heal_variants() -> bool:
 	Effects.run(s, 0, 0, me, &"on_boop", [], ev)
 	assert_eq(s.players[0].lanes[0].creature.damage, 2, "self 2 then all 1")
 	assert_eq(s.players[0].lanes[3].creature.damage, 3, "all own 1")
-	assert_eq(s.players[0].hero_hp, 25, "hero capped at 25")
+	assert_eq(s.players[0].hero_hp, GameState.MAX_HP, "hero capped at max")
 	var hut: CardData = Fx.card(&"hut", B, 1, 0, 0, [], [Fx.eff(&"start_of_turn", &"heal", 2, &"lane_creature")])
 	Effects.run(s, 0, 3, hut, &"start_of_turn", [], ev)
 	assert_eq(s.players[0].lanes[3].creature.damage, 1, "lane creature")
@@ -130,7 +130,7 @@ func test_damage_opposing_and_enemy_hero() -> bool:
 	var ev: Array[GameEvent] = []
 	Effects.run(s, 0, 2, c, &"on_boop", [], ev)
 	assert_eq(s.players[1].lanes[2].creature.damage, 2, "opposing")
-	assert_eq(s.players[1].hero_hp, 22, "enemy hero")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 3, "enemy hero")
 	return true
 
 

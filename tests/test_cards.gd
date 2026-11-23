@@ -30,9 +30,9 @@ func test_puffcap_and_rootstalker_heal_hero() -> bool:
 	_boop(s, 0, 0)
 	assert_eq(s.players[0].hero_hp, 22, "puffcap boop")
 	assert_true(Rules.has_keyword(s, 0, 0, &"second_wind"), "puffcap second wind")
-	s.players[0].hero_hp = 24
+	s.players[0].hero_hp = GameState.MAX_HP - 1
 	_cast(s, 0, &"rootstalker", 1)
-	assert_eq(s.players[0].hero_hp, 25, "rootstalker on play, capped at 25")
+	assert_eq(s.players[0].hero_hp, GameState.MAX_HP, "rootstalker on play, capped at max")
 	assert_true(Rules.has_keyword(s, 0, 1, &"leech"), "rootstalker leech")
 	return true
 
@@ -111,7 +111,7 @@ func test_magmaw() -> bool:
 	var s: GameState = Fx.blank()
 	Fx.put_creature(s, 0, 0, &"magmaw")
 	_boop(s, 0, 0)
-	assert_eq(s.players[1].hero_hp, 23, "2 to enemy hero")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 2, "2 to enemy hero")
 	return true
 
 
@@ -155,7 +155,7 @@ func test_smokestack() -> bool:
 	Fx.put_building(s, 0, 2, &"smokestack")
 	Fx.fill_deck(s, 1, &"mossback", 3)
 	var ev: Array[GameEvent] = Rules.apply(s, Action.end_turn(0))
-	assert_eq(s.players[1].hero_hp, 24, "smokestack end of turn")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 1, "smokestack end of turn")
 	assert_true(&"ability_triggered" in Fx.types(ev), "announced")
 	return true
 

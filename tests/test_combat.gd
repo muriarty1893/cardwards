@@ -50,7 +50,7 @@ func test_attack_hero_no_hit_back() -> bool:
 	var a: GameState.CreatureState = Fx.put(s, 0, 1, _mk(4, 4))
 	Fx.put(s, 1, 1, _mk(5, 5))
 	_hit(s, 1, -1)
-	assert_eq(s.players[1].hero_hp, 21, "hero 25 - 4")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 4, "hero start - 4")
 	assert_eq(a.damage, 0, "no hit-back from heroes")
 	return true
 
@@ -147,7 +147,7 @@ func test_flurry_twice_then_done() -> bool:
 	_hit(s, 1, -1)
 	assert_true(Rules.can_attack(s, 0, 1), "second attack allowed")
 	_hit(s, 1, -1)
-	assert_eq(s.players[1].hero_hp, 21, "two hits")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 4, "two hits")
 	assert_true(not Rules.can_attack(s, 0, 1), "done")
 	return true
 

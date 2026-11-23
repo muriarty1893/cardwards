@@ -5,9 +5,9 @@ extends RefCounted
 ## CHOOSING: waiting for a Dream Up pick (only CHOOSE is legal).
 enum Phase { MAIN, OVER, CHOOSING }
 
-const START_HP := 25
+const START_HP := 40
 const MAX_ARMOUR := 20
-const MAX_HP := 25
+const MAX_HP := 40
 const START_HAND := 5
 const HAND_LIMIT := 8
 ## Max magic grows by 1 each turn up to this.

@@ -42,7 +42,7 @@ func test_flock_hits_heroes_harder() -> bool:
 	Fx.put_creature(s, 0, 0, &"flarebeak")  # 3/3 flyer
 	Fx.put_creature(s, 0, 1, &"ashmite")
 	Rules.apply(s, Action.attack(0, 0, -1))
-	assert_eq(s.players[1].hero_hp, 25 - 4, "3 + flock 1 to the hero")
+	assert_eq(s.players[1].hero_hp, GameState.START_HP - 4, "3 + flock 1 to the hero")
 	return true
 
 

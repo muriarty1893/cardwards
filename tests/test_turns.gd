@@ -15,7 +15,7 @@ func test_setup() -> bool:
 	for p: int in 2:
 		assert_eq(s.players[p].hand.size(), 5 if p == s.first_player else 6, "hand 5, or 6 with Star Shard, p%d" % p)
 		assert_eq(s.players[p].deck.size(), 25, "deck 25 p%d" % p)
-		assert_eq(s.players[p].hero_hp, 25, "hero 25 p%d" % p)
+		assert_eq(s.players[p].hero_hp, GameState.START_HP, "hero start p%d" % p)
 	# Every lane starts bare (living board spec 2), whatever the deck.
 	for i: int in 4:
 		assert_eq(s.players[0].lanes[i].land, Lands.MEADOW, "p0 lane %d is Meadow" % i)
@@ -54,7 +54,7 @@ func test_fatigue() -> bool:
 	var s: GameState = Fx.blank()
 	var ev: Array[GameEvent] = []
 	Rules.draw(s, 0, ev)
-	assert_eq(s.players[0].hero_hp, 23, "fatigue 2")
+	assert_eq(s.players[0].hero_hp, GameState.START_HP - 2, "fatigue 2")
 	assert_eq(ev[0].type, &"fatigue", "fatigue event")
 	assert_eq(ev[0].data["amount"], 2, "fatigue amount")
 	return true
