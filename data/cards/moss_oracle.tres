@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="Eff_moss_oracle_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"dream_up"
+filter_kind = 2
+
+[resource]
+script = ExtResource("1_card")
+id = &"moss_oracle"
+display_name = "Moss Oracle"
+land = 0
+level = 2
+cost = 4
+attack = 3
+health = 4
+tribe = &"blob"
+effects = Array[ExtResource("2_eff")]([SubResource("Eff_moss_oracle_0")])

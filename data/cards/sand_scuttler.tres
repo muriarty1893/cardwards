@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"sand_scuttler"
+display_name = "Sand Scuttler"
+land = 5
+level = 1
+cost = 1
+attack = 1
+health = 3
+keywords = Array[StringName]([&"sturdy"])
+tribe = &"blob"

@@ -7,6 +7,11 @@ unless noted.
 ## Quaternius (https://quaternius.com), CC0 1.0
 
 - `monsters/`: "Ultimate Monsters" pack (creature models, Big / Blob / Flying).
+- `monsters/extra/`: single models from free Quaternius packs: Crab, Bee, Enemy ("Ultimate Platformer Pack", itch.io
+  quaternius.itch.io/ultimate-platformer-pack); Rat, Frog, Snake ("Easy Enemy Pack", itch.io); Velociraptor ("Animated
+  LowPoly Dinosaurs", itch.io); Fox, Bird, Fish ("Animals Pack"), Llama, Pig, Sheep ("Farm Animals"), Wolf ("Animal
+  Pack Vol.2"), Dragon, Skeleton, Slime ("Animated Monster Pack"), from the OpenGameArt mirrors
+  (opengameart.org/content/all-cc0-uploader-quaternius). Animation names normalised on import (extra_import.gd).
 - `monsters/cute/`: "Cute Animated Monsters" (Aug 2020), from the OpenGameArt mirror
   https://opengameart.org/content/textured-cute-monster-pack. Textures brightened x1.5 for the game's lighting.
 - `buildings/`: "Ultimate Fantasy RTS" pack (files renamed to card ids).
@@ -54,9 +59,10 @@ Change: the black background square was removed so the icons are white on transp
   star-swirl, snowing, spiral-shell, volcano, flame-claws, heat-haze, guillotine, burning-book, root-tip,
   leaf-swirl, thorny-vine, wolf-howl, back-forth, stiletto, punch, lightning-frequency, shattered-glass,
   frozen-orb, ice-bolt, snowman, bubbles, sprint, dripping-goo, heart-drop, crossed-slashes, hood,
-  angel-wings, spark-spirit.
+  angel-wings, spark-spirit, shield-reflect, mirror-mirror, sun-radiations, acorn, scroll-unfurled, match-tip,
+  crystal-ball, ice-shield, sundial, stone-tower, ice-cube, stone-block, sunbeams.
 - `icons/`, by **Delapouite** (https://delapouite.com): card-exchange, falling-rocks, chimney,
-  mushrooms-cluster, spiral-lollipop.
+  mushrooms-cluster, spiral-lollipop, sandstorm, present.
 - `icons/`, by **Willdabeast** (https://wjbstories.blogspot.com): round-shield.
 - `icons/`, by **Sbed** (https://opengameart.org/content/95-game-icons): health-increase.
 - `icons/`, by **Zeromancer**: heart-plus.

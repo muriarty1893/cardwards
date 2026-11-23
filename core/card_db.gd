@@ -4,7 +4,7 @@ extends RefCounted
 
 const CARD_DIR := "res://data/cards"
 const DECK_DIR := "res://data/decks"
-const DECK_ORDER: Array[StringName] = [&"grove_guard", &"blaze_rush", &"sugar_storm", &"deep_freeze"]
+const DECK_ORDER: Array[StringName] = [&"grove_guard", &"blaze_rush", &"sugar_storm", &"deep_freeze", &"sun_fortress"]
 
 static var _cards: Dictionary[StringName, CardData] = {}
 static var _card_list: Array[CardData] = []
@@ -111,7 +111,9 @@ static func _ensure_loaded() -> void:
 		_cards[c.id] = c
 		_card_list.append(c)
 	_card_list.sort_custom(func(a: CardData, b: CardData) -> bool:
-		return a.land < b.land if a.land != b.land else _ORDER.find(a.id) < _ORDER.find(b.id))
+		var la: int = _land_rank(a.land)
+		var lb: int = _land_rank(b.land)
+		return la < lb if la != lb else _ORDER.find(a.id) < _ORDER.find(b.id))
 	for file: String in ResourceLoader.list_directory(DECK_DIR):
 		if not file.ends_with(".tres"):
 			continue
@@ -122,15 +124,22 @@ static func _ensure_loaded() -> void:
 		_decks[d.id] = d
 
 
+## Lands in display order (CardData.REAL_LANDS), Neutral last.
+static func _land_rank(land: int) -> int:
+	var i: int = CardData.REAL_LANDS.find(land)
+	return i if i >= 0 else 99
+
+
 ## Display order inside each land (matches the spec tables).
 const _ORDER: Array[StringName] = [
 	&"sporeling", &"glowmoth", &"mossback", &"barkbeetle", &"puffcap", &"glimmer_morel", &"pain_shroom", &"rootstalker", &"elder_shroomhulk", &"spore_hut", &"glowcap_lantern", &"fairy_ring", &"rain_of_spores", &"regrowth", &"bark_shield", &"bark_coat", &"deep_roots", &"grove_roar", &"thorn_lash", &"spore_bloom",
-	&"sporemoth", &"mossback_colossus",
+	&"sporemoth", &"mossback_colossus", &"leaf_finch", &"bog_toad", &"moss_oracle", &"seed_pod",
 	&"hot_head", &"cinderpup", &"emberkit", &"ashmite", &"cinder_wisp", &"flarebeak", &"magmaw", &"blazehorn", &"inferno_drake", &"kiln_tower", &"smokestack", &"bellows_forge", &"stoke", &"overheat", &"ember_pact", &"fireball", &"finish_off", &"ember_rain", &"volcano",
-	&"twinflame_hound", &"magma_wraith",
+	&"twinflame_hound", &"magma_wraith", &"ember_wyrmling", &"magma_hog", &"spark_scroll", &"kindle",
 	&"gummy_cub", &"gumdrop", &"taffy_snail", &"cotton_puff", &"sugar_smuggler", &"lollibat", &"sugar_sprite", &"jellywobble", &"bonbon_behemoth", &"sugar_shack", &"candy_mill", &"gingerbread_gate", &"sugar_shiv", &"sugar_high", &"sugar_rush", &"swap_trick", &"jawbreaker", &"taffy_pull", &"candy_shell", &"sugar_rain",
-	&"gummy_goliath", &"candyfloss_bat",
+	&"gummy_goliath", &"candyfloss_bat", &"jelly_fish", &"taffy_serpent", &"cotton_sheep", &"lucky_wrapper",
 	&"snowmite", &"iceling", &"frostwisp", &"frostfang", &"snow_pup", &"glacier_tortoise", &"ice_sage", &"rimewing", &"blizzard_titan", &"ice_wall", &"frost_spire", &"frost_lookout", &"cold_snap", &"icicle", &"crack_the_ice", &"avalanche", &"whiteout", &"snowmanify", &"snowstorm",
-	&"glacial_wisp", &"snowfang_alpha", &"snowman",
+	&"glacial_wisp", &"snowfang_alpha", &"snowman", &"snow_wolf", &"frost_cairn", &"snow_globe", &"ice_armor",
+	&"sand_scuttler", &"meerkeep", &"sand_fox", &"sun_scarab", &"dune_raptor", &"sandwraith", &"oasis_alpaca", &"lamp_djinn", &"sun_obelisk", &"sandstone_watchtower", &"sun_shield", &"sandstorm", &"mirage", &"heatwave",
 	&"star_shard",
 ]

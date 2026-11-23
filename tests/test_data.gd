@@ -15,10 +15,42 @@ const WHOS: Array[StringName] = [
 	&"chosen_discard_creature", &"self", &"opposing", &"damaged_creature", &"lane_creature",
 	&"all_enemy_creatures", &"all_own_creatures", &"enemy_hero", &"own_hero", &"same_target", &"own_on_land",
 	&"chosen_enemy_creature", &"chosen_damaged_enemy", &"chosen_undamaged_creature", &"chosen_frozen_enemy", &"other_enemies",
+	&"all_away_creatures",
 ]
 
 ## id: [level, cost, atk, hp, keywords, spell_power] (spec section 6; card expansion 2 spec 5).
 const SPEC: Dictionary = {
+	# Sunny Dunes and the second new-card batch (2026-11-23)
+	&"sand_scuttler": [1, 1, 1, 3, [&"sturdy"], 0],
+	&"meerkeep": [1, 2, 1, 3, [&"bask"], 0],
+	&"sand_fox": [1, 2, 3, 1, [&"dash"], 0],
+	&"sun_scarab": [1, 3, 2, 3, [], 0],
+	&"dune_raptor": [2, 3, 2, 3, [], 0],
+	&"sandwraith": [2, 4, 3, 4, [&"hidden", &"sturdy"], 0],
+	&"oasis_alpaca": [2, 4, 2, 5, [&"bask"], 0],
+	&"lamp_djinn": [3, 6, 5, 6, [], 1],
+	&"sun_obelisk": [0, 2, 0, 0, [], 0],
+	&"sandstone_watchtower": [0, 3, 0, 0, [], 0],
+	&"sun_shield": [0, 2, 0, 0, [], 0],
+	&"sandstorm": [0, 4, 0, 0, [], 0],
+	&"mirage": [0, 1, 0, 0, [], 0],
+	&"heatwave": [0, 3, 0, 0, [], 0],
+	&"bog_toad": [1, 3, 2, 4, [&"sturdy"], 0],
+	&"leaf_finch": [1, 2, 2, 2, [&"bask"], 0],
+	&"moss_oracle": [2, 4, 3, 4, [], 0],
+	&"seed_pod": [0, 1, 0, 0, [], 0],
+	&"ember_wyrmling": [2, 3, 3, 3, [&"bask"], 0],
+	&"magma_hog": [2, 4, 3, 5, [&"sturdy"], 0],
+	&"spark_scroll": [0, 1, 0, 0, [], 0],
+	&"kindle": [0, 2, 0, 0, [], 0],
+	&"jelly_fish": [1, 2, 2, 2, [&"bubble"], 0],
+	&"taffy_serpent": [1, 3, 2, 5, [&"sturdy"], 0],
+	&"cotton_sheep": [2, 4, 3, 4, [&"bask"], 0],
+	&"lucky_wrapper": [0, 1, 0, 0, [], 0],
+	&"snow_wolf": [1, 3, 3, 2, [&"dash"], 0],
+	&"snow_globe": [0, 1, 0, 0, [], 0],
+	&"ice_armor": [0, 2, 0, 0, [], 0],
+	&"frost_cairn": [0, 2, 0, 0, [], 0],
 	# Card expansion 2
 	&"glowmoth": [1, 2, 2, 1, [&"hidden"], 0], &"sporemoth": [1, 4, 4, 3, [&"venom", &"hidden"], 0],
 	&"barkbeetle": [1, 3, 3, 3, [], 0], &"mossback_colossus": [1, 5, 4, 8, [&"guard"], 0],
@@ -65,6 +97,37 @@ const SPEC: Dictionary = {
 
 ## Rules text, verbatim from spec section 6.
 const SPEC_TEXT: Dictionary = {
+	# Sunny Dunes and the second new-card batch (2026-11-23)
+	&"sand_scuttler": "Sturdy.",
+	&"meerkeep": "Bask. Boop: Gain 1 armour.",
+	&"sand_fox": "Dash.",
+	&"sun_scarab": "On play: Gain 2 armour.",
+	&"dune_raptor": "On play: Dream Up a Sunny Dunes card.",
+	&"sandwraith": "Hidden. Sturdy.",
+	&"oasis_alpaca": "Bask. End of your turn: Heal your hero 2.",
+	&"lamp_djinn": "Spell Power +1. On play: Dream Up a spell.",
+	&"sun_obelisk": "The creature in this lane has Sturdy.",
+	&"sandstone_watchtower": "Start of your turn: Gain 2 armour.",
+	&"sun_shield": "Give one of your creatures +1/+2 and give it Sturdy.",
+	&"sandstorm": "Deal 2 damage to every creature that isn't at home.",
+	&"mirage": "Dream Up a creature.",
+	&"heatwave": "Field. End of each turn: Deal 1 damage to every creature that isn't at home.",
+	&"bog_toad": "Sturdy.",
+	&"leaf_finch": "Bask.",
+	&"moss_oracle": "On play: Dream Up a spell.",
+	&"seed_pod": "Dream Up a Mushroom Forest card.",
+	&"ember_wyrmling": "Bask.",
+	&"magma_hog": "Sturdy.",
+	&"spark_scroll": "Dream Up an Ember Flats card.",
+	&"kindle": "Deal 3 damage to a creature. Combo: Dream Up an Ember Flats card.",
+	&"jelly_fish": "Bubble.",
+	&"taffy_serpent": "Sturdy.",
+	&"cotton_sheep": "Bask.",
+	&"lucky_wrapper": "Dream Up a Candy Hills card.",
+	&"snow_wolf": "Dash.",
+	&"snow_globe": "Dream Up a Frostpeak card.",
+	&"ice_armor": "Give one of your creatures +0/+3 and give it Sturdy.",
+	&"frost_cairn": "The opposing creature has −1 ATK (minimum 0).",
 	# Card expansion 2
 	&"glowmoth": "Hidden. Merges with Sporeling.",
 	&"sporemoth": "Merged form of Glowmoth + Sporeling. Venom. Hidden. Boop: Heal this creature 2. Level up: Heal your hero 2.",
@@ -159,12 +222,12 @@ const SPEC_TEXT: Dictionary = {
 
 func test_card_count() -> bool:
 	var cards: Array[CardData] = CardDB.all_cards()
-	assert_eq(cards.size(), 88, "88 cards (47 + card expansion 2's 41)")
-	assert_eq(CardDB.collectible_cards().size(), 79, "79 collectible")
+	assert_eq(cards.size(), 118, "118 cards (47 + card expansion 2's 41 + Sunny Dunes 14 + 16 more)")
+	assert_eq(CardDB.collectible_cards().size(), 109, "109 collectible")
 	# 10 per land from Rules 2.0, each land's field spell, the two armour spells, then expansion 2 (10 per land,
-	# Frost 11 with the Snowman token).
-	var per_land: Array[int] = [22, 21, 22, 22]
-	for land: int in 4:
+	# Frost 11 with the Snowman token), then 4 per land and Sunny Dunes' 14.
+	var per_land: Dictionary = {0: 26, 1: 25, 2: 26, 3: 26, 5: 14}
+	for land: int in per_land:
 		assert_eq(cards.filter(func(c: CardData) -> bool: return c.land == land).size(), per_land[land], "%d cards for land %d" % [per_land[land], land])
 	var neutral: Array = cards.filter(func(c: CardData) -> bool: return c.land == CardData.Land.NEUTRAL)
 	assert_eq(neutral.size(), 1, "one neutral card")
@@ -211,7 +274,7 @@ func test_cards_validate() -> bool:
 
 func test_decks() -> bool:
 	var decks: Array[DeckData] = CardDB.all_decks()
-	assert_eq(decks.size(), 4, "4 decks")
+	assert_eq(decks.size(), 5, "5 decks")
 	for d: DeckData in decks:
 		assert_eq(d.cards.size(), 30, "%s 30 cards" % d.id)
 		assert_eq(d.lands.size(), 4, "%s 4 lands" % d.id)

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"sandwraith"
+display_name = "Sandwraith"
+land = 5
+level = 2
+cost = 4
+attack = 3
+health = 4
+keywords = Array[StringName]([&"hidden", &"sturdy"])
+tribe = &"spirit"

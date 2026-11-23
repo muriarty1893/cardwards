@@ -26,6 +26,15 @@ const TINTS: Dictionary = {
 	&"b_fairy": Color("#c8ff8a", 0.35),
 	&"b_ginger": Color("#c8853a", 0.4),
 	&"b_lookout": Color("#cfeeff", 0.35),
+	&"sand": Color("#e8c27a", 0.45),
+	&"sun_gold": Color("#ffc94a", 0.5),
+	&"djinn": Color("#6a9cff", 0.5),
+	&"bone": Color("#f2e6cc", 0.35),
+	&"leaf": Color("#7ad15a", 0.45),
+	&"pink": Color("#ff9fd8", 0.5),
+	&"snowy": Color("#e8f4ff", 0.55),
+	&"b_sandstone": Color("#e2b878", 0.55),
+	&"b_cairn": Color("#bfe8ff", 0.45),
 }
 
 ## Creatures: "model" is relative to res://assets/monsters (Quaternius "Ultimate Monsters", CC0).
@@ -111,6 +120,32 @@ const ENTRIES: Dictionary = {
 	# Living board: field spells and armour spells
 	&"volcano": {}, &"snowstorm": {}, &"spore_bloom": {}, &"sugar_rain": {},
 	&"bark_shield": {}, &"candy_shell": {},
+	# Sunny Dunes and the second new-card batch (models: free Quaternius packs under monsters/extra)
+	&"sand_scuttler": {"model": "extra/Crab.gltf", "tint": &"sand"},
+	&"meerkeep": {"model": "extra/Rat.fbx", "tint": &"sand"},
+	&"sand_fox": {"model": "extra/Fox.fbx", "tint": &"none", "turn": 180.0},
+	&"sun_scarab": {"model": "extra/Bee.gltf", "tint": &"sun_gold"},
+	&"dune_raptor": {"model": "extra/Velociraptor.fbx", "tint": &"sand"},
+	&"sandwraith": {"model": "extra/Skeleton.fbx", "tint": &"bone"},
+	&"oasis_alpaca": {"model": "extra/Llama.fbx", "tint": &"none"},
+	&"lamp_djinn": {"model": "extra/Enemy.gltf", "tint": &"djinn"},
+	&"sun_obelisk": {"building": "frost_spire", "tint": &"b_sandstone"},
+	&"sandstone_watchtower": {"building": "kiln_tower", "tint": &"b_sandstone"},
+	&"sun_shield": {}, &"sandstorm": {}, &"mirage": {}, &"heatwave": {},
+	&"bog_toad": {"model": "extra/Frog.fbx", "tint": &"moss"},
+	&"leaf_finch": {"model": "extra/Bird.fbx", "tint": &"leaf"},
+	&"moss_oracle": {"model": "extra/Slime.fbx", "tint": &"moss"},
+	&"seed_pod": {},
+	&"ember_wyrmling": {"model": "extra/Dragon.fbx", "tint": &"ember"},
+	&"magma_hog": {"model": "extra/Pig.fbx", "tint": &"ember"},
+	&"spark_scroll": {}, &"kindle": {},
+	&"jelly_fish": {"model": "extra/Fish.fbx", "tint": &"candy_pink"},
+	&"taffy_serpent": {"model": "extra/Snake.fbx", "tint": &"taffy"},
+	&"cotton_sheep": {"model": "extra/Sheep.fbx", "tint": &"pink"},
+	&"lucky_wrapper": {},
+	&"snow_wolf": {"model": "extra/Wolf.fbx", "tint": &"snowy", "turn": 270.0},
+	&"frost_cairn": {"building": "ice_wall", "tint": &"b_cairn"},
+	&"snow_globe": {}, &"ice_armor": {},
 }
 
 
@@ -147,6 +182,16 @@ const SPELL_ICONS: Dictionary = {
 	&"whiteout": "res://assets/icons/frozen-orb.svg",
 	&"icicle": "res://assets/icons/ice-bolt.svg",
 	&"snowmanify": "res://assets/icons/snowman.svg",
+	&"sun_shield": "res://assets/icons/shield-reflect.svg",
+	&"sandstorm": "res://assets/icons/sandstorm.svg",
+	&"mirage": "res://assets/icons/mirror-mirror.svg",
+	&"heatwave": "res://assets/icons/sun-radiations.svg",
+	&"seed_pod": "res://assets/icons/acorn.svg",
+	&"spark_scroll": "res://assets/icons/scroll-unfurled.svg",
+	&"kindle": "res://assets/icons/match-tip.svg",
+	&"lucky_wrapper": "res://assets/icons/present.svg",
+	&"snow_globe": "res://assets/icons/crystal-ball.svg",
+	&"ice_armor": "res://assets/icons/ice-shield.svg",
 }
 ## Glow behind spell icons, by land.
 const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff"), Color("#ffe07a"), Color("#ffd27a")]
@@ -175,6 +220,10 @@ const EFFECTS: Dictionary = {
 	&"stoke": &"fireball", &"ember_pact": &"damage", &"deep_roots": &"magic", &"thorn_lash": &"damage",
 	&"taffy_pull": &"regrowth", &"sugar_shiv": &"damage", &"jawbreaker": &"damage", &"whiteout": &"cold_snap",
 	&"icicle": &"avalanche",
+	&"meerkeep": &"armour", &"sun_scarab": &"armour", &"sandstone_watchtower": &"armour", &"oasis_alpaca": &"heal",
+	&"sandstorm": &"damage", &"heatwave": &"field", &"kindle": &"fireball",
+	&"dune_raptor": &"draw", &"lamp_djinn": &"draw", &"moss_oracle": &"draw", &"mirage": &"draw", &"seed_pod": &"draw",
+	&"spark_scroll": &"draw", &"lucky_wrapper": &"draw", &"snow_globe": &"draw",
 }
 
 
@@ -207,6 +256,15 @@ const SPELL_FX: Dictionary = {
 	&"whiteout": {"kind": &"blizzard", "color": Color("#e8f6ff")},
 	&"snowmanify": {"kind": &"swirl", "color": Color("#ffffff")},
 	&"star_shard": {"kind": &"hero", "color": Color("#ffd84a")},
+	&"sun_shield": {"kind": &"circle", "color": Color("#ffc94a")},
+	&"sandstorm": {"kind": &"blizzard", "color": Color("#e8c27a")},
+	&"mirage": {"kind": &"hero", "color": Color("#ffd27a")},
+	&"seed_pod": {"kind": &"hero", "color": Color("#8dff6a")},
+	&"spark_scroll": {"kind": &"hero", "color": Color("#ff8a2a")},
+	&"kindle": {"kind": &"comet", "color": Color("#ff6a1a"), "trail": &"embers", "size": 1.0, "sound": &"fire_whoosh"},
+	&"lucky_wrapper": {"kind": &"hero", "color": Color("#ff9fe0")},
+	&"snow_globe": {"kind": &"hero", "color": Color("#bfe8ff")},
+	&"ice_armor": {"kind": &"circle", "color": Color("#9fd8ff")},
 }
 
 
@@ -221,6 +279,9 @@ const SOUNDS: Dictionary = {
 	&"deep_roots": &"heal", &"bark_coat": &"building_rise", &"thorn_lash": &"explosion", &"grove_roar": &"heal",
 	&"taffy_pull": &"candy_pop", &"sugar_shiv": &"candy_pop", &"jawbreaker": &"candy_pop", &"sugar_high": &"candy_pop",
 	&"crack_the_ice": &"explosion", &"whiteout": &"freeze", &"icicle": &"freeze", &"snowmanify": &"freeze",
+	&"sun_shield": &"building_rise", &"sandstorm": &"attack_whoosh", &"mirage": &"magic_gain", &"heatwave": &"fire_whoosh",
+	&"seed_pod": &"heal", &"spark_scroll": &"magic_gain", &"kindle": &"fire_whoosh", &"lucky_wrapper": &"candy_pop",
+	&"snow_globe": &"magic_gain", &"ice_armor": &"freeze",
 }
 
 
@@ -238,6 +299,9 @@ const BADGES: Dictionary = {
 	&"fairy_ring": "res://assets/icons/heart-plus.svg",
 	&"gingerbread_gate": "res://assets/icons/checked-shield.svg",
 	&"frost_lookout": "res://assets/icons/snowflake-2.svg",
+	&"sun_obelisk": "res://assets/icons/sundial.svg",
+	&"sandstone_watchtower": "res://assets/icons/stone-tower.svg",
+	&"frost_cairn": "res://assets/icons/ice-cube.svg",
 }
 
 
@@ -251,12 +315,15 @@ const KEYWORD_ICONS: Dictionary = {
 	&"flurry": "res://assets/icons/crossed-slashes.svg",
 	&"hidden": "res://assets/icons/hood.svg",
 	&"second_wind": "res://assets/icons/angel-wings.svg",
+	&"sturdy": "res://assets/icons/stone-block.svg",
+	&"bask": "res://assets/icons/sunbeams.svg",
 	&"spell_power": "res://assets/icons/spark-spirit.svg",
 }
 ## Badge colour behind each keyword icon.
 const KEYWORD_COLORS: Dictionary = {
 	&"guard": Color("#c9a24a"), &"bubble": Color("#4ab8e8"), &"dash": Color("#e8803a"), &"venom": Color("#5ab83a"),
 	&"leech": Color("#c8304a"), &"flurry": Color("#8a6ae0"), &"hidden": Color("#5a5a7a"), &"second_wind": Color("#e8c84a"),
+	&"sturdy": Color("#9a8a72"), &"bask": Color("#ffb03a"),
 	&"spell_power": Color("#b04ae8"),
 }
 ## Symbols drawn as icons (the web build has no font with ♥ / ⚔ / ✦).
@@ -306,6 +373,11 @@ static func model_path(id: StringName) -> String:
 ## A merged form's [big partner, rider partner] ids, or [] for other cards.
 static func merge_pair(id: StringName) -> Array:
 	return ENTRIES.get(id, {}).get("merge", [])
+
+
+## Degrees to turn a creature's model so it faces forward like the others (models from other packs).
+static func turn(id: StringName) -> float:
+	return float(ENTRIES.get(id, {}).get("turn", 0.0))
 
 
 static func tint(id: StringName) -> Color:

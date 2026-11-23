@@ -19,6 +19,7 @@ const _WHO: Dictionary = {
 	&"chosen_enemy_creature": "an enemy creature", &"chosen_damaged_enemy": "a damaged enemy creature",
 	&"chosen_undamaged_creature": "an undamaged creature", &"chosen_frozen_enemy": "a frozen enemy creature",
 	&"other_enemies": "every other enemy",
+	&"all_away_creatures": "every creature that isn't at home",
 }
 const _LANE_AURAS: Array[StringName] = [&"lane_atk", &"lane_hp", &"lane_keyword"]
 const _KIND_WORDS: Array[String] = ["creature", "building", "spell"]
@@ -195,7 +196,8 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 		&"dream_up":
 			var land: String = CardData.LAND_NAMES[e.filter_land] + " " if e.filter_land >= 0 else ""
 			var kind: String = _KIND_WORDS[e.filter_kind] if e.filter_kind >= 0 else "card"
-			s = "%s a %s%s" % [_b("Dream Up", bold), land, kind]
+			var noun: String = land + kind
+			s = "%s %s %s" % [_b("Dream Up", bold), "an" if noun.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a", noun]
 		&"lane_damage_taken":
 			s = "The creature in this lane takes %d less damage from attacks and hit-back (minimum 1)" % e.amount
 		&"opposing_atk":

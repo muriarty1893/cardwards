@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="Eff_seed_pod_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"dream_up"
+filter_land = 0
+
+[resource]
+script = ExtResource("1_card")
+id = &"seed_pod"
+display_name = "Seed Pod"
+kind = 2
+land = 0
+cost = 1
+effects = Array[ExtResource("2_eff")]([SubResource("Eff_seed_pod_0")])

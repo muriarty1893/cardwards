@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="Eff_oasis_alpaca_0"]
+script = ExtResource("2_eff")
+when = &"end_of_turn"
+op = &"heal"
+amount = 2
+
+[resource]
+script = ExtResource("1_card")
+id = &"oasis_alpaca"
+display_name = "Oasis Alpaca"
+land = 5
+level = 2
+cost = 4
+attack = 2
+health = 5
+keywords = Array[StringName]([&"bask"])
+tribe = &"beast"
+effects = Array[ExtResource("2_eff")]([SubResource("Eff_oasis_alpaca_0")])

@@ -164,6 +164,8 @@ func _add_blob() -> void:
 func _build_model(scene: PackedScene, tint: Color) -> void:
 	body = scene.instantiate() as Node3D
 	add_child(body)
+	if card:
+		body.rotation.y = deg_to_rad(VisualDB.turn(card.id))
 	Toon.apply(body, tint, 0.0, true)
 	var box: AABB = Palette.bounds(body)
 	var k: float = height / maxf(box.size.y, 0.01)

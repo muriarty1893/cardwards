@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="Eff_ice_armor_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"buff"
+amount2 = 3
+who = &"chosen_own_creature"
+
+[sub_resource type="Resource" id="Eff_ice_armor_1"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"give_keyword"
+who = &"same_target"
+keyword = &"sturdy"
+
+[resource]
+script = ExtResource("1_card")
+id = &"ice_armor"
+display_name = "Ice Armor"
+kind = 2
+land = 3
+cost = 2
+effects = Array[ExtResource("2_eff")]([SubResource("Eff_ice_armor_0"), SubResource("Eff_ice_armor_1")])

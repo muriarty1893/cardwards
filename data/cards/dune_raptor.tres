@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="Eff_dune_raptor_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"dream_up"
+filter_land = 5
+
+[resource]
+script = ExtResource("1_card")
+id = &"dune_raptor"
+display_name = "Dune Raptor"
+land = 5
+level = 2
+cost = 3
+attack = 2
+health = 3
+tribe = &"beast"
+effects = Array[ExtResource("2_eff")]([SubResource("Eff_dune_raptor_0")])
