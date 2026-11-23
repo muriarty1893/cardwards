@@ -103,6 +103,21 @@ func test_illegal_custom_deck_blocked() -> bool:
 	return true
 
 
+## Idle: the empty message line and the empty button row take no space (no gap under JOIN ROOM).
+func test_idle_panel_has_no_empty_rows() -> bool:
+	var saved: Dictionary = _setup(func(_p: String) -> Object: return DeadLink.new())
+	var menu: Node = await _menu()
+	var panel: OnlinePanel = menu.call("open_online")
+	await _tree().process_frame
+	assert_true(not panel.get("_msg").visible, "no empty message line")
+	assert_true(not panel.get("_tools").visible, "no empty button row")
+	panel.press_join("xyz")
+	assert_true(panel.get("_msg").visible, "a message shows")
+	menu.queue_free()
+	_restore(saved)
+	return true
+
+
 func test_join_with_bad_code_shows_message() -> bool:
 	var made: Array = []
 	var saved: Dictionary = _setup(func(_p: String) -> Object:

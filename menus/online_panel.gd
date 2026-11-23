@@ -14,6 +14,7 @@ var _hint: Label
 var _copy: Button
 var _retry: Button
 var _cancel: Button
+var _tools: HBoxContainer
 var _starters: Array[Button] = []
 ## A message from this panel itself (an illegal deck), shown instead of the autoload's.
 var _local_msg: String = ""
@@ -125,6 +126,13 @@ func _request(kind: StringName) -> void:
 func _refresh() -> void:
 	if not is_inside_tree() and _msg == null:
 		return
+	_refresh_rows()
+	# Empty rows take no space, so the idle panel has no gap under JOIN ROOM.
+	_msg.visible = _msg.text != ""
+	_tools.visible = _copy.visible or _retry.visible or _cancel.visible
+
+
+func _refresh_rows() -> void:
 	var st: StringName = Online.state
 	var busy: bool = st in [&"searching", &"hosting", &"joining", &"playing"]
 	for b: Button in _starters:
@@ -230,6 +238,7 @@ func _build() -> void:
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(_hint)
 	var tools := HBoxContainer.new()
+	_tools = tools
 	tools.alignment = BoxContainer.ALIGNMENT_CENTER
 	tools.add_theme_constant_override("separation", 12)
 	vb.add_child(tools)
