@@ -209,6 +209,35 @@ const BADGES: Dictionary = {
 }
 
 
+## One icon per keyword (Keywords.ORDER) plus Spell Power, for creature tags, card tooltips and badges.
+const KEYWORD_ICONS: Dictionary = {
+	&"guard": "res://assets/icons/checked-shield.svg",
+	&"bubble": "res://assets/icons/bubbles.svg",
+	&"dash": "res://assets/icons/sprint.svg",
+	&"venom": "res://assets/icons/dripping-goo.svg",
+	&"leech": "res://assets/icons/heart-drop.svg",
+	&"flurry": "res://assets/icons/crossed-slashes.svg",
+	&"hidden": "res://assets/icons/hood.svg",
+	&"second_wind": "res://assets/icons/angel-wings.svg",
+	&"spell_power": "res://assets/icons/spark-spirit.svg",
+}
+## Badge colour behind each keyword icon.
+const KEYWORD_COLORS: Dictionary = {
+	&"guard": Color("#c9a24a"), &"bubble": Color("#4ab8e8"), &"dash": Color("#e8803a"), &"venom": Color("#5ab83a"),
+	&"leech": Color("#c8304a"), &"flurry": Color("#8a6ae0"), &"hidden": Color("#5a5a7a"), &"second_wind": Color("#e8c84a"),
+	&"spell_power": Color("#b04ae8"),
+}
+## Symbols drawn as icons (the web build has no font with ♥ / ⚔ / ✦).
+const ICON_HEART := "res://assets/icons/heart.svg"
+const ICON_SWORDS := "res://assets/icons/crossed-swords.svg"
+const ICON_SPARKLE := "res://assets/icons/sparkle.svg"
+
+
+static func keyword_icon(kw: StringName) -> Texture2D:
+	var path: String = KEYWORD_ICONS.get(kw, "")
+	return load(path) as Texture2D if path != "" else null
+
+
 static func badge_icon(id: StringName) -> String:
 	return BADGES.get(id, "")
 

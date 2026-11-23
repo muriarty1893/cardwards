@@ -498,22 +498,18 @@ func _weather_moment() -> void:
 
 ## A pink heart floats up (greeting a neighbour).
 func heart() -> void:
-	var h := Label3D.new()
-	h.text = "♥"
-	h.font = load(UiStyle.TITLE_FONT) as FontFile
-	h.font_size = 110
-	h.pixel_size = 0.004
+	var h := Sprite3D.new()
+	h.texture = load(VisualDB.ICON_HEART) as Texture2D
+	h.pixel_size = 0.0007
 	h.modulate = Color("#ff6aa8")
-	h.outline_size = 20
-	h.outline_modulate = Palette.INK
 	h.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	h.no_depth_test = true
+	h.shaded = false
 	h.position = Vector3(0, Island.TOP_Y - BASE_Y + height + 0.15, 0)
 	add_child(h)
 	var tw := h.create_tween().set_parallel(true)
 	tw.tween_property(h, "position", h.position + Vector3(0, 0.45, 0), 1.2)
 	tw.tween_property(h, "modulate:a", 0.0, 1.2).set_ease(Tween.EASE_IN)
-	tw.tween_property(h, "outline_modulate:a", 0.0, 1.2).set_ease(Tween.EASE_IN)
 	tw.chain().tween_callback(h.queue_free)
 
 

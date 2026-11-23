@@ -27,10 +27,14 @@ static func fly(parent: Control, card: CardData, from: Vector2, to: Vector2, fac
 		sb.set_border_width_all(4)
 		sb.set_corner_radius_all(12)
 		back.add_theme_stylebox_override("panel", sb)
-		var star := UiStyle.title(UiStyle.label("✦", 64, Palette.GOLD)) as Label
-		star.size = back.size
-		star.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		star.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var star := TextureRect.new()
+		star.texture = load(VisualDB.ICON_SPARKLE) as Texture2D
+		star.modulate = Palette.GOLD
+		star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		star.size = Vector2(64, 64)
+		star.position = (back.size - star.size) / 2.0
+		star.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		back.add_child(star)
 		f.add_child(back)
 	f.pivot_offset = CardWidget.SIZE / 2.0

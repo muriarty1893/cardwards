@@ -501,13 +501,27 @@ func _hero_bar(left: bool, who: String) -> Control:
 		bar.offset_right = -(12 + 112)
 		bar.offset_top = 14
 		bar.offset_bottom = 14 + BAR.y
-	var hp := UiStyle.title(UiStyle.label("♥ 25", 18, Color.WHITE)) as Label
-	hp.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Heart icon + number (an icon, not a "♥" glyph: the web build has no font with it).
+	var row := HBoxContainer.new()
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_child(row)
+	var heart := TextureRect.new()
+	heart.name = "Heart"
+	heart.texture = load(VisualDB.ICON_HEART) as Texture2D
+	heart.custom_minimum_size = Vector2(16, 16)
+	heart.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	heart.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	heart.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	heart.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(heart)
+	var hp := UiStyle.title(UiStyle.label(str(GameState.START_HP), 18, Color.WHITE)) as Label
 	hp.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hp.add_theme_color_override("font_outline_color", UiStyle.WOOD_INK)
 	hp.add_theme_constant_override("outline_size", 7)
-	bar.add_child(hp)
+	row.add_child(hp)
 	_refs[who + "Bar"] = {"bar": bar, "hp": hp}
 	return bar
 
@@ -518,7 +532,7 @@ func _fill_corner(who: String, ps: GameState.PlayerState, plate_text: String) ->
 	(r["plate"] as Label).text = plate_text
 	var b: Dictionary = _refs[who + "Bar"]
 	(b["bar"] as ProgressBar).value = clampi(ps.hero_hp, 0, GameState.MAX_HP)
-	(b["hp"] as Label).text = "♥ %d" % ps.hero_hp
+	(b["hp"] as Label).text = str(ps.hero_hp)
 
 
 ## Wood with a lighter top edge, like a polished board.

@@ -53,7 +53,8 @@ Change: the black background square was removed so the icons are white on transp
   sprout, wrapped-sweet, snowflake-2, crossed-swords, cut-diamond, checked-shield, sword-break,
   star-swirl, snowing, spiral-shell, volcano, flame-claws, heat-haze, guillotine, burning-book, root-tip,
   leaf-swirl, thorny-vine, wolf-howl, back-forth, stiletto, punch, lightning-frequency, shattered-glass,
-  frozen-orb, ice-bolt, snowman.
+  frozen-orb, ice-bolt, snowman, bubbles, sprint, dripping-goo, heart-drop, crossed-slashes, hood,
+  angel-wings, spark-spirit.
 - `icons/`, by **Delapouite** (https://delapouite.com): card-exchange, falling-rocks, chimney,
   mushrooms-cluster, spiral-lollipop.
 - `icons/`, by **Willdabeast** (https://wjbstories.blogspot.com): round-shield.
@@ -66,6 +67,8 @@ Change: the black background square was removed so the icons are white on transp
   https://fonts.google.com/specimen/Lilita+One .
 
 ## Project art
+
+- `icons/heart.svg`, `icons/sparkle.svg`: simple shapes drawn for this game.
 
 - `card_backs/`: card back designs made for this game by the project owner (backs_v4 set: Ember Reign,
   Frostbound, Verdant Bloom, Candy Realm), resized to 256x358.

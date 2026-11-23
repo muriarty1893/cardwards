@@ -85,8 +85,8 @@ func setup(c: CardData, i: int) -> void:
 	_cost = gem.get_child(gem.get_child_count() - 1) as Label
 	_shown_cost = c.cost
 	if c.is_creature():
-		add_child(_gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, "⚔"))
-		add_child(_gem(Vector2(SIZE.x - 30, 166), 34, Palette.HP, str(c.health), 17, "♥"))
+		add_child(_gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, VisualDB.ICON_SWORDS))
+		add_child(_gem(Vector2(SIZE.x - 30, 166), 34, Palette.HP, str(c.health), 17, VisualDB.ICON_HEART))
 
 
 func art_texture() -> Texture2D:
@@ -134,14 +134,19 @@ func _panel(r: Rect2, bg: Color, border: int, radius: int) -> Panel:
 	return p
 
 
-## Round badge with a number (and a faint symbol behind it).
-func _gem(pos: Vector2, d: float, col: Color, value: String, font: int, symbol: String = "") -> Panel:
+## Round badge with a number (and a faint icon behind it).
+func _gem(pos: Vector2, d: float, col: Color, value: String, font: int, icon: String = "") -> Panel:
 	var g := _panel(Rect2(pos, Vector2(d, d)), col, 3, int(d / 2.0))
-	if symbol != "":
-		var s := UiStyle.label(symbol, int(d * 0.62), Color(1, 1, 1, 0.35))
-		s.size = g.size
-		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		s.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if icon != "":
+		var s := TextureRect.new()
+		s.name = "Symbol"
+		s.texture = load(icon) as Texture2D
+		s.modulate = Color(1, 1, 1, 0.35)
+		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		s.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		s.position = g.size * 0.18
+		s.size = g.size * 0.64
+		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		g.add_child(s)
 	var l := UiStyle.title(UiStyle.label(value, font, Color.WHITE)) as Label
 	l.size = g.size
