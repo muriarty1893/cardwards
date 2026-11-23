@@ -199,10 +199,16 @@ func _tick_clock(delta: float) -> void:
 		_turn_owner = s.active
 		turn_left = TURN_SECONDS
 		_clock_fired = false
-	var paused: bool = m.busy or _playing or _awaiting_echo or m.timing_bar.visible
+	# The clock keeps running while the Dream Up picker waits for us.
+	var picking: bool = m.picker.is_open()
+	var paused: bool = (m.busy and not picking) or _playing or _awaiting_echo or m.timing_bar.visible
 	if not paused:
 		turn_left = maxf(0.0, turn_left - delta)
 	m.hud.set_fuse(turn_left if turn_left <= FUSE_SECONDS else -1.0, FUSE_SECONDS)
+	if turn_left <= 0.0 and picking:
+		# Out of time while choosing: keep the first card; the turn ends once that has played.
+		m.picker.force(0)
+		return
 	if turn_left <= 0.0 and s.active == MatchController.HUMAN and not paused and not _clock_fired:
 		_clock_fired = true
 		m.input.cancel()

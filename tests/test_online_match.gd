@@ -152,6 +152,34 @@ func test_fuse_ends_turn() -> bool:
 	return true
 
 
+## The turn clock keeps running while the Dream Up picker is open; at zero it keeps the first card.
+func test_clock_runs_and_picks_while_choosing() -> bool:
+	var p: Array = await _start(43, 1, false)
+	var m: MatchController = p[3]
+	var d: OnlineRival = m.driver
+	assert_eq(m.state.active, MatchController.HUMAN, "local goes first")
+	# Stand-in pick on the view only (nothing is sent): the clock is what's tested here.
+	m.state.phase = GameState.Phase.CHOOSING
+	m.state.pending_player = MatchController.HUMAN
+	m.busy = true
+	var got: Array = []
+	var cards: Array[CardData] = [CardDB.card(&"gumdrop"), CardDB.card(&"cinderpup"), CardDB.card(&"iceling")]
+	var run := func() -> void: got.append(await m.picker.open(cards))
+	run.call()
+	d.turn_left = 5.0
+	await _tree().create_timer(0.3).timeout
+	assert_true(d.turn_left < 4.95, "clock ran while choosing (%.2f)" % d.turn_left)
+	d.turn_left = 0.01
+	assert_true(await _until(func() -> bool: return not got.is_empty()), "the picker was closed by the clock")
+	assert_eq(got, [0], "first card kept")
+	m.state.phase = GameState.Phase.MAIN
+	m.state.pending_player = -1
+	d.turn_left = 40.0
+	m.busy = false
+	_cleanup(p)
+	return true
+
+
 func test_leave_confirms_then_concedes() -> bool:
 	var p: Array = await _start(44, 0, false)
 	var relay: FakeRelay = p[0]

@@ -120,6 +120,7 @@ func _play_one(e: GameEvent) -> void:
 			await _wait(0.2)
 		&"turn_started":
 			_source = {}
+			m.picker.clear_rival()
 			m.hud.refresh(m.state, MatchController.HUMAN)
 			var mine: bool = d["player"] == MatchController.HUMAN
 			Audio.sfx(&"turn_start", 0.0)
@@ -154,6 +155,13 @@ func _play_one(e: GameEvent) -> void:
 			await _level_up(d)
 		&"field_set":
 			await _field_set(d)
+		&"dream_up_offered":
+			if int(d["player"]) == MatchController.AI:
+				await m.picker.show_rival_offer((d["cards"] as Array).size(), m.card_backs[MatchController.AI], m.rival_hand_screen())
+		&"dream_up_chosen":
+			if int(d["player"]) == MatchController.AI:
+				await m.picker.rival_pick(m.rival_hand_screen())
+			m.refresh_ui()
 		&"bubble_popped":
 			await _bubble_popped(d)
 		&"revealed":

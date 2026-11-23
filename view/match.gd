@@ -33,6 +33,7 @@ var input: InputController
 var player: EventPlayer
 var timing_bar: TimingBar
 var results: Results
+var picker: DreamUpPicker
 var overlay: UnitOverlay
 var attack_arrow: AttackArrow
 var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
@@ -209,6 +210,8 @@ func _begin(opening: Array[GameEvent]) -> void:
 func _process(delta: float) -> void:
 	if driver:
 		driver.process(delta)
+	if picker and picker.is_open() and not human_choosing():
+		picker.force(-1)
 	if board == null:
 		return
 	var pts := PackedVector3Array()
@@ -331,6 +334,13 @@ func _demo_act(act: String) -> void:
 			await perform(Action.attack(HUMAN, 2, 2, Action.Hit.NORMAL, false))
 		"venom":
 			await perform(Action.attack(HUMAN, 2, 2, Action.Hit.NORMAL, false))
+		"dreamup":
+			for l: int in 4:
+				state.players[HUMAN].lanes[l].land = CardData.Land.CANDY
+			state.players[HUMAN].lanes[1].creature = null
+			sync_all()
+			busy = false
+			_on_action_requested(Action.play(HUMAN, Fx_give(&"bonbon_behemoth"), 1))
 		"leech":
 			state.players[0].lanes[0].creature.gained.append(&"leech")
 			state.players[0].hero_hp = 30
@@ -400,6 +410,10 @@ func _build_ui() -> void:
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	toast.offset_top = 64
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	picker = DreamUpPicker.new()
+	picker.m = self
+	root.add_child(picker)
+	picker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	timing_bar = TimingBar.new()
 	root.add_child(timing_bar)
 	hud.pause_overlay.reparent(root)
@@ -517,11 +531,19 @@ func _on_action_requested(a: Action) -> void:
 	refresh_ui()
 
 
-## Interim until the Dream Up picker (Rules 2.0 plan Task 15): take the first card offered.
+## Dream Up: the picker shows the offered cards and the player keeps one. If the pick is settled
+## elsewhere meanwhile (online: the room ended the turn), the picker just closes.
 func _human_dream_up() -> void:
 	if state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
-		toast.show_message("Dream Up: %s" % state.pending_choice[0].display_name, 1.5)
-		await driver.submit(Action.choose(HUMAN, 0))
+		input.cancel()
+		var i: int = await picker.open(state.pending_choice.duplicate())
+		if i >= 0 and state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
+			await driver.submit(Action.choose(HUMAN, i))
+
+
+## True while the human has a Dream Up pick waiting.
+func human_choosing() -> bool:
+	return state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN
 
 
 func _on_end_turn_pressed() -> void:

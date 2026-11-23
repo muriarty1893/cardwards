@@ -228,3 +228,56 @@ func test_click_still_boops() -> bool:
 	assert_true(s.players[0].lanes[0].creature.booped, "a click boops")
 	m.queue_free()
 	return true
+
+
+func _wait_until(cond: Callable, frames: int = 600) -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	for i: int in frames:
+		if cond.call():
+			return true
+		await tree.process_frame
+	return cond.call()
+
+
+## Playing Bonbon opens the picker with 3 Candy cards; clicking the second keeps that one.
+func test_human_dream_up_flow() -> bool:
+	var m: MatchController = await _load_match()
+	var s: GameState = m.state
+	for l: int in 4:
+		s.players[0].lanes[l].creature = null
+		s.players[0].lanes[l].land = CardData.Land.CANDY
+	m.sync_all()
+	s.players[0].hand.clear()
+	s.players[0].hand.append(CardDB.card(&"bonbon_behemoth"))
+	s.players[0].magic = 9
+	m.refresh_ui()
+	m._on_action_requested(Action.play(0, 0, 1))
+	assert_true(await _wait_until(func() -> bool: return m.picker.is_open()), "picker opens")
+	assert_eq(s.phase, GameState.Phase.CHOOSING, "waiting for the pick")
+	var offered: Array[CardData] = s.pending_choice.duplicate()
+	assert_eq(offered.size(), 3, "three cards")
+	assert_true(m.picker.card_widget(1).card == offered[1], "shown in order")
+	m.picker.set_peeking(true)
+	assert_true(m.picker.is_peeking(), "peek hides the picker")
+	m.picker.set_peeking(false)
+	m.picker.choose(1)
+	assert_true(await _wait_until(func() -> bool: return not m.busy and not m.picker.is_open()), "picker closed")
+	assert_eq(s.phase, GameState.Phase.MAIN, "back to the main phase")
+	assert_true(s.players[0].hand.has(offered[1]), "kept the second card")
+	m.queue_free()
+	return true
+
+
+## The rival's Dream Up shows face-down cards; their pick flies to their hand.
+func test_rival_dream_up_shown_face_down() -> bool:
+	var m: MatchController = await _load_match()
+	var ids: Array[StringName] = [&"gumdrop", &"jellywobble", &"sugar_rush"]
+	var ev: Array[GameEvent] = [GameEvent.make(&"dream_up_offered", {"player": MatchController.AI, "cards": ids})]
+	await m.player.play(ev)
+	assert_true(m.picker.rival_showing(), "face-down cards in front of the rival")
+	assert_true(not m.picker.is_open(), "the human's picker stays closed")
+	ev = [GameEvent.make(&"dream_up_chosen", {"player": MatchController.AI, "card": &"gumdrop"})]
+	await m.player.play(ev)
+	assert_true(not m.picker.rival_showing(), "gone after the pick")
+	m.queue_free()
+	return true
