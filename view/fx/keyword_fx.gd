@@ -5,7 +5,7 @@ extends Node3D
 ## One KeywordFx node per CreatureView; sync() adds and removes parts to match the keywords.
 
 ## Keywords with a lasting look (the rest are tag chips plus one-shot moments).
-const LASTING: Array[StringName] = [&"guard", &"bubble", &"hidden", &"second_wind", &"venom"]
+const LASTING: Array[StringName] = [&"guard", &"bubble", &"hidden", &"second_wind", &"venom", &"sturdy", &"bask"]
 const NODE_NAME := "KeywordFx"
 const GUARD_GOLD := Color("#ffb21e")
 const VENOM_GREEN := Color("#7dff4a")
@@ -77,6 +77,10 @@ func attach(kw: StringName) -> void:
 			n = _make_halo()
 		&"venom":
 			n = _make_drips()
+		&"sturdy":
+			n = _make_plates()
+		&"bask":
+			n = _make_sun_glow()
 		_:
 			return
 	n.name = "kw_%s" % kw
@@ -111,6 +115,13 @@ func _process(delta: float) -> void:
 		bubble.scale = bubble.get_meta(&"base") * Vector3(w, 2.0 - w, w)
 	elif is_instance_valid(bubble) and bubble.scale.is_equal_approx(bubble.get_meta(&"base")):
 		bubble.set_meta(&"settled", true)
+	var plates: Node3D = _parts.get(&"sturdy")
+	if is_instance_valid(plates):
+		plates.rotation.y = _t * 0.6
+	var glow: Node3D = _parts.get(&"bask")
+	if is_instance_valid(glow):
+		var k: float = 1.0 + sin(_t * 2.2) * 0.08
+		glow.scale = Vector3(k, 1.0, k)
 	var halo: Node3D = _parts.get(&"second_wind")
 	if is_instance_valid(halo):
 		halo.rotation.y = _t * 1.4
@@ -244,3 +255,59 @@ func _make_drips() -> Node3D:
 	p.position = Vector3(0, _mid() + view.height * 0.1, 0)
 	holder.add_child(p)
 	return holder
+
+
+## Sturdy: little sandstone plates circling slowly round the creature's middle.
+func _make_plates() -> Node3D:
+	var holder := Node3D.new()
+	holder.position = Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + view.height * 0.35, 0)
+	var r: float = clampf(view.height * 0.55, 0.32, 0.55)
+	var mat: ShaderMaterial = Toon.plain(Color("#8a7458"))
+	for i: int in 4:
+		var a: float = TAU * i / 4.0
+		var b := BoxMesh.new()
+		b.size = Vector3(0.24, 0.18, 0.05)
+		var plate := MeshInstance3D.new()
+		plate.mesh = b
+		plate.material_override = mat
+		plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		plate.position = Vector3(cos(a) * r, 0.04 * (i % 2), sin(a) * r)
+		plate.rotation.y = -a + PI / 2.0
+		holder.add_child(plate)
+	return holder
+
+
+## Bask: a warm, softly pulsing patch of sunlight on the ground under the creature.
+func _make_sun_glow() -> Node3D:
+	var disc := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	var r: float = maxf(view.height * 0.8, 0.5)
+	plane.size = Vector2(r, r) * 2.0
+	disc.mesh = plane
+	var mat := ShaderMaterial.new()
+	mat.shader = _sun_shader()
+	disc.material_override = mat
+	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	disc.position = Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + 0.025, 0)
+	return disc
+
+
+static var _sun: Shader
+
+
+static func _sun_shader() -> Shader:
+	if _sun == null:
+		_sun = Shader.new()
+		_sun.code = """
+shader_type spatial;
+render_mode blend_add, unshaded, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://view/look/color_space.gdshaderinc"
+void fragment() {
+	float d = length(UV * 2.0 - 1.0);
+	float ring = smoothstep(0.06, 0.0, abs(d - 0.82)) * 0.9;
+	float a = smoothstep(1.0, 0.2, d) * (0.5 + 0.15 * sin(TIME * 2.0)) + ring;
+	ALBEDO = out_col(src_lin(vec3(1.0, 0.5, 0.12)) * a);
+	ALPHA = a;
+}
+"""
+	return _sun

@@ -58,7 +58,7 @@ func test_keyword_fx_attach_and_detach() -> bool:
 	var r: Node3D = _root()
 	var v := CreatureView.create(CardDB.card(&"mossback"))
 	r.add_child(v)
-	var all: Array[StringName] = [&"guard", &"bubble", &"hidden", &"second_wind", &"venom", &"leech"]
+	var all: Array[StringName] = [&"guard", &"bubble", &"hidden", &"second_wind", &"venom", &"sturdy", &"bask", &"leech"]
 	var fx: KeywordFx = KeywordFx.sync(v, all, -1.0)
 	assert_true(fx != null, "fx node made")
 	for k: StringName in KeywordFx.LASTING:
@@ -66,7 +66,7 @@ func test_keyword_fx_attach_and_detach() -> bool:
 	assert_true(v.hidden_look, "hidden makes the body see-through")
 	KeywordFx.sync(v, [&"guard"] as Array[StringName], -1.0)
 	assert_true(fx.has_part(&"guard"), "guard kept")
-	for k: StringName in [&"bubble", &"hidden", &"second_wind", &"venom"]:
+	for k: StringName in [&"bubble", &"hidden", &"second_wind", &"venom", &"sturdy", &"bask"]:
 		assert_true(not fx.has_part(k), "%s look gone" % k)
 	assert_true(not v.hidden_look, "body solid again")
 	KeywordFx.sync(v, [] as Array[StringName], -1.0)

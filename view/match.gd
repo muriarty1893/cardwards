@@ -388,7 +388,7 @@ func Fx_give(id: StringName) -> int:
 ## Dev view (screenshots): one creature per keyword, with Bubble and Hidden up, plus Spell Power.
 func _demo_keywords() -> void:
 	var ids: Array[StringName] = [&"sporeling", &"flarebeak", &"gumdrop", &"ashmite", &"taffy_snail", &"cinderpup", &"magmaw", &"iceling"]
-	var kws: Array[StringName] = [&"guard", &"bubble", &"venom", &"second_wind", &"hidden", &"leech", &"flurry", &"dash"]
+	var kws: Array[StringName] = [&"guard", &"bubble", &"venom", &"second_wind", &"hidden", &"sturdy", &"bask", &"dash"]
 	for p: int in 2:
 		for l: int in 4:
 			_demo_put(p, l, ids[p * 4 + l])
