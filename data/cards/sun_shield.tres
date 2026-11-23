@@ -7,7 +7,7 @@
 script = ExtResource("2_eff")
 when = &"on_play"
 op = &"buff"
-amount = 1
+amount = 2
 amount2 = 2
 who = &"chosen_own_creature"
 

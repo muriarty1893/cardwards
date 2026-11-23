@@ -13,16 +13,14 @@
 [ext_resource type="Resource" path="res://data/cards/sandstone_watchtower.tres" id="11_sandstone_watchtower"]
 [ext_resource type="Resource" path="res://data/cards/sun_shield.tres" id="12_sun_shield"]
 [ext_resource type="Resource" path="res://data/cards/sandstorm.tres" id="13_sandstorm"]
-[ext_resource type="Resource" path="res://data/cards/mirage.tres" id="14_mirage"]
-[ext_resource type="Resource" path="res://data/cards/heatwave.tres" id="15_heatwave"]
-[ext_resource type="Resource" path="res://data/cards/sporeling.tres" id="16_sporeling"]
-[ext_resource type="Resource" path="res://data/cards/mossback.tres" id="17_mossback"]
-[ext_resource type="Resource" path="res://data/cards/bog_toad.tres" id="18_bog_toad"]
-[ext_resource type="Resource" path="res://data/cards/rain_of_spores.tres" id="19_rain_of_spores"]
+[ext_resource type="Resource" path="res://data/cards/heatwave.tres" id="14_heatwave"]
+[ext_resource type="Resource" path="res://data/cards/sporeling.tres" id="15_sporeling"]
+[ext_resource type="Resource" path="res://data/cards/mossback.tres" id="16_mossback"]
+[ext_resource type="Resource" path="res://data/cards/rain_of_spores.tres" id="17_rain_of_spores"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"sun_fortress"
 display_name = "Sun Fortress"
 lands = Array[int]([5, 5, 0, 5])
-cards = Array[Resource]([ExtResource("2_sand_scuttler"), ExtResource("2_sand_scuttler"), ExtResource("3_meerkeep"), ExtResource("3_meerkeep"), ExtResource("4_sand_fox"), ExtResource("4_sand_fox"), ExtResource("5_sun_scarab"), ExtResource("5_sun_scarab"), ExtResource("6_dune_raptor"), ExtResource("6_dune_raptor"), ExtResource("7_sandwraith"), ExtResource("7_sandwraith"), ExtResource("8_oasis_alpaca"), ExtResource("8_oasis_alpaca"), ExtResource("9_lamp_djinn"), ExtResource("10_sun_obelisk"), ExtResource("10_sun_obelisk"), ExtResource("11_sandstone_watchtower"), ExtResource("12_sun_shield"), ExtResource("12_sun_shield"), ExtResource("13_sandstorm"), ExtResource("14_mirage"), ExtResource("15_heatwave"), ExtResource("16_sporeling"), ExtResource("16_sporeling"), ExtResource("17_mossback"), ExtResource("17_mossback"), ExtResource("18_bog_toad"), ExtResource("19_rain_of_spores"), ExtResource("19_rain_of_spores")])
+cards = Array[Resource]([ExtResource("2_sand_scuttler"), ExtResource("2_sand_scuttler"), ExtResource("3_meerkeep"), ExtResource("3_meerkeep"), ExtResource("4_sand_fox"), ExtResource("4_sand_fox"), ExtResource("5_sun_scarab"), ExtResource("5_sun_scarab"), ExtResource("6_dune_raptor"), ExtResource("6_dune_raptor"), ExtResource("7_sandwraith"), ExtResource("7_sandwraith"), ExtResource("8_oasis_alpaca"), ExtResource("8_oasis_alpaca"), ExtResource("9_lamp_djinn"), ExtResource("9_lamp_djinn"), ExtResource("10_sun_obelisk"), ExtResource("10_sun_obelisk"), ExtResource("11_sandstone_watchtower"), ExtResource("11_sandstone_watchtower"), ExtResource("12_sun_shield"), ExtResource("12_sun_shield"), ExtResource("13_sandstorm"), ExtResource("14_heatwave"), ExtResource("15_sporeling"), ExtResource("15_sporeling"), ExtResource("16_mossback"), ExtResource("16_mossback"), ExtResource("17_rain_of_spores"), ExtResource("17_rain_of_spores")])

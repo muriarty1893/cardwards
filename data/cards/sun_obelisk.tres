@@ -10,6 +10,13 @@ op = &"lane_keyword"
 who = &"lane_creature"
 keyword = &"sturdy"
 
+[sub_resource type="Resource" id="Eff_sun_obelisk_1"]
+script = ExtResource("2_eff")
+when = &"aura"
+op = &"lane_atk"
+amount = 1
+who = &"lane_creature"
+
 [resource]
 script = ExtResource("1_card")
 id = &"sun_obelisk"
@@ -17,4 +24,4 @@ display_name = "Sun Obelisk"
 kind = 1
 land = 5
 cost = 2
-effects = Array[ExtResource("2_eff")]([SubResource("Eff_sun_obelisk_0")])
+effects = Array[ExtResource("2_eff")]([SubResource("Eff_sun_obelisk_0"), SubResource("Eff_sun_obelisk_1")])
