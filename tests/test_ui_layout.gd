@@ -271,3 +271,32 @@ func test_combo_glow_only_on_combo_cards() -> bool:
 	assert_true(not (ws[0] as CardWidget).combo_on(), "glow off")
 	hand.queue_free()
 	return true
+
+
+func test_playable_cards_glow() -> bool:
+	var hand := Hand.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(hand)
+	hand.size = Vector2(1280, 720)
+	hand.show_hand([CardDB.card(&"mossback"), CardDB.card(&"fireball")] as Array[CardData], [true, false] as Array[bool])
+	var ws: Array = hand.get_children().filter(func(x: Node) -> bool: return x is CardWidget)
+	assert_true((ws[0] as CardWidget).ready_glow(), "playable card glows")
+	assert_true(not (ws[1] as CardWidget).ready_glow(), "unplayable card doesn't")
+	var big := CardWidget.new()
+	big.setup(CardDB.card(&"mossback"), -1)
+	big.set_playable(true)
+	assert_true(not big.ready_glow(), "cards outside the hand never glow")
+	big.free()
+	hand.queue_free()
+	return true
+
+
+func test_gems_sparkle_when_filled() -> bool:
+	var g := MagicGems.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(g)
+	g.set_magic(1, 3)
+	g.set_magic(3, 3)
+	assert_true(g.is_processing(), "filling gems starts the sparkle")
+	await (Engine.get_main_loop() as SceneTree).create_timer(0.7).timeout
+	assert_true(not g.is_processing(), "and it ends")
+	g.queue_free()
+	return true

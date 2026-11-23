@@ -133,9 +133,9 @@ func _play_one(e: GameEvent) -> void:
 			await _wait(0.4)
 		&"card_burned":
 			m.refresh_ui()
-			Audio.sfx(&"card_deal")
+			Audio.sfx(&"fire_whoosh")
 			m.toast.show_message("Hand full: %s burned" % CardDB.card(d["card"]).display_name, 1.0)
-			await _wait(0.2)
+			await _burn_card(CardDB.card(d["card"]), int(d["player"]) == MatchController.HUMAN)
 		&"turn_started":
 			_source = {}
 			m.picker.clear_rival()
@@ -521,6 +521,51 @@ func _cast_card(c: CardData, human: bool) -> void:
 	await tw.finished
 
 
+## Hand full: the card shows up, chars from the edges inward and crumbles away in embers.
+func _burn_card(c: CardData, human: bool) -> void:
+	if c == null:
+		return
+	var vp: Vector2 = m.hud.get_viewport_rect().size
+	var w := CardWidget.new()
+	w.setup(c, -1)
+	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	w.pivot_offset = CardWidget.SIZE / 2.0
+	m.hud.add_child(w)
+	var at := Vector2(vp.x * (0.62 if human else 0.5), vp.y * (0.55 if human else 0.3))
+	w.position = (m.hud.deck_screen_pos(human) if human else m.rival_hand_screen()) - CardWidget.SIZE / 2.0
+	w.scale = Vector2.ONE * 0.5
+	var embers := CPUParticles2D.new()
+	embers.amount = 40
+	embers.lifetime = 0.8
+	embers.emitting = false
+	embers.one_shot = true
+	embers.explosiveness = 0.6
+	embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	embers.emission_rect_extents = CardWidget.SIZE / 2.0
+	embers.position = CardWidget.SIZE / 2.0
+	embers.direction = Vector2.UP
+	embers.spread = 40.0
+	embers.gravity = Vector2(0, -160)
+	embers.initial_velocity_min = 30.0
+	embers.initial_velocity_max = 90.0
+	embers.scale_amount_min = 3.0
+	embers.scale_amount_max = 6.0
+	embers.color = Color("#ff9a2a")
+	w.add_child(embers)
+	var tw := w.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(w, "position", at - CardWidget.SIZE / 2.0, 0.25 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(w, "scale", Vector2.ONE * 1.1, 0.25 / speed)
+	tw.chain().tween_callback(func() -> void: embers.emitting = true)
+	tw.chain().tween_property(w, "modulate", Color(1.4, 0.6, 0.2, 1.0), 0.18 / speed)
+	tw.chain().tween_property(w, "modulate", Color(0.15, 0.1, 0.08, 0.0), 0.35 / speed)
+	tw.parallel().tween_property(w, "scale", Vector2(1.0, 0.85), 0.35 / speed)
+	tw.parallel().tween_property(w, "rotation", 0.12, 0.35 / speed)
+	tw.chain().tween_interval(0.5)
+	tw.chain().tween_callback(w.queue_free)
+	await _wait(0.8)
+
+
 # --- Deaths by cause (look & feel spec 1) ----------------------------------------------------
 
 ## What the hit in `d` was like: big (crit or 4+ damage), fire (an Ember ability or spell), and
@@ -773,6 +818,9 @@ func _play_creature(d: Dictionary) -> void:
 		drop = m.board.ground_at_screen(m.rig.camera, m.hand.last_drop_pos)
 	var v: CreatureView = m.place_creature(p, d["lane"], c, drop)
 	var target: Vector3 = v.position
+	# The card bursts into a puff of its land's colour; the creature drops out of it.
+	Burst.spawn(m, &"smoke", target + Vector3(0, 2.6, 0), Palette.LAND_CARD[c.land], 1.3)
+	Burst.spawn(m, &"stars", target + Vector3(0, 2.6, 0), Palette.LAND_CARD[c.land].lightened(0.3), 1.0)
 	v.position = target + Vector3(0, 3, 0)
 	v.busy = true
 	var tw := v.create_tween()

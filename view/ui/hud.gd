@@ -267,6 +267,16 @@ func _fill_field(s: GameState) -> void:
 		_field_chip.add_theme_stylebox_override("normal", _frame(Palette.LAND_CARD[s.field.land].darkened(0.25), 12, 3))
 
 
+## A quick press-and-spring on a button.
+func _squish(b: Control) -> void:
+	if end_turn_pulsing:
+		return
+	b.pivot_offset = b.size / 2.0
+	var tw := b.create_tween()
+	tw.tween_property(b, "scale", Vector2(1.08, 0.86), 0.06)
+	tw.tween_property(b, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
 func set_end_turn_pulse(on: bool) -> void:
 	if on == end_turn_pulsing:
 		return
@@ -590,7 +600,9 @@ func _build_bottom() -> void:
 	end_turn_button.offset_left = -MARGIN - END_TURN_SIZE.x
 	end_turn_button.offset_bottom = -MARGIN
 	end_turn_button.offset_top = -MARGIN - END_TURN_SIZE.y
-	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
+	end_turn_button.pressed.connect(func() -> void:
+		_squish(end_turn_button)
+		end_turn_pressed.emit())
 	UiStyle.sound_button(end_turn_button)
 	add_child(end_turn_button)
 	_fuse = TurnFuse.new()

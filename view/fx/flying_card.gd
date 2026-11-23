@@ -6,10 +6,36 @@ signal landed
 
 
 ## `back`: the owner's card back art (CardBacks) for a face-down card; a plain back when null.
-static func fly(parent: Control, card: CardData, from: Vector2, to: Vector2, face_up: bool, duration: float = 0.3, back_tex: Texture2D = null) -> FlyingCard:
+## `flip`: starts face down and turns face up halfway (a card drawn into your hand).
+static func fly(parent: Control, card: CardData, from: Vector2, to: Vector2, face_up: bool, duration: float = 0.3, back_tex: Texture2D = null, flip: bool = false) -> FlyingCard:
 	var f := FlyingCard.new()
 	f.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	f.size = CardWidget.SIZE
+	if flip and card and back_tex:
+		var face := CardWidget.new()
+		face.setup(card, -1)
+		face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		face.visible = false
+		f.add_child(face)
+		var b := back_rect(back_tex)
+		f.add_child(b)
+		f.pivot_offset = CardWidget.SIZE / 2.0
+		parent.add_child(f)
+		f.position = from - CardWidget.SIZE / 2.0
+		f.scale = Vector2.ONE * 0.45
+		var ft := f.create_tween().set_parallel(true)
+		ft.tween_property(f, "position", to - CardWidget.SIZE / 2.0 - Vector2(0, 40), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		ft.tween_property(f, "scale:y", 0.8, duration)
+		ft.tween_property(f, "scale:x", 0.0, duration * 0.45).set_ease(Tween.EASE_IN)
+		ft.chain().tween_callback(func() -> void:
+			b.visible = false
+			face.visible = true)
+		ft.chain().tween_property(f, "scale:x", 0.8, duration * 0.4).set_ease(Tween.EASE_OUT)
+		ft.chain().tween_property(f, "modulate:a", 0.0, 0.1)
+		ft.chain().tween_callback(func() -> void:
+			f.landed.emit()
+			f.queue_free())
+		return f
 	if face_up and card:
 		var w := CardWidget.new()
 		w.setup(card, -1)

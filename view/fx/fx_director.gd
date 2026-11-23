@@ -290,6 +290,11 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				return
 		&"card_drawn", &"card_returned":
 			Audio.sfx(&"card_draw")
+			if e.type == &"card_drawn" and kind == &"plain" and int(d["player"]) == MatchController.HUMAN:
+				# The turn's draw: from the deck box into the hand, turning face up on the way.
+				await _fly_card(m, d, m.hud.deck_screen_pos(), m.hand.cards_rect().get_center(), false)
+				if not is_instance_valid(m):
+					return
 			m.refresh_ui()
 			await _wait(m, 0.12 / sp)
 			if not is_instance_valid(m):
@@ -389,7 +394,7 @@ static func _fly_card(m: MatchController, d: Dictionary, from: Vector2, to: Vect
 	var target: Vector2 = to if human else m.rival_hand_screen()
 	var start: Vector2 = from if human else m.hud.deck_screen_pos(false)
 	var c: CardData = CardDB.card(d.get("card", &"")) if d.has("card") else null
-	FlyingCard.fly(m.hud, c, start, target, face_up and human, 0.3 / m.player.speed, m.card_backs[int(d.get("player", 0))])
+	FlyingCard.fly(m.hud, c, start, target, face_up and human, 0.3 / m.player.speed, m.card_backs[int(d.get("player", 0))], human and not face_up and c != null)
 	await _wait(m, 0.3 / m.player.speed)
 	if not is_instance_valid(m):
 		return

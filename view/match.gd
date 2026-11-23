@@ -351,6 +351,11 @@ func _demo_act(act: String) -> void:
 			sync_all()
 			busy = false
 			_on_action_requested(Action.play(HUMAN, Fx_give(&"bonbon_behemoth"), 1))
+		"play":
+			state.players[0].lanes[2].creature = null
+			sync_all()
+			refresh_ui()
+			await perform(Action.play(HUMAN, Fx_give(&"cinderpup"), 2))
 		"crit":
 			state.players[0].lanes[3].creature.gained.erase(&"second_wind")
 			await perform(Action.attack(HUMAN, 1, 1, Action.Hit.CRIT, false))

@@ -24,6 +24,7 @@ var index: int = -1
 var _art: TextureRect
 var _text: RichTextLabel
 var _combo: Panel
+var _ready: Panel
 static var _bold: FontVariation
 var _cost: Label
 ## Cost shown on the gem (the printed cost unless set_cost lowered it).
@@ -175,6 +176,32 @@ func is_discounted() -> bool:
 
 func set_playable(on: bool) -> void:
 	modulate = Color.WHITE if on else Color(0.68, 0.68, 0.68, 1.0)
+	_set_ready_glow(on and index >= 0)
+
+
+## A soft glow in the card's land colour behind a card you can play now.
+func _set_ready_glow(on: bool) -> void:
+	if not on and _ready == null:
+		return
+	if _ready == null:
+		_ready = Panel.new()
+		_ready.name = "ReadyGlow"
+		_ready.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_ready.position = Vector2(-3, -3)
+		_ready.size = SIZE + Vector2(6, 6)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0, 0, 0, 0)
+		sb.set_corner_radius_all(14)
+		sb.shadow_color = Color(Palette.LAND_CARD[card.land].lightened(0.35), 0.75)
+		sb.shadow_size = 9
+		_ready.add_theme_stylebox_override("panel", sb)
+		add_child(_ready)
+		move_child(_ready, 0)
+	_ready.visible = on
+
+
+func ready_glow() -> bool:
+	return _ready != null and _ready.visible
 
 
 func _panel(r: Rect2, bg: Color, border: int, radius: int) -> Panel:
