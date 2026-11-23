@@ -38,6 +38,8 @@ var _fidget_in: float = 0.0
 var _dying: bool = false
 ## Faded out while it can't be chosen as an attack target.
 var dimmed: bool = false
+var hidden_look: bool = false
+static var _shimmer_mat: ShaderMaterial
 ## Wanders the lane (cosmetic); set up by the match with the roam zone.
 var wanderer: Wanderer
 ## True while the player drags an attack from this creature; it faces `aim_at`.
@@ -522,10 +524,29 @@ func set_dimmed(on: bool) -> void:
 	if on == dimmed:
 		return
 	dimmed = on
+	_apply_see_through()
+
+
+## Hidden keyword: the body goes half see-through with violet ripples over it.
+func set_hidden_look(on: bool) -> void:
+	if on == hidden_look:
+		return
+	hidden_look = on
+	if _shimmer_mat == null:
+		_shimmer_mat = ShaderMaterial.new()
+		_shimmer_mat.shader = load("res://view/fx/hidden_shimmer.gdshader") as Shader
+	if body:
+		for n: Node in body.find_children("*", "MeshInstance3D", true, false):
+			(n as GeometryInstance3D).material_overlay = _shimmer_mat if on else null
+	_apply_see_through()
+
+
+func _apply_see_through() -> void:
 	if body == null:
 		return
+	var t: float = 0.55 if dimmed else (0.42 if hidden_look else 0.0)
 	for n: Node in body.find_children("*", "GeometryInstance3D", true, false):
-		(n as GeometryInstance3D).transparency = 0.55 if on else 0.0
+		(n as GeometryInstance3D).transparency = t
 
 
 ## Ice shell on while frozen; it shatters when the freeze ends.

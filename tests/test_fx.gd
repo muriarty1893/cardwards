@@ -52,3 +52,47 @@ func test_ice_shell_attach_and_shatter() -> bool:
 	assert_true(not is_instance_valid(s), "shell freed")
 	r.free()
 	return true
+
+
+func test_keyword_fx_attach_and_detach() -> bool:
+	var r: Node3D = _root()
+	var v := CreatureView.create(CardDB.card(&"mossback"))
+	r.add_child(v)
+	var all: Array[StringName] = [&"guard", &"bubble", &"hidden", &"second_wind", &"venom", &"leech"]
+	var fx: KeywordFx = KeywordFx.sync(v, all, -1.0)
+	assert_true(fx != null, "fx node made")
+	for k: StringName in KeywordFx.LASTING:
+		assert_true(fx.has_part(k), "%s look on" % k)
+	assert_true(v.hidden_look, "hidden makes the body see-through")
+	KeywordFx.sync(v, [&"guard"] as Array[StringName], -1.0)
+	assert_true(fx.has_part(&"guard"), "guard kept")
+	for k: StringName in [&"bubble", &"hidden", &"second_wind", &"venom"]:
+		assert_true(not fx.has_part(k), "%s look gone" % k)
+	assert_true(not v.hidden_look, "body solid again")
+	KeywordFx.sync(v, [] as Array[StringName], -1.0)
+	assert_true(not fx.has_part(&"guard"), "guard gone")
+	assert_true(KeywordFx.sync(CreatureView.create(CardDB.card(&"mossback")), [&"leech"] as Array[StringName], 1.0) == null, "no node for badge-only keywords")
+	r.queue_free()
+	return true
+
+
+func test_keyword_shaders_compile() -> bool:
+	for path: String in ["res://view/fx/bubble.gdshader", "res://view/fx/shield_wall.gdshader", "res://view/fx/hidden_shimmer.gdshader"]:
+		var sh := load(path) as Shader
+		assert_true(sh != null and sh.code != "", "%s loads" % path)
+		assert_true(sh.get_shader_uniform_list() != null, "%s compiles" % path)
+	return true
+
+
+func test_keyword_looks_follow_the_match() -> bool:
+	var m: MatchController = await Fx.load_match()
+	Fx.put_creature(m.state, 1, 2, &"mossback")
+	m.sync_all()
+	var fx: KeywordFx = KeywordFx.of(m.creature_views[1][2])
+	assert_true(fx != null and fx.has_part(&"guard"), "rival's Guard has its wall")
+	assert_eq(fx.enemy_z, 1.0, "facing the human's side")
+	m.state.players[1].lanes[2].creature.hushed = true
+	m.refresh_pieces()
+	assert_true(not fx.has_part(&"guard"), "hush takes the wall away")
+	m.queue_free()
+	return true

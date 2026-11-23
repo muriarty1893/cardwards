@@ -617,6 +617,11 @@ func place_creature(p: int, l: int, c: CardData, drop: Vector3 = Vector3.INF) ->
 	return v
 
 
+## Which way along z player p's enemies sit (-1: the rival's side is away from the camera).
+static func enemy_side_z(p: int) -> float:
+	return -1.0 if p == HUMAN else 1.0
+
+
 ## Where a creature looks while standing: towards the enemy side, turned to the camera.
 static func rest_heading(p: int) -> float:
 	return PI * 0.62 if p == HUMAN else PI * -0.12
@@ -667,6 +672,7 @@ func refresh_pieces() -> void:
 					v.set_level(cr.level)
 				v.set_home(Lands.home(state, p, l))
 				v.set_weather(state.field.land if state.field else -1)
+				KeywordFx.sync(v, UnitOverlay.shown_keywords(state, p, l), enemy_side_z(p))
 	_sync_houses()
 	overlay.refresh(state)
 
