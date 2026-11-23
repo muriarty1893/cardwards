@@ -16,6 +16,10 @@ const HIT_STOP := 0.07
 ## Landing / death burst preset per CardData.Land (NEUTRAL last).
 const LAND_BURSTS: Array[StringName] = [&"leaves", &"embers", &"sprinkles", &"snow", &"stars"]
 const HIT_STOP_SCALE := 0.05
+const HIT_STOP_CRIT := 0.16
+## After a crit's freeze: this time scale for this long (real seconds).
+const SLOW_MO := 0.3
+const SLOW_MO_TIME := 0.18
 ## Sound when a lane turns into a land (CardData.Land order, Meadow last).
 const LAND_SOUNDS: Array[StringName] = [&"heal", &"fire_whoosh", &"candy_pop", &"freeze", &"card_draw"]
 ## How each event changes the hand of the player it names (the rival's fan follows it live).
@@ -31,6 +35,8 @@ var _skip_move: Dictionary = {}
 var _source: Dictionary = {}
 ## "p:l" of creatures damaged by a Venom creature in this batch (their death turns green).
 var _venomed: Dictionary = {}
+## "p:l" → the last hit a creature took in this batch: {"big", "fire", "from"} (picks its death).
+var _last_hit: Dictionary = {}
 
 
 func _wait(seconds: float) -> void:
@@ -40,6 +46,7 @@ func _wait(seconds: float) -> void:
 func play(events: Array[GameEvent]) -> void:
 	_source = {}
 	_venomed = {}
+	_last_hit = {}
 	if m.action_log:
 		m.action_log.add_action(events, m.state)
 	for e: GameEvent in events:
@@ -60,6 +67,8 @@ func _play_one(e: GameEvent) -> void:
 		await _reveal(CardDB.card(d["card"]))
 	if e.type == &"creature_damaged" and _dealt_by_venom(d):
 		_venomed["%d:%d" % [d["player"], d["lane"]]] = true
+	if e.type == &"creature_damaged":
+		_last_hit["%d:%d" % [d["player"], d["lane"]]] = _hit_info(d)
 	if e.type in EFFECT_EVENTS:
 		var kind: StringName = FxDirector.choose(_source, e)
 		await FxDirector.play(kind, _source, e, m)
@@ -427,6 +436,80 @@ func _reveal(c: CardData) -> void:
 	await _wait(0.55)
 
 
+# --- Deaths by cause (look & feel spec 1) ----------------------------------------------------
+
+## What the hit in `d` was like: big (crit or 4+ damage), fire (an Ember ability or spell), and
+## where it came from (to knock the creature away from it).
+func _hit_info(d: Dictionary) -> Dictionary:
+	var crit: bool = _source.get("kind") == &"attack" and int(_source.get("hit", Action.Hit.NORMAL)) == Action.Hit.CRIT
+	var fire: bool = false
+	if _source.get("kind") == &"ability":
+		var c: CardData = CardDB.card(_source.get("card", &""))
+		fire = c != null and c.land == CardData.Land.EMBER
+	var from := Vector3.INF
+	if _source.has("lane") and int(_source["lane"]) >= 0:
+		from = FxDirector.spot(m, _source["player"], _source["lane"])
+	return {"big": crit or int(d.get("amount", 0)) >= 4, "fire": fire, "from": from}
+
+
+## Knocked flying: up and away from the hit, spinning, then a puff of stars.
+func _death_fly(v: CreatureView, from: Vector3) -> void:
+	Audio.sfx(&"hit_heavy")
+	var start: Vector3 = v.global_position
+	var away := Vector3(start.x - from.x, 0, start.z - from.z) if from.is_finite() else Vector3(0, 0, -1)
+	away = away.normalized() if away.length() > 0.01 else Vector3(0, 0, -1)
+	var dur: float = 0.55 / speed
+	var tw := v.create_tween().set_parallel(true)
+	tw.tween_method(func(k: float) -> void:
+		if is_instance_valid(v):
+			v.global_position = start + away * 2.4 * k + Vector3(0, sin(k * PI * 0.8) * 2.2, 0), 0.0, 1.0, dur)
+	tw.tween_property(v, "rotation", v.rotation + Vector3(TAU * 1.5, TAU, 0), dur)
+	tw.tween_property(v, "scale", v.scale * 0.4, dur).set_ease(Tween.EASE_IN)
+	await tw.finished
+	if is_instance_valid(v):
+		Burst.spawn(m, &"stars", v.global_position, Color.WHITE, 1.4)
+		Burst.spawn(m, &"smoke", v.global_position, Color.WHITE, 0.8)
+		v.queue_free()
+	await _wait(0.1)
+
+
+## Frozen solid: the ice and the creature burst into shards together.
+func _death_shatter(v: CreatureView) -> void:
+	Audio.sfx(&"ice_shatter")
+	var at: Vector3 = v.global_position + Vector3(0, v.height * 0.5, 0)
+	v.set_frozen(false)
+	Burst.spawn(m, &"snow", at, Color("#e8f6ff"), 1.8)
+	Burst.spawn(m, &"sparks", at, Color("#bfe8ff"), 1.5)
+	ShockRing.spawn(m, v.global_position + Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + 0.05, 0), Color("#d6f2ff"), 0.9, 0.35 / speed)
+	var tw := v.create_tween()
+	tw.tween_property(v, "scale", v.scale * Vector3(1.25, 0.2, 1.25), 0.12 / speed)
+	await tw.finished
+	if is_instance_valid(v):
+		v.queue_free()
+	await _wait(0.1)
+
+
+## Burnt by fire: it chars dark, embers rise and it crumbles to ash.
+func _death_ash(v: CreatureView) -> void:
+	Audio.sfx(&"fire_whoosh")
+	var at: Vector3 = v.global_position + Vector3(0, v.height * 0.4, 0)
+	var tw := v.create_tween()
+	tw.tween_method(func(x: float) -> void:
+		if is_instance_valid(v) and v.body:
+			Toon.set_shade(v.body, x), 0.0, 4.0, 0.25 / speed)
+	await tw.finished
+	if not is_instance_valid(v):
+		return
+	Burst.spawn(m, &"embers", at, Color.WHITE, 1.6)
+	Burst.spawn(m, &"smoke", at, Color("#3a3a3a"), 1.2)
+	var crumble := v.create_tween().set_parallel(true)
+	crumble.tween_property(v, "scale", v.scale * Vector3(1.2, 0.05, 1.2), 0.3 / speed).set_ease(Tween.EASE_IN)
+	await v.dissolve(0.3 / speed)
+	if is_instance_valid(v):
+		v.queue_free()
+	await _wait(0.1)
+
+
 # --- Keyword moments (keywords spec 4) -------------------------------------------------------
 
 ## True when the creature damaged in `d` was hit by a creature with Venom (an attacker, or a
@@ -493,7 +576,7 @@ func _hushed(d: Dictionary) -> void:
 	var fx: KeywordFx = KeywordFx.of(v)
 	if fx:
 		fx.set_keywords([] as Array[StringName])
-	_ring_wave(v.global_position + Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + 0.05, 0), Color("#cfd3dc"))
+	ShockRing.spawn(m, v.global_position + Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + 0.05, 0), Color("#cfd3dc"), 1.0, 0.45 / speed)
 	Audio.sfx(&"ui_click")
 	DamageNumber.stamp(m, v.global_position + Vector3(0, v.height + 0.7, 0.2), "HUSHED")
 	m.overlay.refresh(m.state)
@@ -573,30 +656,6 @@ func _leeched(d: Dictionary) -> void:
 	Burst.spawn(m, &"heal", to, Color("#ff6a8a"), 1.0)
 
 
-## A flat ring that spreads out and fades (Hush).
-func _ring_wave(at: Vector3, col: Color) -> void:
-	var ring := MeshInstance3D.new()
-	var t := TorusMesh.new()
-	t.inner_radius = 0.42
-	t.outer_radius = 0.5
-	t.rings = 32
-	t.ring_segments = 6
-	ring.mesh = t
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(col, 0.85)
-	ring.material_override = mat
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	ring.scale = Vector3(0.3, 0.2, 0.3)
-	m.add_child(ring)
-	ring.global_position = at
-	var tw := ring.create_tween().set_parallel(true)
-	tw.tween_property(ring, "scale", Vector3(2.2, 0.2, 2.2), 0.45 / speed).set_ease(Tween.EASE_OUT)
-	tw.tween_property(mat, "albedo_color:a", 0.0, 0.45 / speed)
-	tw.chain().tween_callback(ring.queue_free)
-
-
 ## Flurry: two quick slashes of sparks where the attack lands, with a second whoosh.
 func _flurry_swoosh(v: CreatureView, target: Vector3) -> void:
 	var col: Color = VisualDB.KEYWORD_COLORS[&"flurry"].lightened(0.4)
@@ -668,6 +727,18 @@ func _death(d: Dictionary) -> void:
 		return
 	m.creature_views[d["player"]][d["lane"]] = null
 	v.busy = true
+	var key: String = "%d:%d" % [d["player"], d["lane"]]
+	var info: Dictionary = _last_hit.get(key, {})
+	if not _venomed.has(key):
+		if v.is_frozen_visual():
+			await _death_shatter(v)
+			return
+		if info.get("fire", false):
+			await _death_ash(v)
+			return
+		if info.get("big", false):
+			await _death_fly(v, info.get("from", Vector3.INF))
+			return
 	var death: float = v.play_death()
 	if death > 0.0:
 		await _wait(minf(death, 0.9) * 0.8)
@@ -714,7 +785,18 @@ func _attack(d: Dictionary) -> void:
 	var out_t: float = 0.3 / speed
 	var back_t: float = 0.4 / speed
 	m.rig.close_up(v.global_position, Vector3(target.x, home.y, target.z), (0.2 + 0.3 + 0.15 + 0.4 + (0.35 if hero else 0.0)) / speed)
-	# Wind-up squash, then the run (the impact plays with the damage event that follows).
+	# Wind-up squash with a glint, the target bracing and turning to face it, then the run (the
+	# impact plays with the damage event that follows).
+	Burst.spawn(m, &"stars", v.global_position + Vector3(0, v.height + 0.2, 0), Palette.GOLD, 0.5)
+	if tv:
+		var face := Vector2(v.position.x - tv.position.x, v.position.z - tv.position.z)
+		if face.length() > 0.01:
+			tv.rotation.y = atan2(face.x, face.y)
+		if tv.body:
+			var tb: Vector3 = tv.body.scale
+			var brace := tv.create_tween()
+			brace.tween_property(tv.body, "scale", tb * Vector3(1.1, 0.88, 1.1), 0.12 / speed)
+			brace.tween_property(tv.body, "scale", tb, 0.3 / speed).set_delay(0.25 / speed)
 	var base: Vector3 = v.body.scale
 	var wind := v.create_tween()
 	wind.tween_property(v.body, "scale", base * Vector3(1.15, 0.8, 1.15), 0.12 / speed)
@@ -779,10 +861,37 @@ func _hero_leap(v: CreatureView, edge: Vector3, foe: int) -> Vector3:
 
 
 ## Brief freeze-frame on impact. Always restores the time scale.
-func hit_stop() -> void:
+## Freeze-frame on impact, by the timing-bar result: a crit holds longer and then runs in slow
+## motion for a moment; a glancing blow barely pauses.
+func hit_stop(hit: int = Action.Hit.NORMAL) -> void:
+	var hold: float = HIT_STOP
+	if hit == Action.Hit.CRIT:
+		hold = HIT_STOP_CRIT
+	elif hit == Action.Hit.GLANCE:
+		hold = HIT_STOP * 0.4
 	Engine.time_scale = HIT_STOP_SCALE
-	await get_tree().create_timer(HIT_STOP / speed, true, false, true).timeout
+	await get_tree().create_timer(hold / speed, true, false, true).timeout
+	if hit == Action.Hit.CRIT:
+		Engine.time_scale = SLOW_MO
+		await get_tree().create_timer(SLOW_MO_TIME / speed, true, false, true).timeout
 	Engine.time_scale = 1.0
+
+
+## Knocked back by a hit from `from`: squashes and slides away, then springs home.
+func knockback(v: CreatureView, from: Vector3, strength: float) -> void:
+	var base: Vector3 = v.position
+	var away := Vector3(base.x - from.x, 0, base.z - from.z)
+	away = away.normalized() if away.length() > 0.01 else Vector3(0, 0, -1)
+	var push: Vector3 = away * clampf(strength, 0.05, 0.45)
+	var body_base: Vector3 = v.body.scale if v.body else Vector3.ONE
+	var tw := v.create_tween().set_parallel(true)
+	tw.tween_property(v, "position", base + push, 0.07 / speed).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	if v.body:
+		tw.tween_property(v.body, "scale", body_base * Vector3(1.3, 0.7, 1.3), 0.07 / speed)
+	tw.chain().tween_property(v, "position", base, 0.3 / speed).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	if v.body:
+		tw.parallel().tween_property(v.body, "scale", body_base, 0.3 / speed).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	await tw.finished
 
 
 ## A quick squash of the body: the hit-back reaction (leaves the position alone).

@@ -176,7 +176,7 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				pos = v.global_position + (pos - spot(m, d["player"], d["lane"]))
 			var attack: bool = kind == &"attack_hit"
 			if attack:
-				await m.player.hit_stop()
+				await m.player.hit_stop(hit)
 				if not is_instance_valid(m):
 					return
 			if attack and hit == Action.Hit.CRIT:
@@ -185,28 +185,41 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				Audio.sfx(&"hit_heavy")
 			else:
 				Audio.sfx(&"hit_light")
+			var crit: bool = attack and hit == Action.Hit.CRIT
+			var glance: bool = attack and hit == Action.Hit.GLANCE
 			var col: Color = Color.WHITE
-			if attack and hit == Action.Hit.GLANCE:
+			var feet: Vector3 = (v.global_position if v else spot(m, d["player"], d["lane"])) + Vector3(0, Island.TOP_Y - CreatureView.BASE_Y + 0.05, 0)
+			if glance:
 				col = Color("#c8c8c8")
 				Burst.spawn(m, &"dust_ring", pos - Vector3(0, 0.9, 0))
 			else:
-				Burst.spawn(m, &"sparks", pos - Vector3(0, 0.4, 0), Color.WHITE, 1.0 + amt * 0.1)
+				Burst.spawn(m, &"sparks", pos - Vector3(0, 0.4, 0), Color.WHITE, 1.0 + amt * 0.12 + (0.6 if crit else 0.0))
 				Burst.spawn(m, &"stars", pos - Vector3(0, 0.4, 0))
+				if amt > 0:
+					ShockRing.spawn(m, feet, Palette.GOLD if crit else Color.WHITE, 1.3 if crit else 0.8, 0.35 / sp)
 			var txt: String = "-%d" % amt
 			if d.get("blocked", false):
 				txt += "  BLOCK"
-			DamageNumber.spawn(m, pos, txt, col)
-			if attack and hit == Action.Hit.CRIT:
+			# Bigger hits, bigger numbers; crits in gold.
+			var size: int = mini(72 + amt * 6, 108)
+			if crit:
+				DamageNumber.spawn(m, pos, txt, Palette.GOLD, 124, 2.0)
+			else:
+				DamageNumber.spawn(m, pos, txt, col, size)
+			if crit:
 				DamageNumber.stamp(m, pos + Vector3(0, 0.55, 0.25), "CRIT!")
 				Burst.spawn(m, &"stars", pos, Palette.GOLD, 1.8)
 				m.rig.punch_zoom()
-			m.rig.kick(minf(0.45, 0.15 + 0.05 * amt))
+			m.rig.kick(0.06 if glance else minf(0.6, 0.15 + 0.05 * amt + (0.2 if crit else 0.0)))
 			if v:
 				if amt > 0:
 					v.play_hit()
-					v.flash()
+					v.flash(0.22 if crit else 0.12)
 				if hit_back:
 					await m.player.recoil(v)
+				elif amt > 0 and not glance:
+					var from: Vector3 = _source_pos(m, source)
+					await m.player.knockback(v, from, 0.12 + 0.04 * amt + (0.15 if crit else 0.0))
 				else:
 					await m.player.shake(v)
 				if not is_instance_valid(m):
@@ -216,7 +229,7 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 			var human: bool = d["player"] == MatchController.HUMAN
 			var pos: Vector3 = _hero_pos(m, d["player"])
 			if kind == &"attack_hit":
-				await m.player.hit_stop()
+				await m.player.hit_stop(int(source.get("hit", Action.Hit.NORMAL)))
 				if not is_instance_valid(m):
 					return
 			var soaked: int = int(d.get("armour", 0))

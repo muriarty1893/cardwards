@@ -11,7 +11,7 @@ static func _title_font() -> FontFile:
 	return _font
 
 
-static func spawn(parent: Node, pos: Vector3, text_: String, color: Color, size: int = 72) -> DamageNumber:
+static func spawn(parent: Node, pos: Vector3, text_: String, color: Color, size: int = 72, punch: float = 1.4) -> DamageNumber:
 	var d := DamageNumber.new()
 	d.text = text_
 	d.font = _title_font()
@@ -25,9 +25,10 @@ static func spawn(parent: Node, pos: Vector3, text_: String, color: Color, size:
 	d.render_priority = 10
 	parent.add_child(d)
 	d.global_position = pos
-	d.scale = Vector3.ONE * 1.4
+	d.scale = Vector3.ONE * punch
+	d.rotation.z = randf_range(-0.08, 0.08)
 	var tw := d.create_tween()
-	tw.tween_property(d, "scale", Vector3.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(d, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(d, "global_position", pos + Vector3(0, 0.8, 0), 1.2).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(d, "modulate:a", 0.0, 0.5).set_delay(0.7)
 	tw.tween_callback(d.queue_free)
