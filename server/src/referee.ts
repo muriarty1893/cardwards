@@ -46,13 +46,14 @@ export interface RoomState {
   cleanupAt: number | null;
 }
 
-const ERRORS: Record<ErrorCode, string> = {
+export const ERRORS: Record<ErrorCode, string> = {
   no_room: "No room with that code",
   full: "That room is full",
   version: "Different game version",
   over: "That match is over",
   bad_token: "That match can't be rejoined",
   bad_hello: "Bad hello",
+  busy: "Too many rooms — try again in a minute",
 };
 
 const ACT_TYPES: number[] = [ActionType.PLAY_CARD, ActionType.BOOP, ActionType.CHOOSE, ActionType.END_TURN];

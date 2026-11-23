@@ -24,6 +24,7 @@ const ERRORS: Dictionary = {
 	"version": "Your friend has a different version — both refresh",
 	"bad_token": "That match can't be rejoined",
 	"bad_hello": "The server didn't accept that deck",
+	"busy": "Too many rooms — try again in a minute",
 }
 
 var server_url: String = SERVER_URL
@@ -77,6 +78,9 @@ func quick_match(player_name: String, deck: DeckData) -> void:
 	_set_state(&"searching", "Searching…")
 	_lobby = link_factory.call("/queue?v=" + NetVersion.current())
 	_lobby.connect("received", func(msg: Dictionary) -> void:
+		if msg.get("t", "") == "error":
+			_fail(ERRORS.get(String(msg.get("code", "")), String(msg.get("msg", ""))))
+			return
 		if msg.get("t", "") == "matched":
 			var l: Object = _lobby
 			_lobby = null

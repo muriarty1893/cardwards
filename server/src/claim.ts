@@ -1,10 +1,12 @@
 import { makeCode } from "./codes";
 import type { Lobby } from "./lobby";
 import type { Room } from "./room";
+import type { Gate } from "./gate";
 
 export interface Env {
   ROOM: DurableObjectNamespace<Room>;
   LOBBY: DurableObjectNamespace<Lobby>;
+  GATE: DurableObjectNamespace<Gate>;
 }
 
 /** A fresh room code, reserved on its Room object (retries on the rare collision). */

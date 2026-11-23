@@ -30,7 +30,7 @@ export type ActionDict = {
 export type DeckMsg = { name: string; lands: number[]; cards: string[] };
 export type Seat = 0 | 1;
 export type OverReason = "normal" | "concede" | "forfeit" | "desync";
-export type ErrorCode = "no_room" | "full" | "version" | "over" | "bad_token" | "bad_hello";
+export type ErrorCode = "no_room" | "full" | "version" | "over" | "bad_token" | "bad_hello" | "busy";
 
 export type HelloMsg = { t: "hello"; v: string; name: unknown; deck: unknown; token?: string };
 export type ClientMsg =

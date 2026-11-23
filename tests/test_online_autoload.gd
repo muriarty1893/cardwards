@@ -157,6 +157,30 @@ func test_unreachable_server() -> bool:
 	return true
 
 
+## Over the server's room limit, hosting and quick match both say so instead of "can't reach".
+func test_busy_server_says_too_many_rooms() -> bool:
+	for kind: String in ["host", "quick"]:
+		var o: Node = ONLINE.new()
+		var made: Array = []
+		o.link_factory = func(_path: String) -> Object:
+			var l := DeadLink.new()
+			made.append(l)
+			return l
+		o.rejoin_path = "user://test_rejoin_c.json"
+		if kind == "host":
+			o.host("Ann", CardDB.deck(&"grove_guard"))
+		else:
+			o.quick_match("Ann", CardDB.deck(&"grove_guard"))
+		var l: DeadLink = made[0]
+		l.opened.emit()
+		l.received.emit({"t": "error", "code": "busy", "msg": "x"})
+		l.closed.emit(1000, "refused")
+		assert_eq(o.state, &"error", "%s: error state" % kind)
+		assert_eq(o.message, "Too many rooms — try again in a minute", "%s: says why" % kind)
+		o.free()
+	return true
+
+
 func test_bad_code_makes_no_connection() -> bool:
 	var o: Node = ONLINE.new()
 	var made: Array = []
