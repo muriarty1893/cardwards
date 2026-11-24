@@ -21,6 +21,12 @@ const SURFACE_COLORS: Dictionary = {
 
 func _post_import(scene: Node) -> Object:
 	var base: String = get_source_file().get_file().get_basename()
+	# Old FBX files (Fox, Bird, Fish) keep the scene they were made in: sun lights, a lamp and a camera.
+	# Left in, they light up the whole board while the creature is out.
+	for n: Node in scene.find_children("*", "", true, false):
+		if n is Light3D or n is Camera3D:
+			n.get_parent().remove_child(n)
+			n.free()
 	if SURFACE_COLORS.has(base):
 		var cols: Array = SURFACE_COLORS[base]
 		for n: Node in scene.find_children("*", "MeshInstance3D", true, false):

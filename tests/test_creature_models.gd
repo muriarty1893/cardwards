@@ -85,3 +85,14 @@ func test_skinned_models_measured_as_drawn() -> bool:
 	assert_true(absf(h - 1.67) < 0.05, "Yeti unchanged (%.2f)" % h)
 	inst.free()
 	return true
+
+
+## Some old FBX files come with the scene they were made in: sun lights, a lamp and a camera. Those would
+## light up the whole board while the creature is out (the Sand Fox did), so the import leaves them out.
+func test_models_bring_no_lights_or_cameras() -> bool:
+	for id: StringName in _creature_ids():
+		var mdl: Node3D = Palette.model(VisualDB.model_path(id), 1.0)
+		for n: Node in mdl.find_children("*", "", true, false):
+			assert_true(not (n is Light3D or n is Camera3D), "%s model has no %s (%s)" % [id, n.get_class(), n.name])
+		mdl.free()
+	return true
