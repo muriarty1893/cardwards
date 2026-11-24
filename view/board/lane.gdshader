@@ -186,17 +186,32 @@ vec3 features(int l, int v, vec2 p, vec2 pw, float side_d, vec3 col, inout vec3 
 			// Wider than the band (paint may run under the roam zone): it hugs the side and bends inward a little.
 			float inward = sign(-(band.x + band.z));
 			float cx = (band.x + band.z) * 0.5 + inward * (0.08 + 0.05 * sin(p.y * 2.2 + 0.5));
-			float half_w = 0.17;
+			float half_w = 0.19;
 			float z0 = band.y;
 			float z1 = band.w;
 			float taper = smoothstep(z0 - 0.05, z0 + 0.15, p.y) * smoothstep(z1 + 0.05, z1 - 0.15, p.y);
 			float dist = abs(p.x - cx);
 			float body = (1.0 - smoothstep(half_w - 0.01, half_w + 0.01, dist)) * taper;
-			float flow = smoothstep(0.75, 0.95, sin(p.y * 18.0 - TIME * 2.4 + dist * 30.0));
-			vec3 choc = mix(vec3(0.3, 0.15, 0.08), vec3(0.72, 0.48, 0.3), flow * 0.7);
-			choc = mix(choc, vec3(0.2, 0.1, 0.05), smoothstep(half_w * 0.5, half_w, dist) * 0.5);
+			float across = dist / half_w;          // 0 mid-stream, 1 at the bank
+			// Flow: noise stretched along the stream and carried downstream, faster in the middle.
+			float speed = 0.35 * (1.0 - across * across * 0.6);
+			vec2 fp = vec2((p.x - cx) * 2.6, p.y * 0.9 - TIME * speed);
+			float swirl = fbm(fp) + 0.5 * fbm(fp * 2.1 + vec2(3.1, -TIME * 0.4));
+			vec3 dark = vec3(0.3, 0.15, 0.07);
+			vec3 milk = vec3(0.58, 0.34, 0.18);
+			vec3 choc = mix(dark, milk, smoothstep(0.55, 1.05, swirl));
+			// Caramel ribbons drifting along.
+			float ribbon = smoothstep(0.9, 0.98, swirl) * (1.0 - smoothstep(0.98, 1.12, swirl));
+			choc = mix(choc, vec3(0.86, 0.6, 0.32), ribbon * 0.6);
+			// Glossy highlight streaks sliding downstream.
+			float streak = smoothstep(0.86, 0.97, sin(p.y * 7.0 - TIME * 1.6 + swirl * 3.0));
+			choc = mix(choc, vec3(0.98, 0.88, 0.76), streak * 0.45 * (1.0 - smoothstep(0.2, 0.7, across)));
+			// Darker, thicker chocolate at the banks with a creamy lip.
+			choc = mix(choc, dark * 0.85, smoothstep(0.65, 0.95, across) * 0.5);
 			col = mix(col, choc, body);
-			col = mix(col, INK, (1.0 - smoothstep(0.004, 0.012, abs(dist - half_w))) * taper * 0.8);
+			float lip = (1.0 - smoothstep(0.0, 0.03, abs(dist - half_w - 0.015))) * taper;
+			col = mix(col, vec3(0.98, 0.9, 0.8), lip * 0.75);
+			col = mix(col, INK, (1.0 - smoothstep(0.004, 0.012, abs(dist - half_w))) * taper * 0.7);
 		} else if (v == 1) {   // Lollipop Grove: soft pink frosting swirls
 			float swirl = smoothstep(0.6, 0.7, fbm(pw * 1.4 + 2.0));
 			col = mix(col, vec3(1.0, 0.82, 0.9), swirl * 0.55);
