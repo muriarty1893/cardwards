@@ -10,8 +10,9 @@ func _ready() -> void:
 	var decks: Array[DeckData] = CardDB.all_decks()
 	var session: Node = get_tree().root.get_node("Session")
 	for i: int in n:
-		session.set("player_deck", decks[i % 4].id)
-		session.set("ai_deck", decks[(i / 4 + i + 1) % 4].id)
+		var nd: int = decks.size()
+		session.set("player_deck", decks[i % nd].id)
+		session.set("ai_deck", decks[(i / nd + i + 1) % nd].id)
 		session.set("seed", 100 + i)
 		var m := (load("res://view/match.tscn") as PackedScene).instantiate() as MatchController
 		get_tree().root.add_child(m)
@@ -25,6 +26,10 @@ func _ready() -> void:
 		while m.state.phase != GameState.Phase.OVER and frames < 60000:
 			await get_tree().process_frame
 			frames += 1
+			# Dream Up: the picker waits for a click; pick the first card.
+			if m.picker.is_open() and m.human_choosing():
+				m.picker.choose(0)
+				continue
 			if m.busy or m.state.active != MatchController.HUMAN:
 				continue
 			var a: Action = me.choose_action(m.state)
@@ -41,7 +46,7 @@ func _ready() -> void:
 		for p: int in 2:
 			for l: int in 4:
 				lands.append(m.state.players[p].lanes[l].land)
-		print("SOAK match %d %s vs %s: phase %d winner %d turn %d frames %d field %s lands %s" % [i, decks[i % 4].id, session.get("ai_deck"), m.state.phase, m.state.winner, m.state.turn, frames, m.state.field.id if m.state.field else &"-", lands])
+		print("SOAK match %d %s vs %s: phase %d winner %d turn %d frames %d field %s lands %s" % [i, session.get("player_deck"), session.get("ai_deck"), m.state.phase, m.state.winner, m.state.turn, frames, m.state.field.id if m.state.field else &"-", lands])
 		m.queue_free()
 		await get_tree().process_frame
 	get_tree().quit()

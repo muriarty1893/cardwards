@@ -179,9 +179,10 @@ func _close(i: int) -> void:
 
 ## Frees the picker's own pieces (not the rival's face-down cards).
 func _free_own() -> void:
-	for n: Node in [_back, _content, _peek]:
+	# Untyped: a piece may already be freed (PEEK goes first, in _close), and a typed array refuses freed objects.
+	for n: Variant in [_back, _content, _peek]:
 		if is_instance_valid(n):
-			n.queue_free()
+			(n as Node).queue_free()
 	_back = null
 	_content = null
 	_peek = null

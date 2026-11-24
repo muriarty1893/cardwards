@@ -376,7 +376,8 @@ static func _source_pos(m: MatchController, source: Dictionary) -> Vector3:
 	var lane: int = source.get("lane", -1)
 	if lane < 0:
 		return _hero_pos(m, p)
-	var c: CardData = CardDB.card(source.get("card", &""))
+	var id: StringName = source.get("card", &"")
+	var c: CardData = CardDB.card(id) if CardDB.has_card(id) else null
 	if c and c.kind == CardData.Kind.BUILDING:
 		var b: Variant = m.building_views[p][lane]
 		if is_instance_valid(b):
@@ -385,7 +386,8 @@ static func _source_pos(m: MatchController, source: Dictionary) -> Vector3:
 
 
 static func _element(m: MatchController, source: Dictionary) -> StringName:
-	var c: CardData = CardDB.card(source.get("card", &""))
+	var id: StringName = source.get("card", &"")
+	var c: CardData = CardDB.card(id) if CardDB.has_card(id) else null
 	return ELEMENT_BY_LAND[c.land] if c else &"fire"
 
 
