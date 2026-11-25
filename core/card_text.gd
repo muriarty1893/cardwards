@@ -346,7 +346,9 @@ static func _scaled(e: EffectData, s: String, x: String, _bold: bool) -> String:
 			&"split_damage":
 				return "Deal damage equal to %s randomly split among enemies" % total
 			&"buff":
-				return "Give %s +X/+X, where X is %s" % [x, total]
+				if e.who == &"self":
+					return "This gets +1/+1 %s" % Scaling.each_text(e.scale)
+				return "Give %s +1/+1 %s" % [x, Scaling.each_text(e.scale)]
 			&"temp_atk":
 				return "Give %s +X ATK this turn, where X is %s" % [x, total]
 	if e.op == &"buff":
