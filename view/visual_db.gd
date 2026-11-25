@@ -241,6 +241,8 @@ const ENTRIES: Dictionary = {
 	&"grand_fence": {"model": "extra/Rogue.fbx", "tint": &"none"},
 	&"hailmother_ysra": {"model": "extra/Monk.fbx", "tint": &"snowy"},
 	&"pyrrhos_spellstorm": {"model": "extra/Horse.fbx", "tint": &"ember"},
+	&"grudge_bolt": {}, &"last_stand": {}, &"shield_bash": {},
+	&"snowball": {}, &"mourning_toll": {},
 }
 
 

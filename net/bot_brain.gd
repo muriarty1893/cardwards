@@ -32,9 +32,16 @@ func step(s: OnlineSession) -> void:
 				s.send_block(rng.randf() < 0.3)
 			"rejected", "over":
 				waiting = false
-	if waiting or not s.is_my_turn():
+	if waiting or s.status != &"playing" or s.state == null:
 		return
 	var st: GameState = s.state
+	# A choice belongs to whoever it was offered to, even in the other player's turn
+	# (a Last Breath Dark Gift set off by the rival's attack).
+	if st.phase == GameState.Phase.CHOOSING:
+		if st.pending_player != s.seat:
+			return
+	elif not s.is_my_turn():
+		return
 	var a: Action = Action.choose(s.seat, 0) if st.phase == GameState.Phase.CHOOSING else ai.choose_action(st)
 	if a.type == Action.Type.ATTACK:
 		s.send_attack(a.lane, a.target_lane, int(ai.roll_hit()))

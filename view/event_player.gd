@@ -34,6 +34,8 @@ var speed: float = 1.0
 var _skip_move: Dictionary = {}
 ## {} | {"kind": &"ability", "player", "lane", "card"} | {"kind": &"attack", "player", "lane", "hit"}
 var _source: Dictionary = {}
+## "p:lane" of the creature just played this batch: its on-play ability needs no extra pulse.
+var _just_played: String = ""
 ## "p:l" of creatures damaged by a Venom creature in this batch (their death turns green).
 var _venomed: Dictionary = {}
 ## "p:l" → the last hit a creature took in this batch: {"big", "fire", "from"} (picks its death).
@@ -93,11 +95,15 @@ func _play_one(e: GameEvent) -> void:
 			if sc and sc.kind == CardData.Kind.SPELL and VisualDB.SPELL_FX.has(sc.id):
 				_source["kit"] = true
 				await SpellKit.play(m, VisualDB.SPELL_FX[sc.id], d["player"], _spell_targets(), speed)
+			elif sc and sc.kind == CardData.Kind.CREATURE and int(d["lane"]) >= 0 and "%d:%d" % [d["player"], d["lane"]] != _just_played:
+				await LegendsFx.trigger_pulse(self, d["player"], d["lane"])
 		&"attack":
+			_just_played = ""
 			_source = {"kind": &"attack", "player": d["player"], "lane": d["lane"], "hit": d["hit"], "target_lane": int(d.get("target_lane", -1))}
 			Audio.sfx(&"attack_whoosh")
 			await _attack(d)
 		&"creature_played":
+			_just_played = "%d:%d" % [d["player"], d["lane"]]
 			await _play_creature(d)
 		&"building_played":
 			await _play_building(d)
@@ -122,6 +128,7 @@ func _play_one(e: GameEvent) -> void:
 				await tw.finished
 				v.busy = false
 		&"creature_destroyed":
+			_just_played = ""
 			Audio.sfx(&"death")
 			var killer: int = int(_source.get("player", -1)) if _source.get("kind") == &"attack" else -1
 			await _death(d)
@@ -147,6 +154,7 @@ func _play_one(e: GameEvent) -> void:
 			await _burn_card(CardDB.card(d["card"]), int(d["player"]) == MatchController.HUMAN)
 		&"turn_started":
 			_source = {}
+			_just_played = ""
 			m.picker.clear_rival()
 			m.hud.refresh(m.state, MatchController.HUMAN)
 			var mine: bool = d["player"] == MatchController.HUMAN
@@ -185,11 +193,11 @@ func _play_one(e: GameEvent) -> void:
 		&"last_breath":
 			await DarkMoonFx.last_breath(self, d)
 		&"card_added":
-			await DarkMoonFx.word(self, d["player"], "+%s" % CardDB.card(d["card"]).display_name.to_upper(), Palette.GOLD)
+			await LegendsFx.card_added(self, d)
 		&"shuffled_in":
 			await DarkMoonFx.word(self, d["player"], "+%d IN DECK" % int(d["count"]), DarkMoonFx.CURSE_PURPLE.lightened(0.45))
 		&"hand_buffed":
-			await DarkMoonFx.word(self, d["player"], "HAND +%d/+%d" % [int(d["atk"]), int(d["hp"])], Color("#8fe07a"))
+			await LegendsFx.hand_buffed(self, d)
 		&"hand_card_grew":
 			m.refresh_ui()
 		&"spell_echoed":
@@ -242,6 +250,10 @@ func _play_one(e: GameEvent) -> void:
 			await _buffed(d)
 		&"leeched":
 			await _leeched(d)
+		&"drained":
+			await LegendsFx.drained(self, d)
+		&"doubled":
+			await LegendsFx.doubled(self, d)
 		&"tribe_bonus":
 			var pos: Vector3 = FxDirector._hero_pos(m, d["player"])
 			DamageNumber.spawn(m, pos + Vector3(0, 0.5, 0), "%s!" % Tribes.BONUS[d["tribe"]].to_upper(), Color("#8fe07a"), 52)

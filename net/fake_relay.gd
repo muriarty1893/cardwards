@@ -132,7 +132,8 @@ func _handle(link: Link, msg: Dictionary) -> void:
 			var a: Dictionary = msg.get("a", {})
 			if status != "playing":
 				_to(seat, {"t": "rejected", "why": "not playing"})
-			elif seat != active:
+			elif seat != active and int(a.get("type", -1)) != Action.Type.CHOOSE:
+				# Only a choice may come from the other seat (a Dark Gift offered in the rival's turn).
 				_to(seat, {"t": "rejected", "why": "not your turn"})
 			elif not pending.is_empty():
 				_to(seat, {"t": "rejected", "why": "attack pending"})

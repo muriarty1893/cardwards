@@ -51,12 +51,13 @@ func _init() -> void:
 
 
 ## `costs`: each card's current cost (a spell discount lowers it); printed costs when empty.
-func show_hand(cards: Array[CardData], playable: Array[bool], costs: Array[int] = []) -> void:
+func show_hand(cards: Array[CardData], playable: Array[bool], costs: Array[int] = [], nows: Array[int] = []) -> void:
 	# Same cards as shown: only update which are playable and their costs (rebuilding costs a hitch).
 	if cards == _shown and _cards.size() == cards.size():
 		for i: int in _cards.size():
 			_cards[i].set_playable(playable[i] if i < playable.size() else true)
 			_cards[i].set_cost(costs[i] if i < costs.size() else cards[i].cost)
+			_cards[i].set_now(nows[i] if i < nows.size() else -1)
 		return
 	_shown = cards.duplicate()
 	# Where each card was, so the rebuilt ones slide on from there instead of jumping.
@@ -75,6 +76,8 @@ func show_hand(cards: Array[CardData], playable: Array[bool], costs: Array[int] 
 		w.set_playable(playable[i] if i < playable.size() else true)
 		if i < costs.size() and costs[i] != cards[i].cost:
 			w.set_cost(costs[i])
+		if i < nows.size():
+			w.set_now(nows[i])
 		# Scale and tilt around the bottom centre, like a card held from below.
 		w.pivot_offset = Vector2(CardWidget.SIZE.x / 2.0, CardWidget.SIZE.y)
 		w.mouse_entered.connect(_on_enter.bind(i))

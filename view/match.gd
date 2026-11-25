@@ -149,6 +149,9 @@ func _ready() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--demo-cards="):
 			_demo_cards(arg.substr(13).split(","))
+			for act: String in OS.get_cmdline_user_args():
+				if act.begins_with("--demo-act="):
+					_demo_act(act.substr(11))
 			return
 		if arg.begins_with("--demo-moon="):
 			# Dev view: cast Dark Moon on the --demo-cards board; "pick" stops at the picker, "left"/"right" plays it.
@@ -356,6 +359,20 @@ func _demo_act(act: String) -> void:
 	state.active = HUMAN
 	state.players[HUMAN].magic = 9
 	await get_tree().create_timer(0.8).timeout
+	state.phase = GameState.Phase.MAIN
+	state.players[HUMAN].magic = 10
+	if act.begins_with("play:"):
+		# A creature into one of your lanes: play:<id>:<lane>
+		var bits: PackedStringArray = act.split(":")
+		await perform(Action.play(HUMAN, Fx_give(StringName(bits[1])), int(bits[2])))
+		return
+	if act.begins_with("hits:"):
+		# Your hero has been hit N times this game, then cast/play what follows: hits:<n>:<card>
+		var bits: PackedStringArray = act.split(":")
+		state.players[HUMAN].history["hero_hits"] = int(bits[1])
+		state.players[HUMAN].hand.append(CardDB.card(StringName(bits[2])))
+		refresh_ui()
+		return
 	if act.begins_with("cast:"):
 		# Any spell, aimed at the first valid targets.
 		var c: CardData = CardDB.card(StringName(act.substr(5)))
@@ -547,7 +564,7 @@ func refresh_ui() -> void:
 			var d: Array[CardData] = state.players[p].discard
 			tops.append(d[d.size() - 1] if not d.is_empty() else null)
 		stacks.set_counts([state.players[0].deck.size(), state.players[1].deck.size()], [state.players[0].discard.size(), state.players[1].discard.size()], tops)
-	hand.show_hand(state.players[HUMAN].hand, hand_playable(), hand_costs())
+	hand.show_hand(state.players[HUMAN].hand, hand_playable(), hand_costs(), hand_nows())
 	hand.set_combo(state.active == HUMAN and state.players[HUMAN].cards_played > 0)
 	var only_end: bool = state.active == HUMAN and state.phase == GameState.Phase.MAIN and Rules.legal_actions(state).size() == 1
 	hud.set_end_turn_pulse(only_end and not busy)
@@ -578,6 +595,14 @@ func hand_playable() -> Array[bool]:
 
 
 ## What each of the human's hand cards costs right now (spells after any spell discount).
+## Each held card's growing number right now (-1: it doesn't grow).
+func hand_nows() -> Array[int]:
+	var out: Array[int] = []
+	for c: CardData in state.players[HUMAN].hand:
+		out.append(Scaling.preview(state, HUMAN, c))
+	return out
+
+
 func hand_costs() -> Array[int]:
 	var costs: Array[int] = []
 	for c: CardData in state.players[HUMAN].hand:

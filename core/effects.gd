@@ -175,7 +175,8 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 					var cr: GameState.CreatureState = s.players[t["player"]].at(t["lane"])
 					var hp_now: int = Rules.effective_max_hp(s, t["player"], t["lane"]) - cr.damage
 					var atk_now: int = Rules.effective_attack(s, t["player"], t["lane"])
-					# Capped at 99/99 so the numbers stay readable (Bonegrave doubles on every death).
+					ev.append(GameEvent.make(&"doubled", {"player": t["player"], "lane": t["lane"]}))
+					# Capped at 99/99 so the numbers stay readable (Mawra doubles on every death).
 					Rules.buff(s, t["player"], t["lane"], clampi(99 - atk_now, 0, atk_now), clampi(99 - hp_now, 0, hp_now), ev)
 		&"next_spell_twice":
 			ps.spell_twice += maxi(e.amount, 1)

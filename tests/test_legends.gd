@@ -121,3 +121,27 @@ func test_scaling_text_and_counts_exist() -> bool:
 	for k: StringName in Scaling.ALL:
 		assert_true(Scaling.each_text(k) != "for each " + String(k) and Scaling.total_text(k) != String(k), "%s has words" % k)
 	return true
+
+
+func test_preview_shows_the_number_now() -> bool:
+	var s: GameState = _state(CardData.Land.CANDY)
+	var ev: Array[GameEvent] = []
+	Rules.damage_hero(s, 0, 1, ev)
+	Rules.damage_hero(s, 0, 1, ev)
+	assert_eq(Scaling.preview(s, 0, CardDB.card(&"grudge_bolt")), 3, "1 + 2 hits")
+	assert_eq(Scaling.preview(s, 0, CardDB.card(&"gumdrop")), -1, "plain cards don't grow")
+	s.players[0].hand.append(CardDB.card(&"duchess_bonbonpaw"))
+	s.players[0].hand.append(CardDB.card(&"gumdrop"))
+	assert_eq(Scaling.preview(s, 0, CardDB.card(&"duchess_bonbonpaw")), 3, "gumdrop + two Sweet Treats")
+	return true
+
+
+func test_hand_card_shows_the_now_badge() -> bool:
+	var w := CardWidget.new()
+	w.setup(CardDB.card(&"grudge_bolt"), 0)
+	w.set_now(4)
+	assert_eq(w.now_value(), 4, "badge shows 4")
+	w.set_now(-1)
+	assert_eq(w.now_value(), -1, "hidden")
+	w.free()
+	return true

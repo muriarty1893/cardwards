@@ -45,6 +45,11 @@ func _post_import(scene: Node) -> Object:
 				m.resource_name = "Painted"
 				m.albedo_color = Color(cols[mini(s, cols.size() - 1)])
 				mi.set_surface_override_material(s, m)
+	# Empty mesh slots (the RPG characters' weapon sockets) would trip the toon pass.
+	for n: Node in scene.find_children("*", "MeshInstance3D", true, false):
+		if (n as MeshInstance3D).mesh == null and n.get_child_count() == 0:
+			n.get_parent().remove_child(n)
+			n.free()
 	if NAMED_COLORS.has(base) or base in TEXTURED:
 		var tex: Texture2D = load(get_source_file().get_base_dir().path_join(base + "_Texture.png")) if base in TEXTURED else null
 		for n: Node in scene.find_children("*", "MeshInstance3D", true, false):

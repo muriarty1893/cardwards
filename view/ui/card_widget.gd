@@ -41,6 +41,8 @@ var _hp: Label
 var _frame_color: Color
 ## Cost shown on the gem (the printed cost unless set_cost lowered it).
 var _shown_cost: int = 0
+## The live-number badge on a growing card ("= 5"); null until set_now.
+var _now: Panel
 
 
 func setup(c: CardData, i: int) -> void:
@@ -267,6 +269,40 @@ func set_cost(n: int) -> void:
 	_cost.text = str(n)
 	var printed: int = CardDB.card(card.id).cost if CardDB.has_card(card.id) else card.cost
 	_cost.add_theme_color_override("font_color", DISCOUNT if n < printed else (WORSE if n > printed else Color.WHITE))
+
+
+## Shows what a growing card's number is right now (Scaling.preview); n < 0 hides it.
+func set_now(n: int) -> void:
+	if n < 0:
+		if _now:
+			_now.visible = false
+		return
+	if _now == null:
+		_now = _panel(Rect2(SIZE.x - 40, 122, 38, 20), Color("#ffd84a"), 2, 9)
+		_now.name = "NowBadge"
+		var l := UiStyle.title(UiStyle.label("", 12, Palette.INK)) as Label
+		l.name = "Value"
+		l.size = _now.size
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_now.add_child(l)
+		add_child(_now)
+		_now.tooltip_text = "What the growing number is right now"
+	var lbl := _now.get_node("Value") as Label
+	var changed: bool = lbl.text != "= %d" % n and lbl.text != ""
+	lbl.text = "= %d" % n
+	_now.visible = true
+	if changed:
+		_now.pivot_offset = _now.size / 2.0
+		var t := create_tween()
+		t.tween_property(_now, "scale", Vector2.ONE * 1.35, 0.12).set_trans(Tween.TRANS_BACK)
+		t.tween_property(_now, "scale", Vector2.ONE, 0.18)
+
+
+func now_value() -> int:
+	if _now == null or not _now.visible:
+		return -1
+	return int((_now.get_node("Value") as Label).text.trim_prefix("= "))
 
 
 func shown_cost() -> int:

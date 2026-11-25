@@ -1,22 +1,28 @@
 class_name AttackArrow
 extends Control
-## The chunky curved arrow drawn while aiming an attack (and during the rival's attacks):
-## ink outline, gold over a valid target, grey otherwise. Never takes the mouse.
+## The curved arrow drawn while aiming (attacks, targeted cards, and the rival's attacks).
+## A smooth tapered ribbon (thin at the tail, full at the head) shaded like a tube, with an ink
+## outline, a notched arrowhead, a soft glow, and bright pulses flowing toward the target.
+## Gold over a valid target, grey otherwise. Never takes the mouse.
 
 const VALID := Color("#ffcf3a")
 const INVALID := Color("#a6a6b4")
-const WIDTH := 16.0
-const OUTLINE := 5.0
-const HEAD := Vector2(40, 28)
-## Flowing chevrons along the shaft (Hearthstone-style): spacing and speed in pixels.
-const CHEVRON_GAP := 34.0
-const FLOW_SPEED := 70.0
+const WIDTH := 22.0
+const TAIL_WIDTH := 8.0
+const OUTLINE := 4.0
+const HEAD := Vector2(48, 34)
+## Flowing pulses along the shaft: spacing and speed in pixels.
+const CHEVRON_GAP := 38.0
+const FLOW_SPEED := 90.0
+const STEPS := 48
 
 var _from := Vector2.ZERO
 var _to := Vector2.ZERO
 var _valid: bool = false
-## Distance the chevron strip has scrolled toward the head, wrapped to CHEVRON_GAP.
+## Distance the pulse strip has scrolled toward the head, wrapped to CHEVRON_GAP.
 var _flow: float = 0.0
+## Seconds shown, for the head's gentle throb.
+var _time: float = 0.0
 
 
 func _init() -> void:
@@ -27,10 +33,11 @@ func _init() -> void:
 
 func _process(delta: float) -> void:
 	_flow = fmod(_flow + delta * FLOW_SPEED, CHEVRON_GAP)
+	_time += delta
 	queue_redraw()
 
 
-## Arc-length positions of the chevrons along the shaft, from the tail.
+## Arc-length positions of the pulses along the shaft, from the tail.
 func chevron_offsets() -> Array[float]:
 	var out: Array[float] = []
 	var length: float = _shaft_length()
@@ -57,13 +64,15 @@ func _shaft_points() -> PackedVector2Array:
 	var base: Vector2 = tip - dir * HEAD.x
 	var shaft := PackedVector2Array()
 	for p: Vector2 in pts:
-		if (p - tip).dot(dir) < -HEAD.x * 0.6:
+		if (p - tip).dot(dir) < -HEAD.x * 0.55:
 			shaft.append(p)
-	shaft.append(base + dir * 4.0)
+	shaft.append(base + dir * 6.0)
 	return shaft
 
 
 func aim(from: Vector2, to: Vector2, valid: bool) -> void:
+	if valid and not _valid:
+		_time = 0.0
 	_from = from
 	_to = to
 	_valid = valid
@@ -83,10 +92,49 @@ func _curve() -> PackedVector2Array:
 	var lift: float = minf(170.0, _from.distance_to(_to) * 0.35)
 	var ctrl: Vector2 = (_from + _to) * 0.5 + Vector2(0, -lift)
 	var pts := PackedVector2Array()
-	for i: int in 25:
-		var t: float = i / 24.0
+	for i: int in STEPS + 1:
+		var t: float = float(i) / STEPS
 		pts.append(_from.lerp(ctrl, t).lerp(ctrl.lerp(_to, t), t))
 	return pts
+
+
+## Half-width of the ribbon at fraction k (0 tail .. 1 head), eased so it swells quickly.
+func _half(k: float) -> float:
+	return lerpf(TAIL_WIDTH, WIDTH, 1.0 - pow(1.0 - k, 2.2)) * 0.5
+
+
+## The ribbon's two edges (left, right) for `shaft`, `grow` pixels wider on each side.
+func _edges(shaft: PackedVector2Array, grow: float) -> Array[PackedVector2Array]:
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	var n: int = shaft.size()
+	for i: int in n:
+		var a: Vector2 = shaft[maxi(i - 1, 0)]
+		var b: Vector2 = shaft[mini(i + 1, n - 1)]
+		var dir: Vector2 = (b - a).normalized()
+		var side := Vector2(-dir.y, dir.x)
+		var h: float = _half(float(i) / maxf(n - 1, 1)) + grow
+		left.append(shaft[i] + side * h)
+		right.append(shaft[i] - side * h)
+	return [left, right]
+
+
+## Fills the ribbon `grow` pixels wider, as one quad per segment (shifted by `offset`).
+func _fill_ribbon(shaft: PackedVector2Array, grow: float, col: Color, offset: Vector2) -> void:
+	var e: Array[PackedVector2Array] = _edges(shaft, grow)
+	var cols := PackedColorArray([col, col, col, col])
+	for i: int in range(1, shaft.size()):
+		draw_primitive(PackedVector2Array([e[0][i - 1] + offset, e[0][i] + offset, e[1][i] + offset, e[1][i - 1] + offset]), cols, PackedVector2Array())
+
+
+## The notched arrowhead: tip, outer wings and a notch at the back, `grow` pixels bigger.
+func _head(tip: Vector2, dir: Vector2, grow: float, k: float = 1.0) -> PackedVector2Array:
+	var side := Vector2(-dir.y, dir.x)
+	var len_: float = HEAD.x * k + grow * 1.6
+	var wing: float = HEAD.y * k + grow * 1.3
+	var base: Vector2 = tip - dir * len_
+	return PackedVector2Array([tip + dir * grow * 0.8, base + side * wing - dir * grow * 0.4,
+		tip - dir * len_ * 0.72, base - side * wing - dir * grow * 0.4])
 
 
 func _draw() -> void:
@@ -94,30 +142,73 @@ func _draw() -> void:
 		return
 	var pts: PackedVector2Array = _curve()
 	var tip: Vector2 = pts[pts.size() - 1]
-	var dir: Vector2 = (tip - pts[pts.size() - 3]).normalized()
-	var side := Vector2(-dir.y, dir.x)
-	var base: Vector2 = tip - dir * HEAD.x
-	# The shaft stops under the head so the outline reads as one shape.
+	var dir: Vector2 = (tip - pts[pts.size() - 4]).normalized()
 	var shaft: PackedVector2Array = _shaft_points()
+	if shaft.size() < 3:
+		return
 	var col: Color = VALID if _valid else INVALID
-	var head := PackedVector2Array([tip, base + side * HEAD.y, base - side * HEAD.y])
-	var head_ink := PackedVector2Array([tip + dir * OUTLINE * 1.6, base + side * (HEAD.y + OUTLINE * 1.4) - dir * OUTLINE, base - side * (HEAD.y + OUTLINE * 1.4) - dir * OUTLINE])
-	draw_polyline(shaft, Palette.INK, WIDTH + OUTLINE * 2.0, true)
-	draw_colored_polygon(head_ink, Palette.INK)
-	draw_polyline(shaft, col, WIDTH, true)
-	draw_colored_polygon(head, col)
-	# A soft highlight stripe along the top edge.
-	var shine := PackedVector2Array()
-	for p: Vector2 in shaft:
-		shine.append(p - Vector2(0, WIDTH * 0.22))
-	draw_polyline(shine, col.lightened(0.45), 3.0, true)
+	# A gentle throb on the head while it sits on a valid target.
+	var k: float = 1.0 + (0.08 * sin(_time * 9.0) if _valid else 0.0)
+	# Soft glow under everything.
+	if _valid:
+		_fill_ribbon(shaft, OUTLINE + 7.0, Color(col, 0.16), Vector2.ZERO)
+		draw_colored_polygon(_head(tip, dir, OUTLINE + 7.0, k), Color(col, 0.16))
+	# Drop shadow, then the ink outline (quads per segment, so the joints stay smooth).
+	var drop := Vector2(3, 5)
+	_fill_ribbon(shaft, OUTLINE, Color(0, 0, 0, 0.18), drop)
+	draw_colored_polygon(_head(tip + drop, dir, OUTLINE, k), Color(0, 0, 0, 0.18))
+	_fill_ribbon(shaft, OUTLINE, Palette.INK, Vector2.ZERO)
+	var e0: Array[PackedVector2Array] = _edges(shaft, OUTLINE)
+	draw_polyline(e0[0], Palette.INK, 1.5, true)
+	draw_polyline(e0[1], Palette.INK, 1.5, true)
+	var ink_head: PackedVector2Array = _head(tip, dir, OUTLINE, k)
+	draw_colored_polygon(ink_head, Palette.INK)
+	_smooth_edge(ink_head, Palette.INK)
+	# The body: shaded like a tube (lighter on the top edge, deeper underneath).
+	_draw_tube(shaft, col)
+	var head: PackedVector2Array = _head(tip, dir, 0.0, k)
+	var hc := PackedColorArray([col.lightened(0.35), col.lightened(0.2), col.darkened(0.12), col.darkened(0.25)])
+	draw_polygon(head, hc)
+	_smooth_edge(head, col.darkened(0.1))
+	# A shine along the top of the shaft and on the head.
+	var e: Array[PackedVector2Array] = _edges(shaft, -WIDTH * 0.18)
+	var shine: PackedVector2Array = e[0] if e[0][e[0].size() - 1].y < e[1][e[1].size() - 1].y else e[1]
+	draw_polyline(shine.slice(2), Color(1, 1, 1, 0.45), 2.5, true)
 	_draw_chevrons(shaft, col)
+	# A round tail cap where the arrow starts.
+	draw_circle(shaft[0], TAIL_WIDTH * 0.5 + OUTLINE + 1.0, Palette.INK)
+	draw_circle(shaft[0], TAIL_WIDTH * 0.5 + 1.0, col)
 
 
-## Chevrons scrolling along the shaft toward the head, fading in at the tail and out at the head.
+## Fills the ribbon as quads coloured light (top edge) to dark (bottom edge).
+func _draw_tube(shaft: PackedVector2Array, col: Color) -> void:
+	var e: Array[PackedVector2Array] = _edges(shaft, 0.0)
+	var top: PackedVector2Array = e[0]
+	var bottom: PackedVector2Array = e[1]
+	var light: Color = col.lightened(0.3)
+	var dark: Color = col.darkened(0.22)
+	for i: int in range(1, shaft.size()):
+		# Whichever edge is higher on screen gets the light.
+		var up: bool = (top[i] - bottom[i]).y <= 0.0
+		var ca: Color = light if up else dark
+		var cb: Color = dark if up else light
+		var quad := PackedVector2Array([top[i - 1], top[i], shaft[i], shaft[i - 1]])
+		draw_primitive(quad, PackedColorArray([ca, ca, col, col]), PackedVector2Array())
+		var quad2 := PackedVector2Array([shaft[i - 1], shaft[i], bottom[i], bottom[i - 1]])
+		draw_primitive(quad2, PackedColorArray([col, col, cb, cb]), PackedVector2Array())
+
+
+## An antialiased line round a polygon so its edge isn't jagged.
+func _smooth_edge(poly: PackedVector2Array, col: Color) -> void:
+	var loop := PackedVector2Array(poly)
+	loop.append(poly[0])
+	draw_polyline(loop, col, 1.5, true)
+
+
+## Bright pulses scrolling along the shaft toward the head, fading in at the tail and out at the head.
 func _draw_chevrons(shaft: PackedVector2Array, col: Color) -> void:
 	var length: float = _shaft_length()
-	var ink: Color = col.darkened(0.6)
+	var glow: Color = col.lightened(0.75)
 	for d: float in chevron_offsets():
 		var walked: float = 0.0
 		for i: int in range(1, shaft.size()):
@@ -126,9 +217,9 @@ func _draw_chevrons(shaft: PackedVector2Array, col: Color) -> void:
 				var dir: Vector2 = (shaft[i] - shaft[i - 1]).normalized()
 				var c: Vector2 = shaft[i - 1] + dir * (d - walked)
 				var side := Vector2(-dir.y, dir.x)
-				var w: float = WIDTH * 0.5
-				var fade: float = clampf(minf(d / 24.0, (length - d) / 24.0), 0.0, 1.0)
-				var pts := PackedVector2Array([c - dir * w + side * w, c + dir * w * 0.4, c - dir * w - side * w])
-				draw_polyline(pts, Color(ink, 0.9 * fade), 5.0, true)
+				var w: float = _half(d / maxf(length, 1.0)) * 0.75
+				var fade: float = clampf(minf(d / 30.0, (length - d) / 30.0), 0.0, 1.0)
+				var pts := PackedVector2Array([c - dir * w + side * w, c + dir * w * 0.5, c - dir * w - side * w])
+				draw_polyline(pts, Color(glow, 0.85 * fade), 3.5, true)
 				break
 			walked += seg

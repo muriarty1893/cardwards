@@ -78,6 +78,15 @@ describe("referee: moves", () => {
     expect(ref.s.log).toHaveLength(2);
   });
 
+  it("a choice from the waiting seat is recorded (Dark Gift offered in the rival's turn)", () => {
+    const { ref, first } = started();
+    const other = (1 - first) as 0 | 1;
+    const out = ref.message(other, { t: "act", a: { type: 3, player: other, choice: 1 } }, T0 + 2000);
+    const mv = ofType(to(out, first), "move")[0];
+    expect(mv.a).toMatchObject({ type: 3, player: other, choice: 1 });
+    expect(ref.s.active).toBe(first);
+  });
+
   it("act from the waiting seat → rejected to sender only, no move", () => {
     const { ref, first } = started();
     const other = (1 - first) as 0 | 1;

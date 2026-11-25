@@ -96,3 +96,23 @@ static func total_text(scale: StringName) -> String:
 		&"self_hp": return "this creature's HP"
 		&"cards_played": return "the number of other cards you played this turn"
 	return String(scale)
+
+
+## What a held card's growing number is right now (its first scaling step), or -1 if it has none.
+## Counts the hand as it will be once this card has left it.
+static func preview(s: GameState, p: int, c: CardData) -> int:
+	var added: int = 0
+	for e: EffectData in c.effects:
+		# Cards an earlier step adds to your hand (Duchess Bonbonpaw's Sweet Treats) count too.
+		if e.op == &"add_to_hand" and e.who != &"enemy_hero":
+			added += maxi(e.amount, 1)
+		if e.scale == &"" or e.scale in [&"self_atk", &"self_hp"]:
+			continue
+		var v: int = value(s, p, -1, e.scale)
+		if e.scale == &"hand":
+			v += added - (1 if c in s.players[p].hand else 0)
+		var n: int = e.amount + e.scale_per * v
+		if c.kind == CardData.Kind.SPELL and not c.field and e.op in [&"damage", &"split_damage"]:
+			n += Rules.spell_power(s, p)
+		return n
+	return -1

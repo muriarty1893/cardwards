@@ -239,7 +239,9 @@ export class Referee {
   private act(seat: Seat, raw: Record<string, unknown>, now: number): Out[] {
     const s = this.s;
     if (s.status !== "playing") return this.reject(seat, "not playing");
-    if (seat !== s.active) return this.reject(seat, "not your turn");
+    // A choice can be offered to the player whose turn it isn't (their Last Breath Dark Gift set off by
+    // an attack); the games check it is theirs, so it is the one move the other seat may send.
+    if (seat !== s.active && raw.type !== ActionType.CHOOSE) return this.reject(seat, "not your turn");
     if (s.pending) return this.reject(seat, "attack pending");
     const type = raw.type;
     if (typeof type !== "number" || !ACT_TYPES.includes(type)) return this.reject(seat, "bad move");
