@@ -22,10 +22,12 @@
 [ext_resource type="Resource" path="res://data/cards/magma_chieftain.tres" id="20_magma_chieftain"]
 [ext_resource type="Resource" path="res://data/cards/overcharge.tres" id="21_overcharge"]
 [ext_resource type="Resource" path="res://data/cards/kindle_pups.tres" id="22_kindle_pups"]
+[ext_resource type="Resource" path="res://data/cards/grudge_bolt.tres" id="23_grudge_bolt"]
+[ext_resource type="Resource" path="res://data/cards/vexa_grudgekeeper.tres" id="24_vexa_grudgekeeper"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"blaze_rush"
 display_name = "Blaze Rush"
 lands = Array[int]([1, 1, 2, 1])
-cards = Array[Resource]([ExtResource("2_cinderpup"), ExtResource("2_cinderpup"), ExtResource("3_flarebeak"), ExtResource("3_flarebeak"), ExtResource("4_magmaw"), ExtResource("4_magmaw"), ExtResource("5_blazehorn"), ExtResource("6_inferno_drake"), ExtResource("6_inferno_drake"), ExtResource("7_kiln_tower"), ExtResource("8_fireball"), ExtResource("8_fireball"), ExtResource("9_ember_rain"), ExtResource("10_gumdrop"), ExtResource("10_gumdrop"), ExtResource("11_lollibat"), ExtResource("12_sugar_shack"), ExtResource("13_volcano"), ExtResource("14_emberkit"), ExtResource("14_emberkit"), ExtResource("15_stoke"), ExtResource("16_hot_head"), ExtResource("17_ember_hornet"), ExtResource("17_ember_hornet"), ExtResource("18_cinder_barrage"), ExtResource("18_cinder_barrage"), ExtResource("19_firestorm"), ExtResource("20_magma_chieftain"), ExtResource("21_overcharge"), ExtResource("22_kindle_pups")])
+cards = Array[Resource]([ExtResource("2_cinderpup"), ExtResource("2_cinderpup"), ExtResource("3_flarebeak"), ExtResource("3_flarebeak"), ExtResource("4_magmaw"), ExtResource("4_magmaw"), ExtResource("5_blazehorn"), ExtResource("6_inferno_drake"), ExtResource("6_inferno_drake"), ExtResource("7_kiln_tower"), ExtResource("8_fireball"), ExtResource("8_fireball"), ExtResource("9_ember_rain"), ExtResource("10_gumdrop"), ExtResource("11_lollibat"), ExtResource("12_sugar_shack"), ExtResource("13_volcano"), ExtResource("14_emberkit"), ExtResource("15_stoke"), ExtResource("16_hot_head"), ExtResource("17_ember_hornet"), ExtResource("17_ember_hornet"), ExtResource("18_cinder_barrage"), ExtResource("18_cinder_barrage"), ExtResource("19_firestorm"), ExtResource("20_magma_chieftain"), ExtResource("21_overcharge"), ExtResource("22_kindle_pups"), ExtResource("23_grudge_bolt"), ExtResource("24_vexa_grudgekeeper")])

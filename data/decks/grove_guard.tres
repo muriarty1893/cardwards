@@ -21,10 +21,12 @@
 [ext_resource type="Resource" path="res://data/cards/mycel_gravekeeper.tres" id="19_mycel_gravekeeper"]
 [ext_resource type="Resource" path="res://data/cards/moss_ape_matriarch.tres" id="20_moss_ape_matriarch"]
 [ext_resource type="Resource" path="res://data/cards/fungal_feast.tres" id="21_fungal_feast"]
+[ext_resource type="Resource" path="res://data/cards/bog_biter.tres" id="22_bog_biter"]
+[ext_resource type="Resource" path="res://data/cards/the_rot_king.tres" id="23_the_rot_king"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"grove_guard"
 display_name = "Grove Guard"
 lands = Array[int]([0, 0, 3, 0])
-cards = Array[Resource]([ExtResource("2_sporeling"), ExtResource("2_sporeling"), ExtResource("3_mossback"), ExtResource("3_mossback"), ExtResource("4_glimmer_morel"), ExtResource("4_glimmer_morel"), ExtResource("5_rootstalker"), ExtResource("6_elder_shroomhulk"), ExtResource("6_elder_shroomhulk"), ExtResource("7_spore_hut"), ExtResource("7_spore_hut"), ExtResource("8_rain_of_spores"), ExtResource("8_rain_of_spores"), ExtResource("9_snowmite"), ExtResource("10_iceling"), ExtResource("10_iceling"), ExtResource("11_ice_wall"), ExtResource("12_cold_snap"), ExtResource("13_spore_bloom"), ExtResource("14_barkbeetle"), ExtResource("14_barkbeetle"), ExtResource("15_thorn_lash"), ExtResource("16_deep_roots"), ExtResource("17_grave_toad"), ExtResource("17_grave_toad"), ExtResource("18_spore_drifter"), ExtResource("18_spore_drifter"), ExtResource("19_mycel_gravekeeper"), ExtResource("20_moss_ape_matriarch"), ExtResource("21_fungal_feast")])
+cards = Array[Resource]([ExtResource("2_sporeling"), ExtResource("2_sporeling"), ExtResource("3_mossback"), ExtResource("3_mossback"), ExtResource("4_glimmer_morel"), ExtResource("5_rootstalker"), ExtResource("6_elder_shroomhulk"), ExtResource("7_spore_hut"), ExtResource("7_spore_hut"), ExtResource("8_rain_of_spores"), ExtResource("8_rain_of_spores"), ExtResource("9_snowmite"), ExtResource("10_iceling"), ExtResource("10_iceling"), ExtResource("11_ice_wall"), ExtResource("12_cold_snap"), ExtResource("13_spore_bloom"), ExtResource("14_barkbeetle"), ExtResource("15_thorn_lash"), ExtResource("16_deep_roots"), ExtResource("17_grave_toad"), ExtResource("17_grave_toad"), ExtResource("18_spore_drifter"), ExtResource("18_spore_drifter"), ExtResource("19_mycel_gravekeeper"), ExtResource("20_moss_ape_matriarch"), ExtResource("21_fungal_feast"), ExtResource("22_bog_biter"), ExtResource("22_bog_biter"), ExtResource("23_the_rot_king")])

@@ -12,18 +12,20 @@
 [ext_resource type="Resource" path="res://data/cards/sun_obelisk.tres" id="10_sun_obelisk"]
 [ext_resource type="Resource" path="res://data/cards/sandstone_watchtower.tres" id="11_sandstone_watchtower"]
 [ext_resource type="Resource" path="res://data/cards/sun_shield.tres" id="12_sun_shield"]
-[ext_resource type="Resource" path="res://data/cards/sandstorm.tres" id="13_sandstorm"]
-[ext_resource type="Resource" path="res://data/cards/sporeling.tres" id="14_sporeling"]
-[ext_resource type="Resource" path="res://data/cards/mossback.tres" id="15_mossback"]
-[ext_resource type="Resource" path="res://data/cards/caravan_master.tres" id="16_caravan_master"]
-[ext_resource type="Resource" path="res://data/cards/mirage_army.tres" id="17_mirage_army"]
-[ext_resource type="Resource" path="res://data/cards/sand_pickpocket.tres" id="18_sand_pickpocket"]
-[ext_resource type="Resource" path="res://data/cards/twin_guardians.tres" id="19_twin_guardians"]
-[ext_resource type="Resource" path="res://data/cards/dune_leviathan.tres" id="20_dune_leviathan"]
+[ext_resource type="Resource" path="res://data/cards/shield_bash.tres" id="13_shield_bash"]
+[ext_resource type="Resource" path="res://data/cards/bastion_last_wall.tres" id="14_bastion_last_wall"]
+[ext_resource type="Resource" path="res://data/cards/sandstorm.tres" id="15_sandstorm"]
+[ext_resource type="Resource" path="res://data/cards/sporeling.tres" id="16_sporeling"]
+[ext_resource type="Resource" path="res://data/cards/mossback.tres" id="17_mossback"]
+[ext_resource type="Resource" path="res://data/cards/caravan_master.tres" id="18_caravan_master"]
+[ext_resource type="Resource" path="res://data/cards/mirage_army.tres" id="19_mirage_army"]
+[ext_resource type="Resource" path="res://data/cards/sand_pickpocket.tres" id="20_sand_pickpocket"]
+[ext_resource type="Resource" path="res://data/cards/twin_guardians.tres" id="21_twin_guardians"]
+[ext_resource type="Resource" path="res://data/cards/dune_leviathan.tres" id="22_dune_leviathan"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"sun_fortress"
 display_name = "Sun Fortress"
 lands = Array[int]([5, 5, 0, 5])
-cards = Array[Resource]([ExtResource("2_sand_scuttler"), ExtResource("2_sand_scuttler"), ExtResource("3_meerkeep"), ExtResource("3_meerkeep"), ExtResource("4_sand_fox"), ExtResource("4_sand_fox"), ExtResource("5_sun_scarab"), ExtResource("5_sun_scarab"), ExtResource("6_dune_raptor"), ExtResource("7_sandwraith"), ExtResource("7_sandwraith"), ExtResource("8_oasis_alpaca"), ExtResource("8_oasis_alpaca"), ExtResource("9_lamp_djinn"), ExtResource("10_sun_obelisk"), ExtResource("10_sun_obelisk"), ExtResource("11_sandstone_watchtower"), ExtResource("12_sun_shield"), ExtResource("12_sun_shield"), ExtResource("13_sandstorm"), ExtResource("14_sporeling"), ExtResource("14_sporeling"), ExtResource("15_mossback"), ExtResource("15_mossback"), ExtResource("16_caravan_master"), ExtResource("17_mirage_army"), ExtResource("18_sand_pickpocket"), ExtResource("18_sand_pickpocket"), ExtResource("19_twin_guardians"), ExtResource("20_dune_leviathan")])
+cards = Array[Resource]([ExtResource("2_sand_scuttler"), ExtResource("2_sand_scuttler"), ExtResource("3_meerkeep"), ExtResource("3_meerkeep"), ExtResource("4_sand_fox"), ExtResource("4_sand_fox"), ExtResource("5_sun_scarab"), ExtResource("5_sun_scarab"), ExtResource("6_dune_raptor"), ExtResource("7_sandwraith"), ExtResource("7_sandwraith"), ExtResource("8_oasis_alpaca"), ExtResource("9_lamp_djinn"), ExtResource("10_sun_obelisk"), ExtResource("10_sun_obelisk"), ExtResource("11_sandstone_watchtower"), ExtResource("12_sun_shield"), ExtResource("13_shield_bash"), ExtResource("14_bastion_last_wall"), ExtResource("15_sandstorm"), ExtResource("16_sporeling"), ExtResource("16_sporeling"), ExtResource("17_mossback"), ExtResource("17_mossback"), ExtResource("18_caravan_master"), ExtResource("19_mirage_army"), ExtResource("20_sand_pickpocket"), ExtResource("20_sand_pickpocket"), ExtResource("21_twin_guardians"), ExtResource("22_dune_leviathan")])

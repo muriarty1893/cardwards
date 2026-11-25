@@ -152,23 +152,23 @@ func _draw() -> void:
 	# Soft glow under everything.
 	if _valid:
 		_fill_ribbon(shaft, OUTLINE + 7.0, Color(col, 0.16), Vector2.ZERO)
-		draw_colored_polygon(_head(tip, dir, OUTLINE + 7.0, k), Color(col, 0.16))
+		_fill_head(_head(tip, dir, OUTLINE + 7.0, k), Color(col, 0.16))
 	# Drop shadow, then the ink outline (quads per segment, so the joints stay smooth).
 	var drop := Vector2(3, 5)
 	_fill_ribbon(shaft, OUTLINE, Color(0, 0, 0, 0.18), drop)
-	draw_colored_polygon(_head(tip + drop, dir, OUTLINE, k), Color(0, 0, 0, 0.18))
+	_fill_head(_head(tip + drop, dir, OUTLINE, k), Color(0, 0, 0, 0.18))
 	_fill_ribbon(shaft, OUTLINE, Palette.INK, Vector2.ZERO)
 	var e0: Array[PackedVector2Array] = _edges(shaft, OUTLINE)
 	draw_polyline(e0[0], Palette.INK, 1.5, true)
 	draw_polyline(e0[1], Palette.INK, 1.5, true)
 	var ink_head: PackedVector2Array = _head(tip, dir, OUTLINE, k)
-	draw_colored_polygon(ink_head, Palette.INK)
+	_fill_head(ink_head, Palette.INK)
 	_smooth_edge(ink_head, Palette.INK)
 	# The body: shaded like a tube (lighter on the top edge, deeper underneath).
 	_draw_tube(shaft, col)
 	var head: PackedVector2Array = _head(tip, dir, 0.0, k)
 	var hc := PackedColorArray([col.lightened(0.35), col.lightened(0.2), col.darkened(0.12), col.darkened(0.25)])
-	draw_polygon(head, hc)
+	_fill_head(head, Color.WHITE, hc)
 	_smooth_edge(head, col.darkened(0.1))
 	# A shine along the top of the shaft and on the head.
 	var e: Array[PackedVector2Array] = _edges(shaft, -WIDTH * 0.18)
@@ -178,6 +178,13 @@ func _draw() -> void:
 	# A round tail cap where the arrow starts.
 	draw_circle(shaft[0], TAIL_WIDTH * 0.5 + OUTLINE + 1.0, Palette.INK)
 	draw_circle(shaft[0], TAIL_WIDTH * 0.5 + 1.0, col)
+
+
+## The notched head as two triangles (tip-wing-notch, tip-notch-wing): never needs triangulating.
+func _fill_head(h: PackedVector2Array, col: Color, cols: PackedColorArray = PackedColorArray()) -> void:
+	var c: PackedColorArray = cols if cols.size() == 4 else PackedColorArray([col, col, col, col])
+	draw_primitive(PackedVector2Array([h[0], h[1], h[2]]), PackedColorArray([c[0], c[1], c[2]]), PackedVector2Array())
+	draw_primitive(PackedVector2Array([h[0], h[2], h[3]]), PackedColorArray([c[0], c[2], c[3]]), PackedVector2Array())
 
 
 ## Fills the ribbon as quads coloured light (top edge) to dark (bottom edge).

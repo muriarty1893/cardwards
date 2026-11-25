@@ -15,18 +15,20 @@
 [ext_resource type="Resource" path="res://data/cards/rain_of_spores.tres" id="13_rain_of_spores"]
 [ext_resource type="Resource" path="res://data/cards/cotton_puff.tres" id="14_cotton_puff"]
 [ext_resource type="Resource" path="res://data/cards/jawbreaker.tres" id="15_jawbreaker"]
-[ext_resource type="Resource" path="res://data/cards/sprinkle_sprite.tres" id="16_sprinkle_sprite"]
-[ext_resource type="Resource" path="res://data/cards/gumdrop_baker.tres" id="17_gumdrop_baker"]
-[ext_resource type="Resource" path="res://data/cards/bakery_rush.tres" id="18_bakery_rush"]
-[ext_resource type="Resource" path="res://data/cards/sugar_shiv.tres" id="19_sugar_shiv"]
-[ext_resource type="Resource" path="res://data/cards/taffy_wolf_matron.tres" id="20_taffy_wolf_matron"]
-[ext_resource type="Resource" path="res://data/cards/cookie_jar.tres" id="21_cookie_jar"]
-[ext_resource type="Resource" path="res://data/cards/twinstripe_peppermare.tres" id="22_twinstripe_peppermare"]
-[ext_resource type="Resource" path="res://data/cards/party_favors.tres" id="23_party_favors"]
+[ext_resource type="Resource" path="res://data/cards/sugar_hoarder.tres" id="16_sugar_hoarder"]
+[ext_resource type="Resource" path="res://data/cards/duchess_bonbonpaw.tres" id="17_duchess_bonbonpaw"]
+[ext_resource type="Resource" path="res://data/cards/sprinkle_sprite.tres" id="18_sprinkle_sprite"]
+[ext_resource type="Resource" path="res://data/cards/gumdrop_baker.tres" id="19_gumdrop_baker"]
+[ext_resource type="Resource" path="res://data/cards/bakery_rush.tres" id="20_bakery_rush"]
+[ext_resource type="Resource" path="res://data/cards/sugar_shiv.tres" id="21_sugar_shiv"]
+[ext_resource type="Resource" path="res://data/cards/taffy_wolf_matron.tres" id="22_taffy_wolf_matron"]
+[ext_resource type="Resource" path="res://data/cards/cookie_jar.tres" id="23_cookie_jar"]
+[ext_resource type="Resource" path="res://data/cards/twinstripe_peppermare.tres" id="24_twinstripe_peppermare"]
+[ext_resource type="Resource" path="res://data/cards/party_favors.tres" id="25_party_favors"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"sugar_storm"
 display_name = "Sugar Storm"
 lands = Array[int]([2, 2, 0, 2])
-cards = Array[Resource]([ExtResource("2_gumdrop"), ExtResource("2_gumdrop"), ExtResource("3_taffy_snail"), ExtResource("3_taffy_snail"), ExtResource("4_lollibat"), ExtResource("5_sugar_sprite"), ExtResource("5_sugar_sprite"), ExtResource("6_jellywobble"), ExtResource("7_bonbon_behemoth"), ExtResource("8_sugar_shack"), ExtResource("9_candy_mill"), ExtResource("10_sugar_rush"), ExtResource("10_sugar_rush"), ExtResource("11_sporeling"), ExtResource("11_sporeling"), ExtResource("12_mossback"), ExtResource("13_rain_of_spores"), ExtResource("14_cotton_puff"), ExtResource("14_cotton_puff"), ExtResource("15_jawbreaker"), ExtResource("15_jawbreaker"), ExtResource("16_sprinkle_sprite"), ExtResource("17_gumdrop_baker"), ExtResource("17_gumdrop_baker"), ExtResource("18_bakery_rush"), ExtResource("19_sugar_shiv"), ExtResource("20_taffy_wolf_matron"), ExtResource("21_cookie_jar"), ExtResource("22_twinstripe_peppermare"), ExtResource("23_party_favors")])
+cards = Array[Resource]([ExtResource("2_gumdrop"), ExtResource("2_gumdrop"), ExtResource("3_taffy_snail"), ExtResource("3_taffy_snail"), ExtResource("4_lollibat"), ExtResource("5_sugar_sprite"), ExtResource("5_sugar_sprite"), ExtResource("6_jellywobble"), ExtResource("7_bonbon_behemoth"), ExtResource("8_sugar_shack"), ExtResource("9_candy_mill"), ExtResource("10_sugar_rush"), ExtResource("10_sugar_rush"), ExtResource("11_sporeling"), ExtResource("11_sporeling"), ExtResource("12_mossback"), ExtResource("13_rain_of_spores"), ExtResource("14_cotton_puff"), ExtResource("15_jawbreaker"), ExtResource("16_sugar_hoarder"), ExtResource("17_duchess_bonbonpaw"), ExtResource("18_sprinkle_sprite"), ExtResource("19_gumdrop_baker"), ExtResource("19_gumdrop_baker"), ExtResource("20_bakery_rush"), ExtResource("21_sugar_shiv"), ExtResource("22_taffy_wolf_matron"), ExtResource("23_cookie_jar"), ExtResource("24_twinstripe_peppermare"), ExtResource("25_party_favors")])
