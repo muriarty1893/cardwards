@@ -70,17 +70,18 @@ func setup(c: CardData, i: int) -> void:
 	name_l.add_theme_constant_override("outline_size", 6)
 	ribbon.add_child(name_l)
 	var kind := UiStyle.bold(UiStyle.label(type_line(c), 10, Palette.INK))
-	kind.position = Vector2(4, 119)
-	kind.size = Vector2(SIZE.x - 8, 14)
+	kind.position = Vector2(4, 118)
+	kind.size = Vector2(SIZE.x - 8, 13)
 	kind.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	frame.add_child(kind)
 	# Rules text on a paper panel (kept above the stat badges on creatures).
-	var text_rect := Rect2(8, 134, SIZE.x - 16, 34 if c.is_creature() else 44)
+	var text_rect := Rect2(8, 131, SIZE.x - 16, 38 if c.is_creature() else 56)
 	var paper := _panel(text_rect, Palette.PAPER, 2, 6)
 	frame.add_child(paper)
 	var rules: String = CardText.render(c)
 	# Rich text so mechanic names are bold; their rules show in KeywordNotes beside an enlarged card.
-	var fs: int = 10 if rules.length() <= 34 else 9
+	# The biggest size (10 down to MIN_TEXT_SIZE) at which the whole text fits the box.
+	var fs: int = fit_size(rules, text_rect.size.x - 6, text_rect.size.y)
 	_text = RichTextLabel.new()
 	_text.bbcode_enabled = true
 	_text.scroll_active = false
@@ -92,7 +93,7 @@ func setup(c: CardData, i: int) -> void:
 	_text.add_theme_font_size_override("bold_font_size", fs)
 	_text.add_theme_font_override("bold_font", bold_font())
 	_text.add_theme_color_override("default_color", Palette.INK)
-	_text.add_theme_constant_override("line_separation", -2)
+	_text.add_theme_constant_override("line_separation", LINE_GAP)
 	_text.text = CardText.render_bbcode(c)
 	_text.position = Vector2(3, 0)
 	_text.size = text_rect.size - Vector2(6, 0)
@@ -105,6 +106,40 @@ func setup(c: CardData, i: int) -> void:
 	if c.is_creature():
 		add_child(_gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, VisualDB.ICON_SWORDS))
 		add_child(_gem(Vector2(SIZE.x - 30, 166), 34, Palette.HP, str(c.health), 17, VisualDB.ICON_HEART))
+
+
+## Smallest rules-text size; below this a card's text would be unreadable even zoomed.
+const MIN_TEXT_SIZE := 6
+## Rules text line spacing (tighter than the font's own).
+const LINE_GAP := -2
+
+
+## Largest font size from 10 down to MIN_TEXT_SIZE whose word-wrapped `text` fits `width` x `height`.
+## Measured with the bold font, the widest the label draws, so it never overflows.
+static func fit_size(text: String, width: float, height: float) -> int:
+	var font: Font = bold_font()
+	for fs: int in range(10, MIN_TEXT_SIZE - 1, -1):
+		if text_height(font, text, width, fs) <= height:
+			return fs
+	return MIN_TEXT_SIZE
+
+
+## Height of `text` wrapped to `width` at size `fs`, with the card's tighter line spacing.
+static func text_height(font: Font, text: String, width: float, fs: int) -> float:
+	var lines: int = 0
+	for para: String in text.split("\n"):
+		var words: PackedStringArray = para.split(" ", false)
+		var line: String = ""
+		for wd: String in words:
+			var trial: String = wd if line == "" else line + " " + wd
+			if line != "" and font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
+				lines += 1
+				line = wd
+			else:
+				line = trial
+		lines += 1
+	var lh: float = font.get_height(fs)
+	return lines * lh + (lines - 1) * LINE_GAP + 2.0
 
 
 func art_texture() -> Texture2D:
