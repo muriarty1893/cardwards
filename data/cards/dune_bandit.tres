@@ -9,7 +9,6 @@ when = &"on_play"
 op = &"steal_hand"
 who = &"own_hero"
 amount = 1
-combo = true
 
 [resource]
 script = ExtResource("1_card")
@@ -20,6 +19,6 @@ land = 5
 level = 1
 cost = 3
 attack = 3
-health = 3
+health = 4
 tribe = &"spirit"
 effects = Array[ExtResource("2_eff")]([SubResource("eff_dune_bandit_0")])

@@ -17,5 +17,5 @@ display_name = "Lure of Gold"
 kind = 2
 land = 5
 level = 0
-cost = 4
+cost = 3
 effects = Array[ExtResource("2_eff")]([SubResource("eff_lure_of_gold_0")])

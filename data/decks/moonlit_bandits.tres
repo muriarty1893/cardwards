@@ -15,16 +15,16 @@
 [ext_resource type="Resource" path="res://data/cards/sand_scuttler.tres" id="13_sand_scuttler"]
 [ext_resource type="Resource" path="res://data/cards/dark_moon.tres" id="14_dark_moon"]
 [ext_resource type="Resource" path="res://data/cards/shadow_peddler.tres" id="15_shadow_peddler"]
-[ext_resource type="Resource" path="res://data/cards/night_market.tres" id="16_night_market"]
-[ext_resource type="Resource" path="res://data/cards/ember_hornet.tres" id="17_ember_hornet"]
-[ext_resource type="Resource" path="res://data/cards/cinder_barrage.tres" id="18_cinder_barrage"]
-[ext_resource type="Resource" path="res://data/cards/dusk_wasp.tres" id="19_dusk_wasp"]
-[ext_resource type="Resource" path="res://data/cards/bad_dream.tres" id="20_bad_dream"]
-[ext_resource type="Resource" path="res://data/cards/lullaby.tres" id="21_lullaby"]
+[ext_resource type="Resource" path="res://data/cards/ember_hornet.tres" id="16_ember_hornet"]
+[ext_resource type="Resource" path="res://data/cards/cinder_barrage.tres" id="17_cinder_barrage"]
+[ext_resource type="Resource" path="res://data/cards/sandwraith.tres" id="18_sandwraith"]
+[ext_resource type="Resource" path="res://data/cards/sun_scarab.tres" id="19_sun_scarab"]
+[ext_resource type="Resource" path="res://data/cards/dusk_wasp.tres" id="20_dusk_wasp"]
+[ext_resource type="Resource" path="res://data/cards/meerkeep.tres" id="21_meerkeep"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"moonlit_bandits"
 display_name = "Moonlit Bandits"
 lands = Array[int]([5, 5, 1, 5])
-cards = Array[Resource]([ExtResource("2_sand_pickpocket"), ExtResource("2_sand_pickpocket"), ExtResource("3_dune_bandit"), ExtResource("3_dune_bandit"), ExtResource("4_alpaking_thief_king"), ExtResource("5_sandglider_sphinx"), ExtResource("6_caravan_master"), ExtResource("7_dune_leviathan"), ExtResource("8_swindle"), ExtResource("8_swindle"), ExtResource("9_lure_of_gold"), ExtResource("10_grand_heist"), ExtResource("11_hex_of_the_dunes"), ExtResource("11_hex_of_the_dunes"), ExtResource("12_sand_fox"), ExtResource("12_sand_fox"), ExtResource("13_sand_scuttler"), ExtResource("13_sand_scuttler"), ExtResource("14_dark_moon"), ExtResource("15_shadow_peddler"), ExtResource("15_shadow_peddler"), ExtResource("16_night_market"), ExtResource("17_ember_hornet"), ExtResource("17_ember_hornet"), ExtResource("18_cinder_barrage"), ExtResource("18_cinder_barrage"), ExtResource("19_dusk_wasp"), ExtResource("19_dusk_wasp"), ExtResource("20_bad_dream"), ExtResource("21_lullaby")])
+cards = Array[Resource]([ExtResource("2_sand_pickpocket"), ExtResource("2_sand_pickpocket"), ExtResource("3_dune_bandit"), ExtResource("3_dune_bandit"), ExtResource("4_alpaking_thief_king"), ExtResource("5_sandglider_sphinx"), ExtResource("6_caravan_master"), ExtResource("7_dune_leviathan"), ExtResource("8_swindle"), ExtResource("9_lure_of_gold"), ExtResource("10_grand_heist"), ExtResource("11_hex_of_the_dunes"), ExtResource("12_sand_fox"), ExtResource("12_sand_fox"), ExtResource("13_sand_scuttler"), ExtResource("13_sand_scuttler"), ExtResource("14_dark_moon"), ExtResource("15_shadow_peddler"), ExtResource("15_shadow_peddler"), ExtResource("16_ember_hornet"), ExtResource("16_ember_hornet"), ExtResource("17_cinder_barrage"), ExtResource("17_cinder_barrage"), ExtResource("18_sandwraith"), ExtResource("18_sandwraith"), ExtResource("19_sun_scarab"), ExtResource("19_sun_scarab"), ExtResource("20_dusk_wasp"), ExtResource("20_dusk_wasp"), ExtResource("21_meerkeep")])

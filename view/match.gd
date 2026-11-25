@@ -681,16 +681,20 @@ func verify_views() -> void:
 			for sp: int in [l, l + GameState.LANES]:
 				var cv: CreatureView = creature_views[p][sp]
 				var cr: GameState.CreatureState = state.players[p].at(sp)
-				if not ((cr == null and cv == null) or (cr != null and cv != null and cv.card == cr.card)):
+				# By id: a changed copy (buffed in hand) shows as the printed card's model.
+				if not ((cr == null and cv == null) or (cr != null and cv != null and cv.card.id == cr.card.id)):
 					ok_c = false
-			var ok_b: bool = (lane.building == null and bv == null) or (lane.building != null and bv != null and bv.card == lane.building)
+			var ok_b: bool = (lane.building == null and bv == null) or (lane.building != null and bv != null and bv.card.id == lane.building.id)
 			if board.island(p, l).land != lane.land:
 				view_resyncs += 1
 				push_warning("Land out of sync at p%d lane %d; resyncing" % [p, l])
 				board.change_land(p, l, lane.land, Vector3.INF, false)
 			if not ok_c or not ok_b:
 				view_resyncs += 1
-				push_warning("View out of sync at p%d lane %d; resyncing" % [p, l])
+				var trail: Array[String] = []
+				for e: GameEvent in player.last_batch:
+					trail.append("%s%s" % [e.type, e.data])
+				push_warning("View out of sync at p%d lane %d; resyncing after: %s" % [p, l, ", ".join(trail)])
 				sync_all()
 				return
 

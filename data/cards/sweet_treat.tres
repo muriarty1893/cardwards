@@ -8,7 +8,7 @@ script = ExtResource("2_eff")
 when = &"on_play"
 op = &"heal"
 who = &"own_hero"
-amount = 3
+amount = 2
 
 [resource]
 script = ExtResource("1_card")

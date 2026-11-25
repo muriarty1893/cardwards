@@ -169,7 +169,7 @@ func island(player: int, lane: int) -> Island:
 
 ## The lane's centre on `player`'s half, ignoring the wobble (where its tiles sit). Halves differ.
 func lane_x(lane: int, player: int = 0) -> float:
-	return layout.base_centre(lane, player)
+	return layout.base_centre(GameState.lane_of(lane), player)
 
 
 ## Centre of the creature's roam zone, at a creature view's origin height. `lane` may be a

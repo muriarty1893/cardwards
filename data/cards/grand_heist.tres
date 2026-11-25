@@ -17,5 +17,5 @@ display_name = "Grand Heist"
 kind = 2
 land = 5
 level = 0
-cost = 5
+cost = 4
 effects = Array[ExtResource("2_eff")]([SubResource("eff_grand_heist_0")])

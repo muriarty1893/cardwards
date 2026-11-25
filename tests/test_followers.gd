@@ -133,3 +133,18 @@ func test_digest_covers_followers() -> bool:
 	assert_eq(s.clone().digest(), s.digest(), "clone keeps the follower")
 	_clean()
 	return true
+
+
+func test_changed_copy_on_board_keeps_views_in_sync() -> bool:
+	var m: MatchController = await Fx.load_match()
+	var s: GameState = m.state
+	var c: CardData = CardDB.variant(CardDB.card(&"gumdrop"), {"attack": 2})
+	var cr := GameState.CreatureState.new()
+	cr.card = c
+	s.players[0].put(2, cr)
+	m.place_creature(0, 2, CardDB.card(&"gumdrop"))
+	var before: int = m.view_resyncs
+	m.verify_views()
+	assert_eq(m.view_resyncs, before, "a buffed copy and its printed card's view agree")
+	m.queue_free()
+	return true

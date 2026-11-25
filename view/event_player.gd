@@ -40,6 +40,8 @@ var _venomed: Dictionary = {}
 var _last_hit: Dictionary = {}
 ## The batch being played and the index of the current event (spells look ahead at their targets).
 var _batch: Array[GameEvent] = []
+## The last batch played (named in resync warnings, to find what left the views behind).
+var last_batch: Array[GameEvent] = []
 var _at: int = 0
 
 
@@ -57,6 +59,7 @@ func play(events: Array[GameEvent]) -> void:
 	for i: int in events.size():
 		_at = i
 		await _play_one(events[i])
+	last_batch = events
 	_batch = []
 	_source = {}
 	if m.rival:

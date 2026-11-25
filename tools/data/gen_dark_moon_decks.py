@@ -14,8 +14,8 @@ DECKS = {
     "sugar_storm": ("Sugar Storm", [C, C, M, C], {
         "gumdrop": 2, "taffy_snail": 2, "lollibat": 1, "sugar_sprite": 2, "jellywobble": 1, "bonbon_behemoth": 1,
         "sugar_shack": 1, "candy_mill": 1, "sugar_rush": 2, "sporeling": 2, "mossback": 1, "rain_of_spores": 1,
-        "cotton_puff": 1, "jawbreaker": 2,
-        "sprinkle_sprite": 2, "gumdrop_baker": 2, "bakery_rush": 2, "taffy_wolf_matron": 1, "cookie_jar": 1, "twinstripe_peppermare": 1, "party_favors": 1}),
+        "cotton_puff": 2, "jawbreaker": 2,
+        "sprinkle_sprite": 1, "gumdrop_baker": 2, "bakery_rush": 1, "sugar_shiv": 1, "taffy_wolf_matron": 1, "cookie_jar": 1, "twinstripe_peppermare": 1, "party_favors": 1}),
     "deep_freeze": ("Deep Freeze", [F, F, E, F], {
         "iceling": 2, "frostfang": 2, "glacier_tortoise": 2, "rimewing": 1, "blizzard_titan": 2, "ice_wall": 1,
         "cold_snap": 2, "avalanche": 1, "cinderpup": 2, "fireball": 2, "snowstorm": 1, "snow_pup": 1, "icicle": 2,
@@ -27,9 +27,9 @@ DECKS = {
         "caravan_master": 1, "mirage_army": 1, "sand_pickpocket": 2, "twin_guardians": 1, "dune_leviathan": 1}),
     "moonlit_bandits": ("Moonlit Bandits", [D, D, E, D], {
         "sand_pickpocket": 2, "dune_bandit": 2, "alpaking_thief_king": 1, "sandglider_sphinx": 1, "caravan_master": 1,
-        "dune_leviathan": 1, "swindle": 2, "lure_of_gold": 1, "grand_heist": 1, "hex_of_the_dunes": 2, "sand_fox": 2,
-        "sand_scuttler": 2, "dark_moon": 1, "shadow_peddler": 2, "night_market": 1, "ember_hornet": 2, "cinder_barrage": 2,
-        "dusk_wasp": 2, "bad_dream": 1, "lullaby": 1}),
+        "dune_leviathan": 1, "swindle": 1, "lure_of_gold": 1, "grand_heist": 1, "hex_of_the_dunes": 1, "sand_fox": 2,
+        "sand_scuttler": 2, "dark_moon": 1, "shadow_peddler": 2, "ember_hornet": 2, "cinder_barrage": 2,
+        "sandwraith": 2, "sun_scarab": 2, "dusk_wasp": 2, "meerkeep": 1}),
 }
 
 
