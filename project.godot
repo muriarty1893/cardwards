@@ -4,7 +4,7 @@ config_version=5
 [application]
 
 config/name="Dream Isles"
-config/version="2.0"
+config/version="2.1"
 config/features=PackedStringArray("4.7", "Mobile")
 run/main_scene="res://menus/main_menu.tscn"
 config/icon="res://icon.svg"
