@@ -58,5 +58,5 @@ static func text(cond: StringName) -> String:
 		"deaths_at_least":
 			return "If %s or more creatures died this game" % bits[1]
 		"spells_of_land_at_least":
-			return "If you've cast %s or more %s spells this game" % [bits[2], CardData.LAND_NAMES[int(bits[1])]]
+			return "If you've cast %s+ %s spells this game" % [bits[2], CardData.LAND_NAMES[int(bits[1])]]
 	return "If " + String(cond)

@@ -22,3 +22,23 @@ func test_every_card_text_fits() -> bool:
 		w.free()
 	assert_eq(bad, [] as Array[String], "cards whose text overflows")
 	return true
+
+
+func test_dark_gift_copies_still_fit() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	var ws: Array[CardWidget] = []
+	for c: CardData in CardDB.dream_up_pool(CardData.Kind.CREATURE, -1):
+		var w := CardWidget.new()
+		w.setup(CardDB.variant(c, Gifts.delta(&"haunt")), 0)
+		tree.root.add_child(w)
+		ws.append(w)
+	await tree.process_frame
+	await tree.process_frame
+	var bad: Array[String] = []
+	for w: CardWidget in ws:
+		var t: RichTextLabel = w.text_label()
+		if t.get_content_height() > t.size.y + 0.5:
+			bad.append(String(w.card.id))
+		w.free()
+	assert_eq(bad, [] as Array[String], "Dark Gift (Last Breath) copies whose text overflows")
+	return true

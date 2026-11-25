@@ -277,7 +277,7 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 		&"steal_creature":
 			s = "Take control of %s%s" % [x, " with %d or less ATK" % e.amount if e.amount > 0 else ""]
 		&"split_damage":
-			s = "Deal %d damage split randomly between all enemies" % e.amount
+			s = "Deal %d damage randomly split among enemies" % e.amount
 		&"double_stats":
 			s = "Double the ATK and HP of %s" % x
 		&"next_spell_twice":
