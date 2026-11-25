@@ -88,17 +88,26 @@ the next hit), **Venom**, **Leech**, **Flurry** (attacks twice), **Hidden**, **S
 Some cards let you **Dream Up** a card: three choices rise up in front of you and you pick one to
 keep.
 
+### Legends and grudges
+
+Legendary cards (one of each per deck, marked with a crown) do something big. Some cards **Drain**
+the enemy across from them, taking its health for themselves. Others **grow** as the game goes on:
+a bolt that hits harder for every time your hero has been hurt, a shield bash that hits as hard as
+your armour, a glutton that doubles every time a creature dies. A growing card in your hand shows
+its number right now in a gold badge.
+
 ## Decks
 
-Five ready-made decks, each mixing two lands:
+Six ready-made decks, each mixing two lands:
 
 - **Grove Guard** (Mushroom Forest + Frostpeak): outlast them with healing.
 - **Blaze Rush** (Ember Flats + Candy Hills): burn fast, hit hard.
 - **Sugar Storm** (Candy Hills + Mushroom Forest): draw, trick, overwhelm.
 - **Deep Freeze** (Frostpeak + Ember Flats): lock the board down.
 - **Sun Fortress** (Sunny Dunes + Mushroom Forest): stand firm and grow in the sun.
+- **Moonlit Bandits** (Sunny Dunes + Ember Flats): steal their best cards and turn the Dark Moon.
 
-Or open **Decks** and build your own 30-card deck from over 100 cards.
+Or open **Decks** and build your own deck from 200 cards.
 
 ![The deck builder](docs/screenshots/deck-builder.jpg)
 
