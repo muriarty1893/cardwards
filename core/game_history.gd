@@ -50,5 +50,20 @@ static func spells_of_land(s: GameState, p: int, land: int) -> int:
 	return (s.players[p].history["spell_lands"] as Array).count(land)
 
 
+## The banner for a met starting-deck condition that one of p's cards cares about ("" for none).
+static func start_banner(s: GameState, p: int) -> String:
+	var ps: GameState.PlayerState = s.players[p]
+	var wants: Dictionary = {}
+	for c: CardData in ps.deck + ps.hand:
+		for e: EffectData in c.effects:
+			if e.need_cond != &"":
+				wants[String(e.need_cond).get_slice(":", 0)] = true
+	if wants.has("start_no_dupes") and bool(ps.history["start_no_dupes"]):
+		return "NO DUPLICATES!"
+	if wants.has("start_40") and int(ps.history["start_size"]) >= DeckStore.BIG_DECK_SIZE:
+		return "40-CARD DECK!"
+	return ""
+
+
 static func started_with(s: GameState, p: int, id: StringName) -> bool:
 	return id in (s.players[p].history["start_ids"] as Array)

@@ -98,3 +98,13 @@ func test_forty_enabler_still_allows_thirty() -> bool:
 	assert_eq(DeckStore.validate(cards), "", "30 cards with a 40-card enabler is fine")
 	CardDB.remove_test_card(&"t_big40b")
 	return true
+
+
+func test_start_banner_text() -> bool:
+	var s: GameState = Rules.setup(CardDB.deck(&"grove_guard"), CardDB.deck(&"blaze_rush"), 3)
+	assert_eq(GameHistory.start_banner(s, 0), "", "nothing to announce")
+	s.players[0].history["start_no_dupes"] = true
+	assert_eq(GameHistory.start_banner(s, 0), "", "no card cares")
+	s.players[0].deck.append(CardDB.card(&"bonbon_unicorn_queen"))
+	assert_eq(GameHistory.start_banner(s, 0), "NO DUPLICATES!", "a card that cares is in the deck")
+	return true

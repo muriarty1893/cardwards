@@ -149,6 +149,19 @@ func _ready() -> void:
 		if arg.begins_with("--demo-cards="):
 			_demo_cards(arg.substr(13).split(","))
 			return
+		if arg.begins_with("--demo-moon="):
+			# Dev view: cast Dark Moon on the --demo-cards board; "pick" stops at the picker, "left"/"right" plays it.
+			var how: String = arg.substr(12)
+			get_tree().create_timer(0.6).timeout.connect(func() -> void:
+				state.active = HUMAN
+				state.phase = GameState.Phase.MAIN
+				state.players[HUMAN].magic = 10
+				state.players[HUMAN].hand.append(CardDB.card(&"dark_moon"))
+				await perform(Action.play(HUMAN, state.players[HUMAN].hand.size() - 1, -1))
+				if how == "pick":
+					_human_dream_up()
+				else:
+					await perform(Action.choose(HUMAN, 0 if how == "left" else 1)))
 		if arg == "--demo-draw":
 			# Dev view: a card flying from the deck into the hand (screenshot it mid-flight).
 			get_tree().create_timer(0.8).timeout.connect(func() -> void:
@@ -221,6 +234,11 @@ func _begin(opening: Array[GameEvent]) -> void:
 		board.reveal_split(false)
 		await get_tree().create_timer(0.4).timeout
 	await player.play(opening)
+	var banner: String = GameHistory.start_banner(state, HUMAN)
+	if banner != "":
+		Banner.show_turn(hud, banner, Color("#b48cff"))
+		Audio.sfx(&"magic_gain")
+		await get_tree().create_timer(0.9).timeout
 	await driver.begin()
 	busy = false
 	refresh_ui()
