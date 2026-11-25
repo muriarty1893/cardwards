@@ -6,7 +6,7 @@ extends RefCounted
 
 static func fresh() -> Dictionary:
 	return {"spells": [] as Array[StringName], "spell_lands": [] as Array[int], "deaths_own": 0, "dead": [] as Array[StringName], "stolen": 0,
-		"start_size": 0, "start_no_dupes": false, "start_ids": [] as Array[StringName]}
+		"start_size": 0, "hero_hits": 0, "start_no_dupes": false, "start_ids": [] as Array[StringName]}
 
 
 ## Notes the starting deck (call before shuffling or drawing).

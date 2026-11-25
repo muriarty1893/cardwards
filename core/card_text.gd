@@ -7,6 +7,7 @@ const _PREFIX: Dictionary = {
 	&"on_boop": "Boop: ", &"on_destroyed": "Last Breath: ", &"on_draw": "When drawn: ", &"in_hand": "",
 	&"start_of_turn": "Start of your turn: ", &"end_of_turn": "End of your turn: ",
 	&"after_damage": "After this damages a creature, ", &"on_hurt": "After this takes damage, ",
+	&"on_any_death": "Whenever a creature dies, ",
 	&"on_level_up": "Level up: ", &"field_start": "Start of each turn: ", &"field_end": "End of each turn: ",
 }
 ## How each `who` reads as the object of a sentence.
@@ -309,6 +310,8 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			s = "Your %s happen twice" % _b("on-play effects", bold)
 		&"echo_death":
 			s = "Your creatures' %s happen twice" % _b("Last Breaths", bold)
+		&"drain":
+			s = "%s %d from %s" % [_b("Drain", bold), e.amount, x]
 		&"resurrect":
 			if e.keyword == &"last_breath":
 				s = "Summon every other creature of yours with %s that died this game" % _b("Last Breath", bold)
@@ -316,7 +319,36 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 				s = "Summon a random creature of yours that died this game" if e.amount <= 1 else "Summon %d random creatures of yours that died this game" % e.amount
 		_:
 			s = String(e.op)
+	if e.scale != &"":
+		s = _scaled(e, s, x, bold)
 	# "it" sentences continue an earlier clause, so they start lower-case.
 	if x == "it" and not s.begins_with("["):
 		s = s.substr(0, 1).to_lower() + s.substr(1)
 	return s
+
+
+## A scaling step's sentence (Scaling): "Deal damage equal to your armour to a creature", or the
+## plain sentence + ", +1 for each time your hero took damage this game".
+static func _scaled(e: EffectData, s: String, x: String, _bold: bool) -> String:
+	var total: String = Scaling.total_text(e.scale)
+	if e.amount == 0 and e.scale_per == 1:
+		match e.op:
+			&"damage":
+				return "Deal damage equal to %s to %s" % [total, x]
+			&"drain":
+				return "Drain HP equal to %s from %s" % [total, x]
+			&"armour":
+				return "Gain armour equal to %s" % total
+			&"heal":
+				return "Heal %s equal to %s" % [x, total]
+			&"draw":
+				return "Draw cards equal to %s" % total
+			&"split_damage":
+				return "Deal damage equal to %s randomly split among enemies" % total
+			&"buff":
+				return "Give %s +X/+X, where X is %s" % [x, total]
+			&"temp_atk":
+				return "Give %s +X ATK this turn, where X is %s" % [x, total]
+	if e.op == &"buff":
+		return "%s, +%d/+%d %s" % [s, e.scale_per, e.scale_per, Scaling.each_text(e.scale)]
+	return "%s, +%d %s" % [s, e.scale_per, Scaling.each_text(e.scale)]

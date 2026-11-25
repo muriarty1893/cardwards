@@ -2,7 +2,7 @@ extends TestCase
 ## Card data matches the Rules 2.0 spec (section 6) and the living board spec (section 10):
 ## numbers, keywords and generated text.
 
-const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura", &"on_level_up", &"field_aura", &"field_start", &"field_end", &"on_hurt", &"in_hand", &"on_draw"]
+const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura", &"on_level_up", &"field_aura", &"field_start", &"field_end", &"on_hurt", &"in_hand", &"on_draw", &"on_any_death"]
 const OPS: Array[StringName] = [
 	&"damage", &"heal", &"draw", &"freeze", &"gain_magic", &"hush", &"return_building", &"move", &"swap",
 	&"dream_up", &"return_from_discard", &"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken",
@@ -13,6 +13,8 @@ const OPS: Array[StringName] = [
 	&"split_damage", &"double_stats", &"next_spell_twice", &"replay_spells", &"add_to_hand", &"shuffle_into_deck",
 	&"summon", &"buff_hand", &"cost_per_death", &"grow_on_spell", &"echo", &"echo_death", &"resurrect",
 	&"dark_moon", &"steal_hand", &"copy_rival", &"steal_creature",
+	# Legends & Grudges
+	&"drain",
 ]
 const WHOS: Array[StringName] = [
 	&"chosen_creature", &"chosen_own_creature", &"chosen_own_empty_lane", &"chosen_two_own_creatures",
@@ -178,6 +180,25 @@ const SPEC: Dictionary = {
 	&"moon_elixir": [0, 3, 0, 0, [], 0],
 	&"moonwell": [0, 3, 0, 0, [], 0],
 	&"twin_guardians": [0, 3, 0, 0, [], 0],
+	# Legends & Grudges (2026-11-25)
+	&"bog_biter": [1, 2, 2, 2, [], 0],
+	&"bloodbow_ranger": [1, 3, 2, 3, [], 0],
+	&"nocturna_velvet_queen": [2, 6, 3, 5, [], 0],
+	&"carrion_hound": [1, 3, 2, 3, [], 0],
+	&"mawra_grave_glutton": [2, 5, 1, 2, [], 0],
+	&"the_rot_king": [2, 6, 4, 5, [], 0],
+	&"grudge_bolt": [0, 2, 0, 0, [], 0],
+	&"vexa_grudgekeeper": [3, 7, 5, 5, [], 0],
+	&"last_stand": [0, 4, 0, 0, [], 0],
+	&"shield_bash": [0, 1, 0, 0, [], 0],
+	&"bastion_last_wall": [2, 6, 3, 7, [&"sturdy"], 0],
+	&"sugar_hoarder": [2, 4, 2, 2, [], 0],
+	&"duchess_bonbonpaw": [3, 7, 4, 4, [], 0],
+	&"grand_fence": [2, 4, 3, 3, [], 0],
+	&"snowball": [0, 2, 0, 0, [], 0],
+	&"hailmother_ysra": [3, 8, 5, 6, [], 0],
+	&"pyrrhos_spellstorm": [3, 8, 6, 6, [], 0],
+	&"mourning_toll": [0, 6, 0, 0, [], 0],
 }
 
 ## Rules text, verbatim from spec section 6.
@@ -383,21 +404,41 @@ const SPEC_TEXT: Dictionary = {
 	&"moon_elixir": "Double the ATK and HP of one of your creatures.",
 	&"moonwell": "Gain 2 max magic.",
 	&"twin_guardians": "Summon two 1/5 Mossbacks.",
+	# Legends & Grudges (2026-11-25)
+	&"bog_biter": "On play: Drain 1 from the opposing creature.",
+	&"bloodbow_ranger": "On play: Drain 2 from the opposing creature.",
+	&"nocturna_velvet_queen": "On play: Drain 2 from all enemy creatures.",
+	&"carrion_hound": "Whenever a creature dies, give this creature +1/+1.",
+	&"mawra_grave_glutton": "Whenever a creature dies, double the ATK and HP of this creature.",
+	&"the_rot_king": "On play: Deal 1 damage to all enemy creatures. Whenever a creature dies, give this creature +2/+2.",
+	&"grudge_bolt": "Deal 1 damage to a creature, +1 for each time your hero took damage this game.",
+	&"vexa_grudgekeeper": "On play: Deal 1 damage to the enemy hero, +1 for each time your hero took damage this game.",
+	&"last_stand": "Gain 3 armour, +1 for each time your hero took damage this game.",
+	&"shield_bash": "Deal damage equal to your armour to an enemy creature.",
+	&"bastion_last_wall": "Sturdy. On play: Gain 4 armour. Deal damage equal to your armour to an enemy creature.",
+	&"sugar_hoarder": "On play: Give this creature +X/+X, where X is the number of cards in your hand.",
+	&"duchess_bonbonpaw": "On play: Add two Sweet Treats to your hand. Give this creature +X/+X, where X is the number of cards in your hand.",
+	&"grand_fence": "On play: Steal a random card from your rival's hand. Give this creature +X/+X, where X is the number of cards you've stolen this game.",
+	&"snowball": "Deal 1 damage to a creature, +1 for each spell you've cast this game.",
+	&"hailmother_ysra": "Start of your turn: Deal damage equal to this creature's ATK randomly split among enemies.",
+	&"pyrrhos_spellstorm": "On play: Deal damage equal to the number of spells you've cast this game randomly split among enemies.",
+	&"mourning_toll": "Deal damage equal to the number of your creatures that died this game to all enemy creatures.",
 }
 
 
 func test_card_count() -> bool:
 	var cards: Array[CardData] = CardDB.all_cards()
-	assert_eq(cards.size(), 198, "198 cards (47 + card expansion 2's 41 + Sunny Dunes 14 + 16 more + Dark Moon's 80)")
-	assert_eq(CardDB.collectible_cards().size(), 182, "182 collectible (Dark Moon adds 73 and 7 tokens)")
+	assert_eq(cards.size(), 216, "216 cards (47 + card expansion 2's 41 + Sunny Dunes 14 + 16 more + Dark Moon's 80 + Legends & Grudges 18)")
+	assert_eq(CardDB.collectible_cards().size(), 200, "200 collectible (Dark Moon adds 73 and 7 tokens, Legends & Grudges 18)")
 	# 10 per land from Rules 2.0, each land's field spell, the two armour spells, then expansion 2 (10 per land,
 	# Frost 11 with the Snowman token), then 4 per land and Sunny Dunes' 14.
 	# Dark Moon: 12 Mushroom, 13 Ember, 13 Candy, 11 Frost, 12 Dunes, 19 Neutral.
-	var per_land: Dictionary = {0: 38, 1: 38, 2: 39, 3: 37, 5: 26}
+	# Legends & Grudges: 4 Mushroom, 3 Ember, 2 Candy, 2 Frost, 3 Dunes, 4 Neutral.
+	var per_land: Dictionary = {0: 42, 1: 41, 2: 41, 3: 39, 5: 29}
 	for land: int in per_land:
 		assert_eq(cards.filter(func(c: CardData) -> bool: return c.land == land).size(), per_land[land], "%d cards for land %d" % [per_land[land], land])
 	var neutral: Array = cards.filter(func(c: CardData) -> bool: return c.land == CardData.Land.NEUTRAL)
-	assert_eq(neutral.size(), 20, "Star Shard and Dark Moon's 19 neutral cards")
+	assert_eq(neutral.size(), 24, "Star Shard, Dark Moon's 19 and Legends & Grudges' 4 neutral cards")
 	assert_true(neutral.any(func(c: CardData) -> bool: return c.id == &"star_shard"), "star shard")
 	return true
 

@@ -227,6 +227,20 @@ const ENTRIES: Dictionary = {
 	&"moon_elixir": {},
 	&"moonwell": {},
 	&"twin_guardians": {},
+	# Legends & Grudges (2026-11-25)
+	&"bog_biter": {"model": "extra/BogFish.fbx", "tint": &"moss"},
+	&"bloodbow_ranger": {"model": "extra/Ranger.fbx", "tint": &"none"},
+	&"nocturna_velvet_queen": {"model": "extra/Bat.fbx", "tint": &"candy_purple"},
+	&"carrion_hound": {"model": "extra/Dog.fbx", "tint": &"ash"},
+	&"mawra_grave_glutton": {"model": "extra/Pug.fbx", "tint": &"bone"},
+	&"the_rot_king": {"model": "extra/Cleric.fbx", "tint": &"moss"},
+	&"vexa_grudgekeeper": {"model": "extra/Wizard.fbx", "tint": &"gummy_red"},
+	&"bastion_last_wall": {"model": "extra/Warrior.fbx", "tint": &"none"},
+	&"sugar_hoarder": {"model": "extra/Chick.fbx", "tint": &"taffy"},
+	&"duchess_bonbonpaw": {"model": "extra/Cat.fbx", "tint": &"candy_pink"},
+	&"grand_fence": {"model": "extra/Rogue.fbx", "tint": &"none"},
+	&"hailmother_ysra": {"model": "extra/Monk.fbx", "tint": &"snowy"},
+	&"pyrrhos_spellstorm": {"model": "extra/Horse.fbx", "tint": &"ember"},
 }
 
 
@@ -315,6 +329,11 @@ const SPELL_ICONS: Dictionary = {
 	&"moon_elixir": "res://assets/icons/bubbling-flask.svg",
 	&"moonwell": "res://assets/icons/well.svg",
 	&"twin_guardians": "res://assets/icons/guards.svg",
+	&"grudge_bolt": "res://assets/icons/screaming.svg",
+	&"last_stand": "res://assets/icons/checked-shield.svg",
+	&"shield_bash": "res://assets/icons/round-shield.svg",
+	&"snowball": "res://assets/icons/frozen-orb.svg",
+	&"mourning_toll": "res://assets/icons/grave-flowers.svg",
 }
 ## Glow behind spell icons, by land.
 const SPELL_GLOW: Array[Color] = [Color("#b6ff7a"), Color("#ffb03a"), Color("#ff9fe0"), Color("#bfe8ff"), Color("#ffe07a"), Color("#ffd27a")]
@@ -348,6 +367,10 @@ const EFFECTS: Dictionary = {
 	&"dune_raptor": &"draw", &"lamp_djinn": &"draw", &"moss_oracle": &"draw", &"mirage": &"draw", &"seed_pod": &"draw",
 	&"spark_scroll": &"draw", &"lucky_wrapper": &"draw", &"snow_globe": &"draw",
 	&"spore_drifter": &"heal", &"grave_toad": &"damage", &"mycel_gravekeeper": &"heal", &"mycelia_spore_weaver": &"heal", &"ancient_hollowneck": &"heal", &"ember_hornet": &"damage", &"flame_tiki": &"damage", &"ignis_ember_storm": &"damage", &"cinder_fiend": &"magic", &"molten_titan": &"damage", &"sprinkle_sprite": &"draw", &"gumdrop_baker": &"draw", &"bonbon_unicorn_queen": &"draw", &"twinstripe_peppermare": &"magic", &"cakequake_behemoth": &"draw", &"snowdrift_sage": &"draw", &"glacier_shark": &"freeze", &"aurora_skywhale": &"freeze", &"glacial_archmage": &"magic", &"rimeback_stegosaur": &"freeze", &"sand_pickpocket": &"draw", &"dune_bandit": &"draw", &"alpaking_thief_king": &"draw", &"sandglider_sphinx": &"move", &"dune_leviathan": &"draw", &"gluttonous_dreamer": &"draw", &"shadow_peddler": &"draw", &"herald_of_the_sleeper": &"armour", &"moonlit_stalker": &"draw", &"dusk_wasp": &"damage", &"moon_guppy": &"magic", &"dark_moon": &"swap_trick", &"moon_left": &"swap_trick", &"moon_right": &"swap_trick", &"fungal_feast": &"draw", &"mycelium_call": &"regrowth", &"rot_harvest": &"damage", &"grave_bloom": &"regrowth", &"necrospore": &"damage", &"spore_burst": &"damage", &"firestorm": &"ember_rain", &"cinder_barrage": &"ember_rain", &"overcharge": &"magic", &"hex_of_cinders": &"fireball", &"smolder": &"damage", &"lava_wave": &"damage", &"kindle_pups": &"regrowth", &"bakery_rush": &"draw", &"cookie_jar": &"draw", &"sweet_treat": &"heal", &"cavity_hex": &"draw", &"toothache": &"damage", &"party_favors": &"draw", &"gumdrop_parade": &"regrowth", &"rime_dart": &"avalanche", &"hoarfrost": &"draw", &"blizzard_echo": &"cold_snap", &"permafrost": &"cold_snap", &"snow_call": &"regrowth", &"swindle": &"draw", &"lure_of_gold": &"move", &"hex_of_the_dunes": &"draw", &"cursed_coin": &"damage", &"grand_heist": &"draw", &"mirage_army": &"regrowth", &"night_market": &"draw", &"bad_dream": &"draw", &"nightmare": &"damage", &"lullaby": &"draw", &"shooting_stars": &"ember_rain", &"moon_elixir": &"magic", &"moonwell": &"magic", &"twin_guardians": &"regrowth",
+	&"bog_biter": &"damage", &"bloodbow_ranger": &"damage", &"nocturna_velvet_queen": &"damage", &"carrion_hound": &"heal",
+	&"mawra_grave_glutton": &"heal", &"the_rot_king": &"damage", &"vexa_grudgekeeper": &"damage", &"bastion_last_wall": &"armour",
+	&"sugar_hoarder": &"draw", &"duchess_bonbonpaw": &"draw", &"grand_fence": &"draw", &"hailmother_ysra": &"freeze",
+	&"pyrrhos_spellstorm": &"damage",
 }
 
 
@@ -431,6 +454,11 @@ const SPELL_FX: Dictionary = {
 	&"twin_guardians": {"kind": &"circle", "color": Color("#b6ff7a")},
 	&"moon_left": {"kind": &"swirl", "color": Color("#8a5aff")},
 	&"moon_right": {"kind": &"swirl", "color": Color("#8a5aff")},
+	&"grudge_bolt": {"kind": &"comet", "color": Color("#ff3a4a"), "trail": &"embers", "size": 1.3, "sound": &"fire_whoosh"},
+	&"last_stand": {"kind": &"hero", "color": Color("#ffd27a")},
+	&"shield_bash": {"kind": &"slash", "color": Color("#ffc94a")},
+	&"snowball": {"kind": &"comet", "color": Color("#e8f6ff"), "size": 1.4},
+	&"mourning_toll": {"kind": &"rain", "color": Color("#9a7ad1")},
 }
 
 

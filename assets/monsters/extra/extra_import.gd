@@ -19,6 +19,15 @@ const SURFACE_COLORS: Dictionary = {
 }
 
 
+## FBX files whose colours come through as plain grey: a colour per material name.
+const NAMED_COLORS: Dictionary = {
+		"Dog": {"Dog": "#c8915a"},
+	"Cat": {"Grey": "#8a8a96", "White": "#ffffff", "Pink": "#ff9fb0"},
+	"Chick": {"Material.001": "#ffd84a", "Material.002": "#ff9a2a"},
+}
+## Textured characters (Quaternius RPG Characters): <name>_Texture.png next to the model.
+const TEXTURED: Array[String] = ["Wizard", "Warrior", "Rogue", "Monk", "Cleric", "Ranger"]
+
 func _post_import(scene: Node) -> Object:
 	var base: String = get_source_file().get_file().get_basename()
 	# Old FBX files (Fox, Bird, Fish) keep the scene they were made in: sun lights, a lamp and a camera.
@@ -35,6 +44,22 @@ func _post_import(scene: Node) -> Object:
 				var m := StandardMaterial3D.new()
 				m.resource_name = "Painted"
 				m.albedo_color = Color(cols[mini(s, cols.size() - 1)])
+				mi.set_surface_override_material(s, m)
+	if NAMED_COLORS.has(base) or base in TEXTURED:
+		var tex: Texture2D = load(get_source_file().get_base_dir().path_join(base + "_Texture.png")) if base in TEXTURED else null
+		for n: Node in scene.find_children("*", "MeshInstance3D", true, false):
+			var mi := n as MeshInstance3D
+			if mi.mesh == null:
+				continue
+			for s: int in mi.mesh.get_surface_count():
+				var old: Material = mi.mesh.surface_get_material(s)
+				var m := StandardMaterial3D.new()
+				m.resource_name = "Painted"
+				if tex:
+					m.albedo_texture = tex
+				else:
+					var named: Dictionary = NAMED_COLORS[base]
+					m.albedo_color = Color(named.get(old.resource_name if old else "", "#e0e0e0"))
 				mi.set_surface_override_material(s, m)
 	for n: Node in scene.find_children("*", "AnimationPlayer", true, false):
 		var ap := n as AnimationPlayer

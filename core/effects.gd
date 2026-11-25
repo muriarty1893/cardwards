@@ -35,6 +35,13 @@ static func run(s: GameState, p: int, lane: int, card: CardData, when: StringNam
 
 static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectData, ts: Array[Dictionary], chosen: Array[Dictionary], ev: Array[GameEvent]) -> void:
 	var ps: GameState.PlayerState = s.players[p]
+	if e.scale != &"":
+		# Scaling (Scaling.value): the step grows by scale_per for each point of the count.
+		var bonus: int = e.scale_per * Scaling.value(s, p, lane if card.kind == CardData.Kind.CREATURE else -1, e.scale)
+		e = e.duplicate() as EffectData
+		e.amount += bonus
+		if e.op == &"buff":
+			e.amount2 += bonus
 	if e.cond != &"":
 		ts = ts.filter(func(t: Dictionary) -> bool: return _cond_ok(s, e.cond, t))
 	match e.op:
@@ -52,6 +59,24 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 					var r: Dictionary = Lands.react_before(s, card, e.op, t, ev)
 					Rules.damage_creature(s, t["player"], t["lane"], amount + int(r.get("extra", 0)), src, ev)
 					Lands.react_after(s, p, r, t, ev)
+		&"drain":
+			# Leech on play: the target loses HP and this creature gains it (+0/+N).
+			# An empty lane drains the enemy hero instead.
+			var dsrc: Dictionary = {"player": p, "lane": -1, "kind": &"ability"}
+			for t: Dictionary in ts:
+				var got: int = 0
+				if _creature(s, t):
+					got = Rules.damage_creature(s, t["player"], t["lane"], e.amount, dsrc, ev)
+				elif t.has("player"):
+					var before: int = s.players[t["player"]].hero_hp + s.players[t["player"]].armour
+					Rules.damage_hero(s, t["player"], e.amount, ev, dsrc)
+					got = before - s.players[t["player"]].hero_hp - s.players[t["player"]].armour
+				if got > 0 and lane >= 0 and card.kind == CardData.Kind.CREATURE and ps.at(lane) and ps.at(lane).card == card:
+					ev.append(GameEvent.make(&"drained", {"player": p, "lane": lane, "from": t, "amount": got}))
+					Rules.buff(s, p, lane, 0, got, ev)
+				elif got > 0:
+					ev.append(GameEvent.make(&"drained", {"player": p, "lane": -1, "from": t, "amount": got}))
+					Rules.heal_hero(s, p, got, ev)
 		&"heal":
 			for t: Dictionary in ts:
 				if t.has("hero"):
@@ -149,7 +174,9 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 				if _creature(s, t):
 					var cr: GameState.CreatureState = s.players[t["player"]].at(t["lane"])
 					var hp_now: int = Rules.effective_max_hp(s, t["player"], t["lane"]) - cr.damage
-					Rules.buff(s, t["player"], t["lane"], Rules.effective_attack(s, t["player"], t["lane"]), hp_now, ev)
+					var atk_now: int = Rules.effective_attack(s, t["player"], t["lane"])
+					# Capped at 99/99 so the numbers stay readable (Bonegrave doubles on every death).
+					Rules.buff(s, t["player"], t["lane"], clampi(99 - atk_now, 0, atk_now), clampi(99 - hp_now, 0, hp_now), ev)
 		&"next_spell_twice":
 			ps.spell_twice += maxi(e.amount, 1)
 		&"replay_spells":

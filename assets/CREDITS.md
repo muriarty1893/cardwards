@@ -16,6 +16,10 @@ unless noted.
   itch.io); Spider, Wasp ("Easy Enemy Pack", itch.io); Shark, Whale, Manta, Dolphin ("LowPoly Animated Fish", itch.io);
   Zebra ("LowPoly Animated Animals", itch.io); Donkey, Horse_White, Cow, ShibaInu ("Ultimate Animated Animals",
   quaternius.com).
+  Legends & Grudges additions (OpenGameArt mirrors): Bat ("Animated Monster Pack"); Cat, Dog ("Animal Pack Vol.2");
+  Chick ("Animals Pack"); Pug, Horse ("Farm Animals"); BogFish (Fish2 from "Animated Fish Pack"); Wizard, Warrior,
+  Rogue, Monk, Cleric, Ranger with their textures ("RPG Characters - Nov 2020",
+  opengameart.org/content/lowpoly-rpg-characters).
 - `monsters/cute/`: "Cute Animated Monsters" (Aug 2020), from the OpenGameArt mirror
   https://opengameart.org/content/textured-cute-monster-pack. Textures brightened x1.5 for the game's lighting.
 - `buildings/`: "Ultimate Fantasy RTS" pack (files renamed to card ids).

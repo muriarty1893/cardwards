@@ -10,7 +10,7 @@ const NAMES: Dictionary = {
 	&"leech": "Leech", &"flurry": "Flurry", &"hidden": "Hidden", &"second_wind": "Second Wind",
 	&"hush": "Hush", &"dream_up": "Dream Up", &"combo": "Combo", &"spell_power": "Spell Power",
 	&"field": "Field", &"armour": "Armour", &"level_up": "Level up", &"sturdy": "Sturdy", &"bask": "Bask",
-	&"last_breath": "Last Breath", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo", &"follower": "Follower",
+	&"last_breath": "Last Breath", &"drain": "Drain", &"scaling": "Grows", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo", &"follower": "Follower",
 }
 
 const RULES: Dictionary = {
@@ -31,6 +31,8 @@ const RULES: Dictionary = {
 	&"sturdy": "Takes 1 less damage from every hit.",
 	&"bask": "At the end of your turn, if it didn't attack, it gets +1/+1.",
 	&"last_breath": "Happens when this creature dies (not if it's Hushed).",
+	&"drain": "Deals the damage, and this creature gains that much HP (a spell or building heals your hero instead). An empty lane drains the enemy hero.",
+	&"scaling": "The number grows during the game. The card in your hand shows what it is right now.",
 	&"curse": "A bad card made for the rival. Some go off when drawn.",
 	&"dark_gift": "Choose one of 3 random creatures; the one you take gets a random bonus.",
 	&"follower": "Shares its leader's land. It fights and can be hit on its own, and takes over the land if its leader falls.",

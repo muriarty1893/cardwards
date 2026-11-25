@@ -28,3 +28,7 @@ extends Resource
 @export var gift: bool = false
 ## Runs only if Conditions.ok(owner, need_cond): "name" or "name:arg[:arg]".
 @export var need_cond: StringName = &""
+## Scaling (Scaling.value): the step's amount grows by `scale_per` for each point of this count,
+## e.g. &"hero_hits" (times your hero took damage this game) or &"armour". Empty: no scaling.
+@export var scale: StringName = &""
+@export var scale_per: int = 1

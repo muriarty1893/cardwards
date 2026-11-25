@@ -837,6 +837,8 @@ static func damage_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent],
 	var soaked: int = mini(ps.armour, maxi(amount, 0))
 	ps.armour -= soaked
 	ps.hero_hp -= amount - soaked
+	if amount > 0:
+		ps.history["hero_hits"] = int(ps.history.get("hero_hits", 0)) + 1
 	ev.append(GameEvent.make(&"hero_damaged", {"player": p, "amount": amount - soaked, "armour": soaked}))
 	var sp: int = int(src.get("player", -1))
 	var sl: int = int(src.get("lane", -1))
@@ -1160,6 +1162,15 @@ static func steal_creature(s: GameState, p: int, q: int, spot: int, ev: Array[Ga
 	_promote_follower(s, q, spot, ev)
 
 
+## "Whenever a creature dies": every creature still on the board with an on_any_death step.
+static func _any_death(s: GameState, ev: Array[GameEvent]) -> void:
+	for q: int in [s.active, s.opponent(s.active)]:
+		for l: int in GameState.SPOTS:
+			var cr: GameState.CreatureState = s.players[q].at(l)
+			if cr and not cr.hushed and cr.damage < effective_max_hp(s, q, l) and cr.card.has_effect(&"on_any_death"):
+				Effects.run(s, q, l, cr.card, &"on_any_death", [], ev)
+
+
 static func _hero_down(s: GameState) -> bool:
 	return s.players[0].hero_hp <= 0 or s.players[1].hero_hp <= 0
 
@@ -1188,6 +1199,8 @@ static func resolve_deaths(s: GameState, ev: Array[GameEvent]) -> void:
 					if not cr.hushed:
 						for i: int in (2 if _echoes_death(s, p) else 1):
 							Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)
+					if not _hero_down(s):
+						_any_death(s, ev)
 					if second_wind and not _hero_down(s) and s.players[p].at(l) == null:
 						s.players[p].discard.erase(cr.card)
 						var back: GameState.CreatureState = enter_creature(s, p, l, cr.card, ev)
