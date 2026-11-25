@@ -24,7 +24,8 @@ const SLOW_MO_TIME := 0.18
 const LAND_SOUNDS: Array[StringName] = [&"heal", &"fire_whoosh", &"candy_pop", &"freeze", &"card_draw", &"building_rise"]
 ## How each event changes the hand of the player it names (the rival's fan follows it live).
 const HAND_DELTA: Dictionary = {
-	&"card_drawn": 1, &"card_returned": 1, &"dream_up_chosen": 1,
+	&"card_drawn": 1, &"card_returned": 1, &"dream_up_chosen": 1, &"card_added": 1, &"card_copied": 1, &"card_stolen": 1,
+	&"curse_triggered": -1,
 	&"creature_played": -1, &"building_played": -1, &"spell_cast": -1, &"creature_merged": -1,
 }
 
@@ -104,6 +105,8 @@ func _play_one(e: GameEvent) -> void:
 				Audio.sfx(VisualDB.sound(c.id))
 			await _cast_card(c, int(d["player"]) == MatchController.HUMAN)
 			Burst.spawn(m, &"stars", FxDirector._hero_pos(m, d["player"]), Palette.LAND_CARD[c.land], 1.4)
+			if c.legendary:
+				await DarkMoonFx.legendary(self, m.board.anchor(0, 1).lerp(m.board.anchor(1, 2), 0.5))
 		&"booped":
 			var v: CreatureView = _view(d["player"], d["lane"])
 			if v:
@@ -155,6 +158,36 @@ func _play_one(e: GameEvent) -> void:
 			await _bounced(d)
 		&"follower_entered":
 			await _follower_entered(d)
+		&"creature_summoned":
+			await DarkMoonFx.summoned(self, d)
+		&"dark_moon":
+			await DarkMoonFx.dark_moon(self, d)
+		&"creature_stolen":
+			await DarkMoonFx.creature_stolen(self, d)
+		&"card_stolen":
+			await DarkMoonFx.card_taken(self, d, "STOLEN!")
+		&"card_copied":
+			await DarkMoonFx.card_taken(self, d, "COPIED!")
+		&"curse_triggered":
+			await DarkMoonFx.curse_triggered(self, d)
+		&"dark_gift":
+			await DarkMoonFx.dark_gift(self, d)
+		&"last_breath":
+			await DarkMoonFx.last_breath(self, d)
+		&"card_added":
+			await DarkMoonFx.word(self, d["player"], "+%s" % CardDB.card(d["card"]).display_name.to_upper(), Palette.GOLD)
+		&"shuffled_in":
+			await DarkMoonFx.word(self, d["player"], "+%d IN DECK" % int(d["count"]), DarkMoonFx.CURSE_PURPLE.lightened(0.45))
+		&"hand_buffed":
+			await DarkMoonFx.word(self, d["player"], "HAND +%d/+%d" % [int(d["atk"]), int(d["hp"])], Color("#8fe07a"))
+		&"hand_card_grew":
+			m.refresh_ui()
+		&"spell_echoed":
+			await DarkMoonFx.word(self, d["player"], "TWICE!", Palette.GOLD)
+		&"spell_replayed":
+			var rc: CardData = CardDB.card(d["card"])
+			await _cast_card(rc, int(d["player"]) == MatchController.HUMAN)
+			await DarkMoonFx.word(self, d["player"], "AGAIN: %s" % rc.display_name.to_upper(), Color("#bfe8ff"))
 		&"follower_promoted":
 			await move_piece(d, false)
 		&"creature_merged":
@@ -882,6 +915,8 @@ func _play_creature(d: Dictionary) -> void:
 	Burst.spawn(m, &"dust_ring", feet)
 	Burst.spawn(m, LAND_BURSTS[c.land], feet + Vector3(0, 0.3, 0), Color.WHITE, 1.2)
 	m.rig.kick(0.08)
+	if c.legendary:
+		await DarkMoonFx.legendary(self, target)
 	if &"dash" in c.keywords:
 		# Dash: a skid of dust and speed sparks, ready to go.
 		Burst.spawn(m, &"dust_ring", feet, Color.WHITE, 1.6)

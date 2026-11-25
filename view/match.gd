@@ -149,6 +149,12 @@ func _ready() -> void:
 		if arg.begins_with("--demo-cards="):
 			_demo_cards(arg.substr(13).split(","))
 			return
+		if arg == "--demo-draw":
+			# Dev view: a card flying from the deck into the hand (screenshot it mid-flight).
+			get_tree().create_timer(0.8).timeout.connect(func() -> void:
+				hand.expect_draw(hud.deck_screen_pos())
+				state.players[HUMAN].hand.append(CardDB.card(&"aurora_skywhale"))
+				refresh_ui())
 	if "--demo-expansion" in OS.get_cmdline_user_args():
 		_demo_expansion()
 		return
@@ -590,7 +596,15 @@ func _on_action_requested(a: Action) -> void:
 func _human_dream_up() -> void:
 	if state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
 		input.cancel()
-		var i: int = await picker.open(state.pending_choice.duplicate())
+		var title: String = "DREAM UP"
+		var sub: String = "Choose a card to keep"
+		if state.pending_kind == &"direction":
+			title = "DARK MOON"
+			sub = "Turn the board left or right"
+		elif state.pending_gift:
+			title = "DARK GIFT"
+			sub = "Choose a creature: it gets a random bonus"
+		var i: int = await picker.open(state.pending_choice.duplicate(), title, sub)
 		if i >= 0 and state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
 			await driver.submit(Action.choose(HUMAN, i))
 

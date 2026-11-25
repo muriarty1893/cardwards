@@ -158,9 +158,12 @@ static func play(kind: StringName, source: Dictionary, e: GameEvent, m: MatchCon
 				return
 			return
 		&"draw":
-			await _fly_card(m, d, m.hud.deck_screen_pos(), m.hand.cards_rect().get_center(), false)
-			if not is_instance_valid(m):
-				return
+			if e.type == &"card_drawn" and int(d.get("player", -1)) == MatchController.HUMAN:
+				pass  # result() flies it from the deck into the hand
+			else:
+				await _fly_card(m, d, m.hud.deck_screen_pos(), m.hand.cards_rect().get_center(), false)
+				if not is_instance_valid(m):
+					return
 	if not is_instance_valid(m):
 		return
 	await result(kind, source, e, m)
@@ -290,11 +293,13 @@ static func result(kind: StringName, source: Dictionary, e: GameEvent, m: MatchC
 				return
 		&"card_drawn", &"card_returned":
 			Audio.sfx(&"card_draw")
-			if e.type == &"card_drawn" and kind == &"plain" and int(d["player"]) == MatchController.HUMAN:
-				# The turn's draw: from the deck box into the hand, turning face up on the way.
-				await _fly_card(m, d, m.hud.deck_screen_pos(), m.hand.cards_rect().get_center(), false)
-				if not is_instance_valid(m):
-					return
+			if e.type == &"card_drawn" and int(d["player"]) == MatchController.HUMAN:
+				# A draw: the card itself flies from the deck pile into its slot, turning face up.
+				m.hand.expect_draw(m.hud.deck_screen_pos())
+				m.refresh_ui()
+				await _wait(m, Hand.DRAW_TIME * 0.8 / sp)
+			elif e.type == &"card_drawn":
+				await _fly_card(m, d, m.hud.deck_screen_pos(), m.rival_hand_screen(), false)
 			m.refresh_ui()
 			await _wait(m, 0.12 / sp)
 			if not is_instance_valid(m):

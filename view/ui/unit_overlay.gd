@@ -18,6 +18,8 @@ const CHIP := 20.0
 
 var _m: MatchController
 var _entries: Array[Array] = []
+## Follower tags are drawn smaller (Dark Moon spec 6).
+const FOLLOWER_TAG_SCALE := 0.8
 var _bars: Array[Array] = []
 var _badges: Array[Array] = []
 var _hover: CardWidget
@@ -167,12 +169,21 @@ func _update_bar_entry(s: GameState, p: int, l: int, cr: GameState.CreatureState
 		var hp: int = max_hp - cr.damage
 		_entries[p][l] = {"visible": true, "atk": Rules.effective_attack(s, p, l), "hp": hp, "max": max_hp, "bar_color": bar_color(hp, max_hp),
 			"level": cr.level, "xp": cr.xp, "home": Lands.home(s, p, l), "name": cr.card.display_name,
-			"keywords": shown_keywords(s, p, l), "spell_power": 0 if cr.hushed else cr.card.spell_power}
+			"keywords": tag_keywords(s, p, l), "spell_power": 0 if cr.hushed else cr.card.spell_power}
 	_update_bar(_bars[p][l], _entries[p][l])
 
 
 ## The keywords a creature's tag shows: what Rules.keywords_of says, minus a popped Bubble and a
 ## Hidden that has been revealed (those only count while they are up).
+## What the tag shows: the keywords, plus a Last Breath marker while the creature has one.
+static func tag_keywords(s: GameState, p: int, l: int) -> Array[StringName]:
+	var out: Array[StringName] = shown_keywords(s, p, l)
+	var cr: GameState.CreatureState = s.players[p].at(l)
+	if cr and not cr.hushed and cr.card.has_effect(&"on_destroyed"):
+		out.append(&"last_breath")
+	return out
+
+
 static func shown_keywords(s: GameState, p: int, l: int) -> Array[StringName]:
 	var cr: GameState.CreatureState = s.players[p].at(l)
 	var out: Array[StringName] = []
@@ -263,7 +274,12 @@ func _process(_delta: float) -> void:
 			bar.visible = show
 			if show:
 				var cv := v as CreatureView
-				bar.position = bar_rect_at(cam, cv.global_position + Vector3(0, cv.height + 0.15, 0), _m.hud.corner_rects()).position
+				if l >= GameState.LANES:
+					# A follower's tag is smaller and sits lower, so it doesn't cover its leader's.
+					bar.scale = Vector2.ONE * FOLLOWER_TAG_SCALE if _grown_key != "%d:%d" % [p, l] else bar.scale
+					bar.position = bar_rect_at(cam, cv.global_position + Vector3(0, cv.height * 0.55, 0), _m.hud.corner_rects()).position + Vector2(10, 28)
+				else:
+					bar.position = bar_rect_at(cam, cv.global_position + Vector3(0, cv.height + 0.15, 0), _m.hud.corner_rects()).position
 			if l >= GameState.LANES:
 				continue
 			var badge: Control = _badges[p][l]

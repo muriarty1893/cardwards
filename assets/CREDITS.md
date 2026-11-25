@@ -12,6 +12,10 @@ unless noted.
   LowPoly Dinosaurs", itch.io); Fox, Bird, Fish ("Animals Pack"), Llama, Pig, Sheep ("Farm Animals"), Wolf ("Animal
   Pack Vol.2"), Dragon, Skeleton, Slime ("Animated Monster Pack"), from the OpenGameArt mirrors
   (opengameart.org/content/all-cc0-uploader-quaternius). Animation names normalised on import (extra_import.gd).
+  Dark Moon additions: Trex, Triceratops, Stegosaurus, Apatosaurus, Parasaurolophus ("Animated LowPoly Dinosaurs",
+  itch.io); Spider, Wasp ("Easy Enemy Pack", itch.io); Shark, Whale, Manta, Dolphin ("LowPoly Animated Fish", itch.io);
+  Zebra ("LowPoly Animated Animals", itch.io); Donkey, Horse_White, Cow, ShibaInu ("Ultimate Animated Animals",
+  quaternius.com).
 - `monsters/cute/`: "Cute Animated Monsters" (Aug 2020), from the OpenGameArt mirror
   https://opengameart.org/content/textured-cute-monster-pack. Textures brightened x1.5 for the game's lighting.
 - `buildings/`: "Ultimate Fantasy RTS" pack (files renamed to card ids).
@@ -60,9 +64,16 @@ Change: the black background square was removed so the icons are white on transp
   leaf-swirl, thorny-vine, wolf-howl, back-forth, stiletto, punch, lightning-frequency, shattered-glass,
   frozen-orb, ice-bolt, snowman, bubbles, sprint, dripping-goo, heart-drop, crossed-slashes, hood,
   angel-wings, spark-spirit, shield-reflect, mirror-mirror, sun-radiations, acorn, scroll-unfurled, match-tip,
-  crystal-ball, ice-shield, sundial, stone-tower, ice-cube, stone-block, sunbeams.
+  crystal-ball, ice-shield, sundial, stone-tower, ice-cube, stone-block, sunbeams,
+  evil-moon, spotted-mushroom, death-zone, burst-blob, flame-tunnel, flaming-arrow, power-lightning, ember-shot,
+  burning-embers, tooth, ice-spear, snowflake-1, frozen-block, crown-coin, cursed-star, screaming, bubbling-flask,
+  crown, haunting.
 - `icons/`, by **Delapouite** (https://delapouite.com): card-exchange, falling-rocks, chimney,
-  mushrooms-cluster, spiral-lollipop, sandstorm, present.
+  mushrooms-cluster, spiral-lollipop, sandstorm, present, anticlockwise-rotation, clockwise-rotation,
+  carnivorous-plant, sickle, grave-flowers, dog-house, cupcake, cookie, candy-canes, party-popper, jelly-beans,
+  ice-spell-cast, igloo, two-coins, coins, robber, desert-camp, shop, dream-catcher, musical-notes, falling-star,
+  well, guards.
+- `icons/`, by **Sbed**: lava. By **Caro Asercion**: toothbrush.
 - `icons/`, by **Willdabeast** (https://wjbstories.blogspot.com): round-shield.
 - `icons/`, by **Sbed** (https://opengameart.org/content/95-game-icons): health-increase.
 - `icons/`, by **Zeromancer**: heart-plus.

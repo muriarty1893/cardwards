@@ -20,6 +20,10 @@ var _result: int = -1
 var _rival: Array[Control] = []
 
 
+var _title_text: String = "DREAM UP"
+var _sub_text: String = "Choose a card to keep"
+
+
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
@@ -37,7 +41,9 @@ func card_widget(i: int) -> CardWidget:
 
 
 ## Shows the cards and waits for a click; returns the chosen index (-1 if closed by force(-1)).
-func open(cards: Array[CardData]) -> int:
+func open(cards: Array[CardData], title: String = "DREAM UP", subtitle: String = "Choose a card to keep") -> int:
+	_title_text = title
+	_sub_text = subtitle
 	_build(cards)
 	_open = true
 	_result = -2
@@ -73,13 +79,13 @@ func _build(cards: Array[CardData]) -> void:
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_content)
 	_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var title := UiStyle.title(UiStyle.label("DREAM UP", 54, Palette.GOLD)) as Label
+	var title := UiStyle.title(UiStyle.label(_title_text, 54, Palette.GOLD)) as Label
 	title.add_theme_color_override("font_outline_color", Palette.INK)
 	title.add_theme_constant_override("outline_size", 12)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.name = "Title"
 	_content.add_child(title)
-	var sub := UiStyle.title(UiStyle.label("Choose a card to keep", 22, Color.WHITE)) as Label
+	var sub := UiStyle.title(UiStyle.label(_sub_text, 22, Color.WHITE)) as Label
 	sub.add_theme_color_override("font_outline_color", Palette.INK)
 	sub.add_theme_constant_override("outline_size", 7)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

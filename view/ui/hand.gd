@@ -26,6 +26,8 @@ const FAN_DEG := 2.5
 const ARC := 2.5
 ## Dragged card over the board.
 const TOKEN_SCALE := 0.45
+## A drawn card's flight from the deck pile into its slot (seconds).
+const DRAW_TIME := 0.5
 
 var _cards: Array[CardWidget] = []
 ## Set by MatchController: over the board the dragged card is shown as this 3D card (seen by `camera`).
@@ -40,6 +42,8 @@ var _notes_for: int = -1
 var enabled: bool = true
 ## Where the last dragged card was released (playback flies the card from here).
 var last_drop_pos: Vector2 = Vector2.ZERO
+## Screen points new cards fly in from (expect_draw); used by the next show_hand that adds cards.
+var _incoming: Array[Vector2] = []
 
 
 func _init() -> void:
@@ -55,7 +59,10 @@ func show_hand(cards: Array[CardData], playable: Array[bool], costs: Array[int] 
 			_cards[i].set_cost(costs[i] if i < costs.size() else cards[i].cost)
 		return
 	_shown = cards.duplicate()
+	# Where each card was, so the rebuilt ones slide on from there instead of jumping.
+	var was: Array[Array] = []
 	for w: CardWidget in _cards:
+		was.append([w.position, w.scale, w.rotation])
 		w.queue_free()
 	_cards.clear()
 	_hover = -1
@@ -76,6 +83,57 @@ func show_hand(cards: Array[CardData], playable: Array[bool], costs: Array[int] 
 		add_child(w)
 		_cards.append(w)
 	_layout(false)
+	var drawn: int = cards.size() - was.size()
+	if _incoming.is_empty() or drawn <= 0:
+		_incoming.clear()
+		return
+	for i: int in mini(was.size(), _cards.size()):
+		var w: CardWidget = _cards[i]
+		var to: Array = [w.position, w.scale, w.rotation]
+		w.position = was[i][0]
+		w.scale = was[i][1]
+		w.rotation = was[i][2]
+		var tw := w.create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(w, "position", to[0], DRAW_TIME * 0.6)
+		tw.tween_property(w, "scale", to[1], DRAW_TIME * 0.6)
+		tw.tween_property(w, "rotation", to[2], DRAW_TIME * 0.6)
+	for k: int in drawn:
+		var i: int = _cards.size() - drawn + k
+		var from: Vector2 = _incoming[mini(k, _incoming.size() - 1)]
+		_fly_in(_cards[i], from - global_position - CardWidget.SIZE / 2.0, k * 0.12)
+	_incoming.clear()
+
+
+## The next show_hand that adds cards flies them in from this screen point (the deck pile).
+func expect_draw(screen_from: Vector2) -> void:
+	_incoming.append(screen_from)
+
+
+## A new card: from the deck, small and edge-on (its back), it arcs up and turns face up as it
+## settles into its slot.
+func _fly_in(w: CardWidget, start: Vector2, delay: float) -> void:
+	var end: Vector2 = w.position
+	var end_scale: Vector2 = w.scale
+	var end_rot: float = w.rotation
+	w.position = start
+	w.scale = Vector2(0.05, 0.5)
+	w.rotation = -0.35
+	var lift: float = 140.0
+	var tw := w.create_tween().set_parallel(true)
+	if delay > 0.0:
+		tw.tween_interval(delay)
+		tw.chain()
+	tw.tween_method(func(k: float) -> void:
+		if is_instance_valid(w):
+			w.position = start.lerp(end, k) - Vector2(0, sin(k * PI) * lift), 0.0, 1.0, DRAW_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(w, "scale", end_scale, DRAW_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(w, "rotation", end_rot, DRAW_TIME).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+## Where card i rests (for tests and playback).
+func rest_position(i: int) -> Vector2:
+	var r: Rect2 = _rest_rect(i)
+	return _position_for(Vector2(r.get_center().x, r.end.y))
 
 
 ## Centre x of card i at rest (no hover spread).
@@ -319,3 +377,7 @@ func cancel_drag() -> void:
 	_drag = -1
 	_hide_3d()
 	_layout()
+
+
+func card_widget(i: int) -> CardWidget:
+	return _cards[i] if i >= 0 and i < _cards.size() else null

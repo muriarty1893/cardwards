@@ -1131,6 +1131,8 @@ static func resolve_deaths(s: GameState, ev: Array[GameEvent]) -> void:
 					ev.append(GameEvent.make(&"creature_destroyed", {"player": p, "lane": l, "card": cr.card.id}))
 					GameHistory.record_death(s.players[p], cr.card)
 					_promote_follower(s, p, l, ev)
+					if not cr.hushed and cr.card.has_effect(&"on_destroyed"):
+						ev.append(GameEvent.make(&"last_breath", {"player": p, "lane": l, "card": cr.card.id}))
 					if not cr.hushed:
 						for i: int in (2 if _echoes_death(s, p) else 1):
 							Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)

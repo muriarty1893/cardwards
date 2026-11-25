@@ -485,9 +485,11 @@ const KEYWORD_ICONS: Dictionary = {
 	&"sturdy": "res://assets/icons/stone-block.svg",
 	&"bask": "res://assets/icons/sunbeams.svg",
 	&"spell_power": "res://assets/icons/spark-spirit.svg",
+	&"last_breath": "res://assets/icons/haunting.svg",
 }
 ## Badge colour behind each keyword icon.
 const KEYWORD_COLORS: Dictionary = {
+	&"last_breath": Color("#7a8ab8"),
 	&"guard": Color("#c9a24a"), &"bubble": Color("#4ab8e8"), &"dash": Color("#e8803a"), &"venom": Color("#5ab83a"),
 	&"leech": Color("#c8304a"), &"flurry": Color("#8a6ae0"), &"hidden": Color("#5a5a7a"), &"second_wind": Color("#e8c84a"),
 	&"sturdy": Color("#9a8a72"), &"bask": Color("#ffb03a"),

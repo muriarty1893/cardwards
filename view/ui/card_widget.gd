@@ -8,6 +8,12 @@ const ART := Rect2(8, 8, 124, 93)
 const KIND_NAMES: Array[String] = ["CREATURE", "BUILDING", "SPELL"]
 ## Cost gem number while a discount lowers the cost.
 const DISCOUNT := Color("#7dff6a")
+## A changed copy's number that got worse (Dark Moon spec 6).
+const WORSE := Color("#ff6a6a")
+## Frames: curses are purple-black; legendaries get a gold rim and a crown.
+const CURSE_FRAME := Color("#3a2552")
+const ICON_CROWN := "res://assets/icons/crown.svg"
+const ICON_GIFT := "res://assets/icons/evil-moon.svg"
 
 
 ## "BEAST · L2" for creatures (the tribe says it's a creature), "FIELD SPELL", "BUILDING"...
@@ -27,6 +33,9 @@ var _combo: Panel
 var _ready: Panel
 static var _bold: FontVariation
 var _cost: Label
+var _atk: Label
+var _hp: Label
+var _frame_color: Color
 ## Cost shown on the gem (the printed cost unless set_cost lowered it).
 var _shown_cost: int = 0
 
@@ -38,9 +47,10 @@ func setup(c: CardData, i: int) -> void:
 	size = SIZE
 	pivot_offset = Vector2.ZERO
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	var land: Color = Palette.LAND_CARD[c.land]
+	var land: Color = CURSE_FRAME if c.curse else Palette.LAND_CARD[c.land]
+	_frame_color = land
 	var frame := _panel(Rect2(Vector2.ZERO, SIZE), land, 4, 12)
-	if c.land == CardData.Land.NEUTRAL:
+	if c.land == CardData.Land.NEUTRAL or c.legendary:
 		# Neutral cards (Star Shard) get a gold rim.
 		var fsb := frame.get_theme_stylebox("panel") as StyleBoxFlat
 		fsb.border_color = Palette.GOLD.darkened(0.35)
@@ -103,9 +113,37 @@ func setup(c: CardData, i: int) -> void:
 	add_child(gem)
 	_cost = gem.get_child(gem.get_child_count() - 1) as Label
 	_shown_cost = c.cost
+	var printed: CardData = CardDB.card(c.id) if CardDB.has_card(c.id) else c
+	if c.cost != printed.cost:
+		_cost.add_theme_color_override("font_color", DISCOUNT if c.cost < printed.cost else WORSE)
 	if c.is_creature():
-		add_child(_gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, VisualDB.ICON_SWORDS))
-		add_child(_gem(Vector2(SIZE.x - 30, 166), 34, Palette.HP, str(c.health), 17, VisualDB.ICON_HEART))
+		var ag := _gem(Vector2(-4, 166), 34, Color("#ffcf3a"), str(c.attack), 17, VisualDB.ICON_SWORDS)
+		add_child(ag)
+		_atk = ag.get_child(ag.get_child_count() - 1) as Label
+		var hg := _gem(Vector2(SIZE.x - 30, 166), 34, Palette.HP, str(c.health), 17, VisualDB.ICON_HEART)
+		add_child(hg)
+		_hp = hg.get_child(hg.get_child_count() - 1) as Label
+		if c.attack != printed.attack:
+			_atk.add_theme_color_override("font_color", DISCOUNT if c.attack > printed.attack else WORSE)
+		if c.health != printed.health:
+			_hp.add_theme_color_override("font_color", DISCOUNT if c.health > printed.health else WORSE)
+	if c.legendary:
+		var crown := TextureRect.new()
+		crown.name = "Crown"
+		crown.texture = load(ICON_CROWN) as Texture2D
+		crown.modulate = Palette.GOLD
+		crown.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		crown.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		crown.size = Vector2(40, 30)
+		crown.position = Vector2(SIZE.x / 2.0 - 20.0, -18)
+		crown.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(crown)
+	if c.changes.has("gift"):
+		var mark := _gem(Vector2(SIZE.x - 30, 4), 26, Color("#5a3aa8"), "", 10, ICON_GIFT)
+		mark.name = "GiftMark"
+		(mark.get_node("Symbol") as TextureRect).modulate = Color(1, 1, 1, 0.95)
+		mark.tooltip_text = "Dark Gift: %s" % Gifts.TEXT.get(StringName(c.changes["gift"]), "")
+		add_child(mark)
 
 
 ## Smallest rules-text size; below this a card's text would be unreadable even zoomed.
@@ -140,6 +178,18 @@ static func text_height(font: Font, text: String, width: float, fs: int) -> floa
 		lines += 1
 	var lh: float = font.get_height(fs)
 	return lines * lh + (lines - 1) * LINE_GAP + 2.0
+
+
+func attack_label() -> Label:
+	return _atk
+
+
+func health_label() -> Label:
+	return _hp
+
+
+func frame_color() -> Color:
+	return _frame_color
 
 
 func art_texture() -> Texture2D:
@@ -198,7 +248,8 @@ func cost_label() -> Label:
 func set_cost(n: int) -> void:
 	_shown_cost = n
 	_cost.text = str(n)
-	_cost.add_theme_color_override("font_color", DISCOUNT if n < card.cost else Color.WHITE)
+	var printed: int = CardDB.card(card.id).cost if CardDB.has_card(card.id) else card.cost
+	_cost.add_theme_color_override("font_color", DISCOUNT if n < printed else (WORSE if n > printed else Color.WHITE))
 
 
 func shown_cost() -> int:
