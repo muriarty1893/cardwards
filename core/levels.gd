@@ -15,7 +15,7 @@ static func bonus(cr: GameState.CreatureState) -> int:
 
 ## Gives `amount` XP to the creature in the lane; levels it up (maybe twice) when it gets there.
 static func gain_xp(s: GameState, p: int, lane: int, amount: int, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null or amount <= 0 or cr.level >= MAX:
 		return
 	cr.xp += amount
@@ -26,5 +26,5 @@ static func gain_xp(s: GameState, p: int, lane: int, amount: int, ev: Array[Game
 		if cr.damage > 0:
 			Rules.heal_creature(s, p, lane, 1, ev)
 		Effects.run(s, p, lane, cr.card, &"on_level_up", [], ev)
-		if s.players[p].lanes[lane].creature != cr:
+		if s.players[p].at(lane) != cr:
 			return

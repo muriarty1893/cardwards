@@ -162,8 +162,9 @@ func set_field(land: int, animate: bool = true) -> void:
 			isl.set_field(land, animate)
 
 
+## The lane tile (`lane` may be a creature spot: followers are in lane spot % 4).
 func island(player: int, lane: int) -> Island:
-	return _islands[player][lane]
+	return _islands[player][GameState.lane_of(lane)]
 
 
 ## The lane's centre on `player`'s half, ignoring the wobble (where its tiles sit). Halves differ.
@@ -171,16 +172,20 @@ func lane_x(lane: int, player: int = 0) -> float:
 	return layout.base_centre(lane, player)
 
 
-## Centre of the creature's roam zone, at a creature view's origin height.
+## Centre of the creature's roam zone, at a creature view's origin height. `lane` may be a
+## creature spot: a follower (4..7) stands a little beside its leader.
 func anchor(player: int, lane: int) -> Vector3:
 	var c: Vector2 = roam_rect(player, lane).get_center()
-	return Vector3(c.x, CREATURE_Y, c.y)
+	var at := Vector3(c.x, CREATURE_Y, c.y)
+	if GameState.is_follower(lane):
+		at.x += 0.9
+	return at
 
 
 ## Where `player`'s creature in `lane` may wander (world x/z): the half-lane's front part (seam
 ## side), inset from the lane edges and the seam, stopping short of the boop plate row.
 func roam_rect(player: int, lane: int) -> Rect2:
-	return roam_rect_for(layout, player, lane)
+	return roam_rect_for(layout, player, GameState.lane_of(lane))
 
 
 static func roam_rect_for(lay: BoardLayout, player: int, lane: int) -> Rect2:

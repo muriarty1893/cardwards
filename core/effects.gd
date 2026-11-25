@@ -9,7 +9,7 @@ static func run(s: GameState, p: int, lane: int, card: CardData, when: StringNam
 	if effs.is_empty():
 		return
 	if lane >= 0 and card.kind == CardData.Kind.CREATURE:
-		var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+		var cr: GameState.CreatureState = s.players[p].at(lane)
 		if cr and cr.card == card and cr.hushed:
 			return
 	var c: Dictionary = ctx.duplicate()
@@ -88,26 +88,34 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 					Rules.destroy_creature(s, t["player"], t["lane"], ev)
 		&"return_building":
 			for t: Dictionary in ts:
-				var b: CardData = s.players[t["player"]].lanes[t["lane"]].building
+				var b: CardData = s.players[t["player"]].lane(t["lane"]).building
 				if b:
-					s.players[t["player"]].lanes[t["lane"]].building = null
+					s.players[t["player"]].lane(t["lane"]).building = null
 					ev.append(GameEvent.make(&"building_returned", {"player": t["player"], "lane": t["lane"], "card": b.id}))
 					Rules.return_to_hand(s, t["player"], b, ev)
 		&"move":
-			if chosen.size() == 1 and chosen[0].has("lane") and ps.lanes[chosen[0]["lane"]].creature == null and ps.lanes[lane].creature:
-				var to: int = chosen[0]["lane"]
-				ps.lanes[to].creature = ps.lanes[lane].creature
-				ps.lanes[lane].creature = null
-				ev.append(GameEvent.make(&"creature_moved", {"player": p, "from": lane, "to": to}))
+			if chosen.size() == 1 and chosen[0].has("lane") and ps.at(chosen[0]["lane"]) == null and ps.at(lane):
+				Rules.move_unit(s, p, lane, chosen[0]["lane"], ev)
 			else:
 				push_warning("Effects: move target gone")
 		&"swap":
 			if ts.size() == 2 and _creature(s, ts[0]) and _creature(s, ts[1]):
 				var a: int = ts[0]["lane"]
 				var b: int = ts[1]["lane"]
-				var tmp: GameState.CreatureState = ps.lanes[a].creature
-				ps.lanes[a].creature = ps.lanes[b].creature
-				ps.lanes[b].creature = tmp
+				if not GameState.is_follower(a) and not GameState.is_follower(b):
+					# Whole lanes trade places: each main creature keeps its follower.
+					var la: GameState.LaneState = ps.lanes[a]
+					var lb: GameState.LaneState = ps.lanes[b]
+					var tmp_c: GameState.CreatureState = la.creature
+					var tmp_f: GameState.CreatureState = la.follower
+					la.creature = lb.creature
+					la.follower = lb.follower
+					lb.creature = tmp_c
+					lb.follower = tmp_f
+				else:
+					var tmp: GameState.CreatureState = ps.at(a)
+					ps.put(a, ps.at(b))
+					ps.put(b, tmp)
 				ev.append(GameEvent.make(&"creature_moved", {"player": p, "from": a, "to": b}))
 				ev.append(GameEvent.make(&"creature_moved", {"player": p, "from": b, "to": a}))
 		&"return_from_discard":
@@ -126,25 +134,25 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 		&"sprout_meadow":
 			# Spore Bloom: the player's first Meadow lane grows into the field's land.
 			for l: int in GameState.LANES:
-				if ps.lanes[l].land == Lands.MEADOW:
+				if ps.lane(l).land == Lands.MEADOW:
 					Lands.set_land(s, p, l, card.land, &"field", ev)
 					break
 		&"land_draw":
 			# Sugar Rain: draw if the player has a creature on that land.
 			for l: int in GameState.LANES:
-				if ps.lanes[l].creature and ps.lanes[l].land == e.filter_land:
+				if ps.at(l) and ps.lane(l).land == e.filter_land:
 					for i: int in e.amount:
 						Rules.draw(s, p, ev)
 					break
 		&"temp_atk":
 			for t: Dictionary in ts:
 				if _creature(s, t):
-					s.players[t["player"]].lanes[t["lane"]].creature.temp_atk += e.amount
+					s.players[t["player"]].at(t["lane"]).temp_atk += e.amount
 					ev.append(GameEvent.make(&"buffed", {"player": t["player"], "lane": t["lane"], "atk": e.amount, "hp": 0, "temp": true}))
 		&"doom":
 			for t: Dictionary in ts:
 				if _creature(s, t):
-					s.players[t["player"]].lanes[t["lane"]].creature.doomed = true
+					s.players[t["player"]].at(t["lane"]).doomed = true
 					ev.append(GameEvent.make(&"doomed", {"player": t["player"], "lane": t["lane"]}))
 		&"grow_magic":
 			ps.magic_cap = mini(ps.magic_cap + e.amount, GameState.MAGIC_CAP_MAX)
@@ -171,7 +179,7 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 static func _cond_ok(s: GameState, cond: StringName, t: Dictionary) -> bool:
 	if not _creature(s, t):
 		return false
-	var frozen: bool = s.players[t["player"]].lanes[t["lane"]].creature.is_frozen()
+	var frozen: bool = s.players[t["player"]].at(t["lane"]).is_frozen()
 	match cond:
 		&"target_frozen":
 			return frozen
@@ -181,4 +189,4 @@ static func _cond_ok(s: GameState, cond: StringName, t: Dictionary) -> bool:
 
 
 static func _creature(s: GameState, t: Dictionary) -> bool:
-	return t.has("lane") and t.has("player") and s.players[t["player"]].lanes[t["lane"]].creature != null
+	return t.has("lane") and t.has("player") and s.players[t["player"]].at(t["lane"]) != null

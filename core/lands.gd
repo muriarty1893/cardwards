@@ -44,7 +44,7 @@ static func lane_name(land: int) -> String:
 
 
 static func set_land(s: GameState, p: int, lane: int, land: int, cause: StringName, ev: Array[GameEvent]) -> void:
-	var ls: GameState.LaneState = s.players[p].lanes[lane]
+	var ls: GameState.LaneState = s.players[p].lane(lane)
 	if ls.land == land:
 		return
 	var from: int = ls.land
@@ -57,7 +57,7 @@ static func set_land(s: GameState, p: int, lane: int, land: int, cause: StringNa
 static func claim(s: GameState, p: int, lane: int, c: CardData, ev: Array[GameEvent]) -> void:
 	if c.land == MEADOW or c.kind == CardData.Kind.SPELL:
 		return
-	var current: int = s.players[p].lanes[lane].land
+	var current: int = s.players[p].lane(lane).land
 	if current == MEADOW:
 		set_land(s, p, lane, c.land, &"claim", ev)
 	elif c.kind == CardData.Kind.BUILDING and current != c.land:
@@ -68,7 +68,7 @@ static func claim(s: GameState, p: int, lane: int, c: CardData, ev: Array[GameEv
 ## the lane counts if it is Meadow or already that land).
 static func count_after_play(s: GameState, p: int, lane: int, land: int) -> int:
 	var n: int = Rules.matching_lands(s, p, land)
-	if lane >= 0 and lane < GameState.LANES and s.players[p].lanes[lane].land == MEADOW:
+	if lane >= 0 and lane < GameState.LANES and s.players[p].lane(lane).land == MEADOW:
 		n += 1
 	return n
 
@@ -76,10 +76,10 @@ static func count_after_play(s: GameState, p: int, lane: int, land: int) -> int:
 ## The land whose quirk the creature in this lane gets, or -1 when it is not at home (or the
 ## field switches that land's quirk off).
 static func home(s: GameState, p: int, lane: int) -> int:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return -1
-	var land: int = s.players[p].lanes[lane].land
+	var land: int = s.players[p].lane(lane).land
 	if land == MEADOW or land != cr.card.land or Fields.blocks_quirk(s, land):
 		return -1
 	return land
@@ -102,7 +102,7 @@ static func react_before(s: GameState, card: CardData, op: StringName, t: Dictio
 		return {}
 	var p: int = t["player"]
 	var lane: int = t["lane"]
-	var r: StringName = reaction(card.land, s.players[p].lanes[lane].land)
+	var r: StringName = reaction(card.land, s.players[p].lane(lane).land)
 	if r == &"":
 		return {}
 	# Each reaction answers to the kind of step it fits: damage for fire, heal for spores, any
@@ -140,13 +140,13 @@ static func react_after(s: GameState, src_player: int, info: Dictionary, t: Dict
 		&"caramel":
 			Rules.freeze(s, p, lane, ev)
 		&"thaw":
-			var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+			var cr: GameState.CreatureState = s.players[p].at(lane)
 			if cr:
 				if cr.freeze_turn >= 0:
 					cr.freeze_turn = -1
 					ev.append(GameEvent.make(&"unfrozen", {"player": p, "lane": lane}))
 				Rules.heal_creature(s, p, lane, 2, ev)
 		&"wildfire":
-			for n: int in [lane - 1, lane + 1]:
-				if n >= 0 and n < GameState.LANES and s.players[p].lanes[n].creature:
+			for n: int in [GameState.lane_of(lane) - 1, GameState.lane_of(lane) + 1]:
+				if n >= 0 and n < GameState.LANES and s.players[p].at(n):
 					Rules.damage_creature(s, p, n, 1, {"player": src_player, "lane": -1, "kind": &"spell"}, ev)

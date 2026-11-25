@@ -32,7 +32,7 @@ static func put_creature(s: GameState, p: int, lane: int, id: StringName, damage
 	c.ready = true
 	c.bubble = &"bubble" in c.card.keywords
 	c.hidden = &"hidden" in c.card.keywords
-	s.players[p].lanes[lane].creature = c
+	s.players[p].put(lane, c)
 
 
 static func put_building(s: GameState, p: int, lane: int, id: StringName) -> void:
@@ -75,7 +75,7 @@ static func put(s: GameState, p: int, lane: int, c: CardData) -> GameState.Creat
 	cr.ready = true
 	cr.bubble = &"bubble" in c.keywords
 	cr.hidden = &"hidden" in c.keywords
-	s.players[p].lanes[lane].creature = cr
+	s.players[p].put(lane, cr)
 	return cr
 
 

@@ -24,12 +24,12 @@ static func _auras(s: GameState, op: StringName) -> Array[EffectData]:
 
 
 static func _creature_land(s: GameState, p: int, lane: int) -> int:
-	return s.players[p].lanes[lane].land
+	return s.players[p].lane(lane).land
 
 
 ## ATK change from the field for the creature in this lane.
 static func atk_bonus(s: GameState, p: int, lane: int) -> int:
-	if s.field == null or s.players[p].lanes[lane].creature == null:
+	if s.field == null or s.players[p].at(lane) == null:
 		return 0
 	var land: int = _creature_land(s, p, lane)
 	var n: int = 0
@@ -43,7 +43,7 @@ static func atk_bonus(s: GameState, p: int, lane: int) -> int:
 
 
 static func hp_bonus(s: GameState, p: int, lane: int) -> int:
-	if s.field == null or s.players[p].lanes[lane].creature == null:
+	if s.field == null or s.players[p].at(lane) == null:
 		return 0
 	var n: int = 0
 	for e: EffectData in _auras(s, &"on_land_hp"):

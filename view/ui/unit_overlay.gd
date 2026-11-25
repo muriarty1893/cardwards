@@ -34,7 +34,8 @@ var _hover_layer: CanvasLayer
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for p: int in 2:
-		_entries.append([{}, {}, {}, {}])
+		# Per creature spot (0..3 main, 4..7 followers).
+		_entries.append([{}, {}, {}, {}, {}, {}, {}, {}])
 		_bars.append([])
 		_badges.append([])
 
@@ -45,10 +46,11 @@ func setup(m: MatchController) -> void:
 	_hover_layer.layer = MatchController.HUD_LAYER + 1
 	add_child(_hover_layer)
 	for p: int in 2:
-		for l: int in 4:
+		for l: int in GameState.SPOTS:
 			var bar := _make_bar()
 			add_child(bar)
 			_bars[p].append(bar)
+		for l: int in GameState.LANES:
 			var badge := _make_badge()
 			add_child(badge)
 			_badges[p].append(badge)
@@ -95,7 +97,7 @@ static func hover_rect(at: Vector2, vp: Vector2, avoid: Array[Rect2], floor_y: f
 func plate_state(l: int) -> BoopPlate.State:
 	if not _m.board.split_revealed:
 		return BoopPlate.State.HIDDEN
-	var cr: GameState.CreatureState = _m.state.players[MatchController.HUMAN].lanes[l].creature
+	var cr: GameState.CreatureState = _m.state.players[MatchController.HUMAN].at(l)
 	var lit: bool = cr != null and cr.card.has_effect(&"on_boop") and not cr.hushed and _m.input.can_boop(l) and not _m.busy
 	return BoopPlate.State.LIT if lit else BoopPlate.State.DIM
 
@@ -139,18 +141,12 @@ static func bar_rect_at(cam: Camera3D, head: Vector3, avoid: Array[Rect2] = []) 
 
 func refresh(s: GameState) -> void:
 	for p: int in 2:
-		for l: int in 4:
-			var lane: GameState.LaneState = s.players[p].lanes[l]
-			var cr: GameState.CreatureState = lane.creature
-			if cr == null:
-				_entries[p][l] = {}
-			else:
-				var max_hp: int = Rules.effective_max_hp(s, p, l)
-				var hp: int = max_hp - cr.damage
-				_entries[p][l] = {"visible": true, "atk": Rules.effective_attack(s, p, l), "hp": hp, "max": max_hp, "bar_color": bar_color(hp, max_hp),
-					"level": cr.level, "xp": cr.xp, "home": Lands.home(s, p, l), "name": cr.card.display_name,
-					"keywords": shown_keywords(s, p, l), "spell_power": 0 if cr.hushed else cr.card.spell_power}
-			_update_bar(_bars[p][l], _entries[p][l])
+		for l: int in GameState.SPOTS:
+			var lane: GameState.LaneState = s.players[p].lane(l)
+			var cr: GameState.CreatureState = s.players[p].at(l)
+			_update_bar_entry(s, p, l, cr)
+			if l >= GameState.LANES:
+				continue
 			var badge: Control = _badges[p][l]
 			badge.visible = lane.building != null
 			if lane.building:
@@ -163,10 +159,22 @@ func refresh(s: GameState) -> void:
 			_m.board.boop_plate(l).set_state(st)
 
 
+func _update_bar_entry(s: GameState, p: int, l: int, cr: GameState.CreatureState) -> void:
+	if cr == null:
+		_entries[p][l] = {}
+	else:
+		var max_hp: int = Rules.effective_max_hp(s, p, l)
+		var hp: int = max_hp - cr.damage
+		_entries[p][l] = {"visible": true, "atk": Rules.effective_attack(s, p, l), "hp": hp, "max": max_hp, "bar_color": bar_color(hp, max_hp),
+			"level": cr.level, "xp": cr.xp, "home": Lands.home(s, p, l), "name": cr.card.display_name,
+			"keywords": shown_keywords(s, p, l), "spell_power": 0 if cr.hushed else cr.card.spell_power}
+	_update_bar(_bars[p][l], _entries[p][l])
+
+
 ## The keywords a creature's tag shows: what Rules.keywords_of says, minus a popped Bubble and a
 ## Hidden that has been revealed (those only count while they are up).
 static func shown_keywords(s: GameState, p: int, l: int) -> Array[StringName]:
-	var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+	var cr: GameState.CreatureState = s.players[p].at(l)
 	var out: Array[StringName] = []
 	if cr == null:
 		return out
@@ -210,7 +218,7 @@ func set_grown(key: String) -> void:
 		return
 	_grown_key = key
 	for p: int in 2:
-		for l: int in 4:
+		for l: int in GameState.SPOTS:
 			var on: bool = key == "%d:%d" % [p, l]
 			var bar: Control = _bars[p][l]
 			bar.get_node("Info").visible = on
@@ -223,10 +231,12 @@ func set_grown(key: String) -> void:
 func piece_at(screen: Vector2) -> Dictionary:
 	var cam: Camera3D = _m.rig.camera
 	for p: int in 2:
-		for l: int in 4:
+		for l: int in GameState.SPOTS:
 			var v: Variant = _m.creature_views[p][l]
 			if is_instance_valid(v) and _piece_rect(cam, (v as CreatureView).global_position, (v as CreatureView).height).has_point(screen):
 				return {"player": p, "lane": l, "kind": &"creature"}
+			if l >= GameState.LANES:
+				continue
 			var b: Variant = _m.building_views[p][l]
 			if is_instance_valid(b) and _piece_rect(cam, (b as Node3D).global_position + Vector3(0, CreatureView.BASE_Y, 0), BuildingView.HEIGHT).has_point(screen):
 				return {"player": p, "lane": l, "kind": &"building"}
@@ -246,7 +256,7 @@ func _process(_delta: float) -> void:
 		return
 	var cam: Camera3D = _m.rig.camera
 	for p: int in 2:
-		for l: int in 4:
+		for l: int in GameState.SPOTS:
 			var bar: Control = _bars[p][l]
 			var v: Variant = _m.creature_views[p][l]
 			var show: bool = bool(entry(p, l)["visible"]) and is_instance_valid(v)
@@ -254,6 +264,8 @@ func _process(_delta: float) -> void:
 			if show:
 				var cv := v as CreatureView
 				bar.position = bar_rect_at(cam, cv.global_position + Vector3(0, cv.height + 0.15, 0), _m.hud.corner_rects()).position
+			if l >= GameState.LANES:
+				continue
 			var badge: Control = _badges[p][l]
 			var bv: Variant = _m.building_views[p][l]
 			if badge.visible and is_instance_valid(bv):
@@ -287,8 +299,9 @@ func _update_hover() -> void:
 		_hover_notes = null
 	if hit.is_empty():
 		return
-	var lane: GameState.LaneState = _m.state.players[hit["player"]].lanes[hit["lane"]]
-	var c: CardData = lane.creature.card if hit["kind"] == &"creature" and lane.creature else lane.building
+	var lane: GameState.LaneState = _m.state.players[hit["player"]].lane(hit["lane"])
+	var hcr: GameState.CreatureState = _m.state.players[hit["player"]].at(hit["lane"])
+	var c: CardData = (hcr.card if hcr else null) if hit["kind"] == &"creature" else lane.building
 	if c == null:
 		return
 	_hover = CardWidget.new()

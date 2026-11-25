@@ -45,7 +45,10 @@ const AI_PAUSE := 0.6
 ## Divides AI pauses (tests speed this up).
 var pace: float = 1.0
 var busy: bool = false
-var creature_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
+## A follower is drawn at this scale (it starts beside its leader: Board.anchor).
+const FOLLOWER_SCALE := 0.75
+## Per player, per creature spot (0..3 main, 4..7 followers; GameState.SPOTS).
+var creature_views: Array[Array] = [[null, null, null, null, null, null, null, null], [null, null, null, null, null, null, null, null]]
 ## Creature houses (decoration), kept in step with the creatures by _sync_houses.
 var house_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
 var building_views: Array[Array] = [[null, null, null, null], [null, null, null, null]]
@@ -115,7 +118,7 @@ func _ready() -> void:
 			var ls: PackedStringArray = arg.substr(13).split(",")
 			for p: int in 2:
 				for l: int in mini(4, ls.size()):
-					state.players[p].lanes[l].land = int(ls[l])
+					state.players[p].lane(l).land = int(ls[l])
 	board = Board.new()
 	add_child(board)
 	var lands: Array[Array] = []
@@ -224,7 +227,7 @@ func _process(delta: float) -> void:
 		return
 	var pts := PackedVector3Array()
 	for p: int in 2:
-		for l: int in 4:
+		for l: int in GameState.SPOTS:
 			var v: Variant = creature_views[p][l]
 			if is_instance_valid(v):
 				pts.append((v as Node3D).global_position)
@@ -278,12 +281,12 @@ func _demo_expansion() -> void:
 	var ids: Array[StringName] = [&"sporemoth", &"twinflame_hound", &"gummy_goliath", &"glacial_wisp", &"snowfang_alpha", &"candyfloss_bat", &"magma_wraith", &"mossback_colossus"]
 	for p: int in 2:
 		for l: int in 4:
-			state.players[p].lanes[l].land = lands[p][l]
+			state.players[p].lane(l).land = lands[p][l]
 			_demo_put(p, l, ids[p * 4 + l])
-	state.players[0].lanes[1].building = CardDB.card(&"bellows_forge")
-	state.players[0].lanes[3].building = CardDB.card(&"frost_lookout")
-	state.players[1].lanes[1].building = CardDB.card(&"gingerbread_gate")
-	state.players[1].lanes[3].building = CardDB.card(&"fairy_ring")
+	state.players[0].lane(1).building = CardDB.card(&"bellows_forge")
+	state.players[0].lane(3).building = CardDB.card(&"frost_lookout")
+	state.players[1].lane(1).building = CardDB.card(&"gingerbread_gate")
+	state.players[1].lane(3).building = CardDB.card(&"fairy_ring")
 	sync_all()
 	board.reveal_split(false)
 	refresh_ui()
@@ -298,11 +301,11 @@ func _demo_living(field_id: String) -> void:
 	for p: int in 2:
 		state.players[p].armour = [5, 3][p]
 		for l: int in 4:
-			state.players[p].lanes[l].land = lands[p][l]
+			state.players[p].lane(l).land = lands[p][l]
 			_demo_put(p, l, ids[p * 4 + l])
-			state.players[p].lanes[l].creature.level = levels[p * 4 + l]
-	state.players[0].lanes[1].building = CardDB.card(&"kiln_tower")
-	state.players[1].lanes[0].building = CardDB.card(&"sugar_shack")
+			state.players[p].at(l).level = levels[p * 4 + l]
+	state.players[0].lane(1).building = CardDB.card(&"kiln_tower")
+	state.players[1].lane(0).building = CardDB.card(&"sugar_shack")
 	if field_id != "none":
 		state.field = CardDB.card(StringName(field_id))
 		state.field_owner = 1
@@ -331,51 +334,51 @@ func _demo_act(act: String) -> void:
 		return
 	match act:
 		"melt":
-			state.players[1].lanes[3].land = CardData.Land.FROST
+			state.players[1].lane(3).land = CardData.Land.FROST
 			board.change_land(1, 3, CardData.Land.FROST, Vector3.INF, false)
 			await perform(Action.play(HUMAN, Fx_give(&"fireball"), -1, [{"player": 1, "lane": 3}]))
 		"claim":
-			state.players[0].lanes[2].creature = null
+			state.players[0].put(2, null)
 			sync_all()
 			await perform(Action.play(HUMAN, Fx_give(&"cinderpup"), 2))
 		"level":
-			state.players[0].lanes[3].creature.xp = 3
-			state.players[0].lanes[3].creature.attacks_used = 0
+			state.players[0].at(3).xp = 3
+			state.players[0].at(3).attacks_used = 0
 			await perform(Action.attack(HUMAN, 3, 3, Action.Hit.NORMAL, false))
 		"field":
 			await perform(Action.play(HUMAN, Fx_give(&"snowstorm"), -1))
 		"pop":
 			# (--demo-keywords) the venom gumdrop attacks a bubbled rival.
-			state.players[1].lanes[2].creature.gained.append(&"bubble")
-			state.players[1].lanes[2].creature.bubble = true
+			state.players[1].at(2).gained.append(&"bubble")
+			state.players[1].at(2).bubble = true
 			refresh_pieces()
 			await perform(Action.attack(HUMAN, 2, 2, Action.Hit.NORMAL, false))
 		"venom":
 			await perform(Action.attack(HUMAN, 2, 2, Action.Hit.NORMAL, false))
 		"dreamup":
 			for l: int in 4:
-				state.players[HUMAN].lanes[l].land = CardData.Land.CANDY
-			state.players[HUMAN].lanes[1].creature = null
+				state.players[HUMAN].lane(l).land = CardData.Land.CANDY
+			state.players[HUMAN].put(1, null)
 			sync_all()
 			busy = false
 			_on_action_requested(Action.play(HUMAN, Fx_give(&"bonbon_behemoth"), 1))
 		"play":
-			state.players[0].lanes[2].creature = null
+			state.players[0].put(2, null)
 			sync_all()
 			refresh_ui()
 			await perform(Action.play(HUMAN, Fx_give(&"cinderpup"), 2))
 		"crit":
-			state.players[0].lanes[3].creature.gained.erase(&"second_wind")
+			state.players[0].at(3).gained.erase(&"second_wind")
 			await perform(Action.attack(HUMAN, 1, 1, Action.Hit.CRIT, false))
 		"burn":
 			await perform(Action.play(HUMAN, Fx_give(&"fireball"), -1, [{"player": 1, "lane": 3}]))
 		"shatter":
-			state.players[1].lanes[3].creature.freeze_turn = state.turn
+			state.players[1].at(3).freeze_turn = state.turn
 			refresh_pieces()
 			await get_tree().create_timer(0.4).timeout
 			await perform(Action.attack(HUMAN, 1, 3, Action.Hit.CRIT, false))
 		"leech":
-			state.players[0].lanes[0].creature.gained.append(&"leech")
+			state.players[0].at(0).gained.append(&"leech")
 			state.players[0].hero_hp = 30
 			await perform(Action.attack(HUMAN, 0, -1, Action.Hit.NORMAL, false))
 
@@ -392,7 +395,7 @@ func _demo_keywords() -> void:
 	for p: int in 2:
 		for l: int in 4:
 			_demo_put(p, l, ids[p * 4 + l])
-			var cr: GameState.CreatureState = state.players[p].lanes[l].creature
+			var cr: GameState.CreatureState = state.players[p].at(l)
 			cr.gained.append(kws[p * 4 + l])
 			cr.bubble = kws[p * 4 + l] == &"bubble"
 			cr.hidden = kws[p * 4 + l] == &"hidden"
@@ -405,7 +408,7 @@ func _demo_put(p: int, l: int, id: StringName) -> void:
 	var c := GameState.CreatureState.new()
 	c.card = CardDB.card(id)
 	c.ready = true
-	state.players[p].lanes[l].creature = c
+	state.players[p].put(l, c)
 
 
 func _build_ui() -> void:
@@ -622,10 +625,14 @@ func request_attack(lane: int, target_lane: int) -> void:
 func verify_views() -> void:
 	for p: int in 2:
 		for l: int in 4:
-			var lane: GameState.LaneState = state.players[p].lanes[l]
-			var cv: CreatureView = creature_views[p][l]
+			var lane: GameState.LaneState = state.players[p].lane(l)
 			var bv: BuildingView = building_views[p][l]
-			var ok_c: bool = (lane.creature == null and cv == null) or (lane.creature != null and cv != null and cv.card == lane.creature.card)
+			var ok_c: bool = true
+			for sp: int in [l, l + GameState.LANES]:
+				var cv: CreatureView = creature_views[p][sp]
+				var cr: GameState.CreatureState = state.players[p].at(sp)
+				if not ((cr == null and cv == null) or (cr != null and cv != null and cv.card == cr.card)):
+					ok_c = false
 			var ok_b: bool = (lane.building == null and bv == null) or (lane.building != null and bv != null and bv.card == lane.building)
 			if board.island(p, l).land != lane.land:
 				view_resyncs += 1
@@ -646,19 +653,22 @@ func sync_all() -> void:
 		field_fx.set_field(state.field.land if state.field else -1, false)
 	for p: int in 2:
 		for l: int in 4:
-			if board.island(p, l).land != state.players[p].lanes[l].land:
-				board.change_land(p, l, state.players[p].lanes[l].land, Vector3.INF, false)
-			if creature_views[p][l]:
-				(creature_views[p][l] as Node).queue_free()
-				creature_views[p][l] = null
+			if board.island(p, l).land != state.players[p].lane(l).land:
+				board.change_land(p, l, state.players[p].lane(l).land, Vector3.INF, false)
+			for sp: int in [l, l + GameState.LANES]:
+				if creature_views[p][sp]:
+					(creature_views[p][sp] as Node).queue_free()
+					creature_views[p][sp] = null
 			if building_views[p][l]:
 				(building_views[p][l] as Node).queue_free()
 				building_views[p][l] = null
-			var lane: GameState.LaneState = state.players[p].lanes[l]
+			var lane: GameState.LaneState = state.players[p].lane(l)
 			if lane.building:
 				place_building(p, l, lane.building)
 			if lane.creature:
 				place_creature(p, l, lane.creature.card)
+			if lane.follower:
+				place_creature(p, l + GameState.LANES, lane.follower.card)
 	refresh_pieces()
 
 
@@ -667,11 +677,17 @@ func sync_all() -> void:
 func place_creature(p: int, l: int, c: CardData, drop: Vector3 = Vector3.INF) -> CreatureView:
 	var v := CreatureView.create(c)
 	add_child(v)
-	var zone: Rect2 = board.roam_rect(p, l)
+	# `l` is a creature spot: followers (4..7) share their lane's roam zone, starting beside the
+	# leader and a little smaller.
+	var lane: int = GameState.lane_of(l)
+	var zone: Rect2 = board.roam_rect(p, lane)
 	if CreatureHouse.wants_house(c.id):
 		# Keep clear of the house on the lane's right-hand side.
 		zone.size.x -= Board.HOUSE_CLEAR
 	var at: Vector3 = board.anchor(p, l)
+	if GameState.is_follower(l):
+		at.x = clampf(at.x, zone.position.x, zone.end.x)
+		v.scale *= FOLLOWER_SCALE
 	if drop.is_finite():
 		at = Vector3(clampf(drop.x, zone.position.x, zone.end.x), Board.CREATURE_Y, clampf(drop.z, zone.position.y, zone.end.y))
 	v.position = at
@@ -719,7 +735,7 @@ func _footstep(v: CreatureView, pos: Vector3) -> void:
 	for p: int in 2:
 		var l: int = creature_views[p].find(v)
 		if l >= 0:
-			Burst.spawn(self, EventPlayer.LAND_BURSTS[state.players[p].lanes[l].land], pos, Color.WHITE, 0.3)
+			Burst.spawn(self, EventPlayer.LAND_BURSTS[state.players[p].lane(l).land], pos, Color.WHITE, 0.3)
 			return
 
 
@@ -749,9 +765,9 @@ func _readiness(p: int, l: int, cr: GameState.CreatureState) -> CreatureView.Rea
 ## Update freeze and readiness visuals from the state.
 func refresh_pieces() -> void:
 	for p: int in 2:
-		for l: int in 4:
+		for l: int in GameState.SPOTS:
 			var v: CreatureView = creature_views[p][l]
-			var cr: GameState.CreatureState = state.players[p].lanes[l].creature
+			var cr: GameState.CreatureState = state.players[p].at(l)
 			if v and cr:
 				v.set_frozen(cr.is_frozen())
 				v.set_readiness(_readiness(p, l, cr))

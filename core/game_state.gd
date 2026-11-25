@@ -15,6 +15,9 @@ const MAGIC_CAP := 10
 const MAGIC_CAP_MAX := 15
 const FATIGUE_DAMAGE := 2
 const LANES := 4
+## Creature spots per player: 0..3 are the lanes' main creatures, 4..7 their followers (a pack
+## card's companion shares the lane; Dark Moon spec 2.1). Spot k is in lane k % LANES.
+const SPOTS := 8
 
 var players: Array[PlayerState] = []
 var active: int = 0
@@ -51,6 +54,31 @@ class PlayerState:
 	var discard: Array[CardData] = []
 	var lanes: Array[LaneState] = []
 
+	## The creature in a spot (0..3 main, 4..7 follower), or null.
+	func at(spot: int) -> CreatureState:
+		if spot < 0 or spot >= SPOTS:
+			return null
+		var l: LaneState = lanes[spot % LANES]
+		return l.creature if spot < LANES else l.follower
+
+	func put(spot: int, cr: CreatureState) -> void:
+		if spot < LANES:
+			lanes[spot].creature = cr
+		else:
+			lanes[spot - LANES].follower = cr
+
+	## The lane a spot is in.
+	func lane(spot: int) -> LaneState:
+		return lanes[spot % LANES]
+
+	## Occupied spots, mains first (0..3) then followers (4..7).
+	func creature_spots() -> Array[int]:
+		var out: Array[int] = []
+		for i: int in SPOTS:
+			if at(i) != null:
+				out.append(i)
+		return out
+
 	func clone() -> PlayerState:
 		var p := PlayerState.new()
 		p.hero_hp = hero_hp
@@ -73,12 +101,16 @@ class LaneState:
 	extends RefCounted
 	var land: int = 0
 	var creature: CreatureState = null
+	## A pack card's follower sharing this lane (spot lane + LANES), or null. Only set while
+	## `creature` is set: when the main creature leaves, the follower moves up.
+	var follower: CreatureState = null
 	var building: CardData = null
 
 	func clone() -> LaneState:
 		var l := LaneState.new()
 		l.land = land
 		l.creature = creature.clone() if creature else null
+		l.follower = follower.clone() if follower else null
 		l.building = building
 		return l
 
@@ -155,6 +187,15 @@ func clone() -> GameState:
 	s.rng.seed = rng.seed
 	s.rng.state = rng.state
 	return s
+
+
+## The lane a creature spot is in.
+static func lane_of(spot: int) -> int:
+	return spot % LANES
+
+
+static func is_follower(spot: int) -> bool:
+	return spot >= LANES
 
 
 func opponent(p: int) -> int:

@@ -77,7 +77,7 @@ static func play(kind: StringName, source: Dictionary, e: GameEvent, m: MatchCon
 				var pts: Array[Vector3] = []
 				var foe: int = 1 - int(source["player"])
 				for l: int in 4:
-					if m.state.players[foe].lanes[l].creature != null or l == int(d["lane"]):
+					if m.state.players[foe].at(l) != null or l == int(d["lane"]):
 						pts.append(spot(m, foe, l))
 				Rain.over(m, pts, &"embers", 0.6 / sp)
 				await _wait(m, 0.45 / sp)

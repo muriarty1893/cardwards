@@ -33,6 +33,8 @@ const REAL_LANDS: Array[int] = [Land.MUSHROOM, Land.EMBER, Land.CANDY, Land.FROS
 @export var merges_into: StringName = &""
 ## False for merged forms and tokens: never in decks, the deck builder or Dream Up.
 @export var collectible: bool = true
+## Pack (Dark Moon spec 2.1): the token that enters this creature's lane as its follower.
+@export var follower_id: StringName = &""
 
 
 func is_creature() -> bool:

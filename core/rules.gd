@@ -50,11 +50,11 @@ static func start_turn(s: GameState) -> Array[GameEvent]:
 	ps.max_magic = maxi(ps.max_magic, mini(ps.max_magic + 1, ps.magic_cap))
 	ps.magic = ps.max_magic
 	ps.cards_played = 0
-	for lane: GameState.LaneState in ps.lanes:
-		if lane.creature:
-			lane.creature.ready = true
-			lane.creature.attacks_used = 0
-			lane.creature.booped = false
+	for sp: int in ps.creature_spots():
+		var mine: GameState.CreatureState = ps.at(sp)
+		mine.ready = true
+		mine.attacks_used = 0
+		mine.booped = false
 	_run_lane_triggers(s, p, &"start_of_turn", ev)
 	_start_of_turn_lands(s, p, ev)
 	Fields.run(s, p, &"field_start", ev)
@@ -111,12 +111,12 @@ static func validate(s: GameState, a: Action) -> String:
 
 
 static func _validate_attack(s: GameState, a: Action) -> String:
-	if a.lane < 0 or a.lane >= GameState.LANES or not can_attack(s, a.player, a.lane):
+	if a.lane < 0 or a.lane >= GameState.SPOTS or not can_attack(s, a.player, a.lane):
 		return "Can't attack"
 	var targets: Array[int] = attack_targets(s, a.player, a.lane)
 	if a.target_lane in targets:
 		return ""
-	if a.target_lane >= -1 and a.target_lane < GameState.LANES and _guarded(s, s.opponent(a.player)):
+	if a.target_lane >= -1 and a.target_lane < GameState.SPOTS and _guarded(s, s.opponent(a.player)):
 		return "Must attack a Guard"
 	return "Invalid target"
 
@@ -133,7 +133,7 @@ static func _validate_play(s: GameState, a: Action) -> String:
 	if c.kind != CardData.Kind.SPELL:
 		if a.lane < 0 or a.lane >= GameState.LANES:
 			return "Invalid target"
-		var lane: GameState.LaneState = ps.lanes[a.lane]
+		var lane: GameState.LaneState = ps.lane(a.lane)
 		if c.kind == CardData.Kind.CREATURE and lane.creature != null and not can_merge(s, a.player, a.lane, c):
 			return "Lane already has a creature"
 		if c.kind == CardData.Kind.BUILDING and lane.building != null:
@@ -147,7 +147,7 @@ static func _validate_play(s: GameState, a: Action) -> String:
 static func can_merge(s: GameState, p: int, lane: int, c: CardData) -> bool:
 	if c == null or c.kind != CardData.Kind.CREATURE or c.merge_with == &"" or lane < 0 or lane >= GameState.LANES:
 		return false
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	return cr != null and cr.card.id == c.merge_with and CardDB.has_card(c.merges_into)
 
 
@@ -163,9 +163,9 @@ static func _played_form(s: GameState, p: int, lane: int, c: CardData) -> CardDa
 static func _validate_boop(s: GameState, a: Action) -> String:
 	if s.phase != GameState.Phase.MAIN:
 		return "Can't do that now"
-	if a.lane < 0 or a.lane >= GameState.LANES or s.players[a.player].lanes[a.lane].creature == null:
+	if a.lane < 0 or a.lane >= GameState.SPOTS or s.players[a.player].at(a.lane) == null:
 		return "No such creature"
-	var cr: GameState.CreatureState = s.players[a.player].lanes[a.lane].creature
+	var cr: GameState.CreatureState = s.players[a.player].at(a.lane)
 	if not cr.card.has_effect(&"on_boop") or cr.hushed:
 		return "No boop ability"
 	if cr.is_frozen():
@@ -198,7 +198,7 @@ static func _validate_targets(s: GameState, p: int, c: CardData, when: StringNam
 
 ## Ready, not frozen, hasn't attacked or booped this turn, and has an un-hushed boop.
 static func can_boop(s: GameState, p: int, lane: int) -> bool:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	return cr != null and cr.ready and not cr.is_frozen() and not cr.booped \
 		and cr.attacks_used == 0 and cr.card.has_effect(&"on_boop") and not cr.hushed
 
@@ -223,7 +223,7 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 		Action.Type.PLAY_CARD:
 			_play(s, a, ev)
 		Action.Type.BOOP:
-			var cr: GameState.CreatureState = s.players[a.player].lanes[a.lane].creature
+			var cr: GameState.CreatureState = s.players[a.player].at(a.lane)
 			cr.booped = true
 			ev.append(GameEvent.make(&"booped", {"player": a.player, "lane": a.lane}))
 			reveal(s, a.player, a.lane, ev)
@@ -272,15 +272,15 @@ static func legal_actions(s: GameState) -> Array[Action]:
 						var a: Action = Action.play(p, i, lane, t)
 						if validate(s, a) == "":
 							out.append(a)
-			for lane: int in GameState.LANES:
-				var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+			for lane: int in GameState.SPOTS:
+				var cr: GameState.CreatureState = s.players[p].at(lane)
 				if cr == null or not cr.card.has_effect(&"on_boop"):
 					continue
 				for t: Array[Dictionary] in _target_options(s, p, cr.card, &"on_boop", lane):
 					var a: Action = Action.boop(p, lane, t)
 					if validate(s, a) == "":
 						out.append(a)
-			for lane: int in GameState.LANES:
+			for lane: int in GameState.SPOTS:
 				if can_attack(s, p, lane):
 					for t: int in attack_targets(s, p, lane):
 						out.append(Action.attack(p, lane, t))
@@ -310,7 +310,7 @@ static func _target_options(s: GameState, p: int, c: CardData, when: StringName,
 
 ## Ready (or just played with Dash), not frozen or booped, attacks left, and ATK above 0.
 static func can_attack(s: GameState, p: int, lane: int) -> bool:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null or cr.is_frozen() or cr.booped:
 		return false
 	if not cr.ready and not (cr.played_turn == s.turn and has_keyword(s, p, lane, &"dash")):
@@ -324,14 +324,14 @@ static func attack_targets(s: GameState, p: int, lane: int) -> Array[int]:
 	var foe: int = s.opponent(p)
 	var out: Array[int] = []
 	var guarded: bool = _guarded(s, foe)
-	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[foe].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var cr: GameState.CreatureState = s.players[foe].at(l)
 		if cr == null or cr.hidden:
 			continue
 		if guarded and not has_keyword(s, foe, l, &"guard"):
 			continue
 		out.append(l)
-	var mine: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var mine: GameState.CreatureState = s.players[p].at(lane)
 	if not guarded and mine and mine.ready:
 		out.append(-1)
 	return out
@@ -339,8 +339,8 @@ static func attack_targets(s: GameState, p: int, lane: int) -> Array[int]:
 
 ## True while player p has a Guard that is not Hidden.
 static func _guarded(s: GameState, p: int) -> bool:
-	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var cr: GameState.CreatureState = s.players[p].at(l)
 		if cr and not cr.hidden and has_keyword(s, p, l, &"guard"):
 			return true
 	return false
@@ -364,10 +364,11 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 		CardData.Kind.CREATURE:
 			enter_creature(s, p, a.lane, c, ev)
 			ev.append(GameEvent.make(&"creature_played", {"player": p, "lane": a.lane, "card": c.id}))
+			_enter_follower(s, p, a.lane, c, ev)
 			Lands.claim(s, p, a.lane, c, ev)
 			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.BUILDING:
-			ps.lanes[a.lane].building = c
+			ps.lane(a.lane).building = c
 			ev.append(GameEvent.make(&"building_played", {"player": p, "lane": a.lane, "card": c.id}))
 			Lands.claim(s, p, a.lane, c, ev)
 			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
@@ -388,7 +389,7 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 ## buffs, gained keywords, freeze, hush and readiness; the form's printed Bubble / Hidden switch on and its on-play
 ## ("When merged") runs. The hand card is absorbed.
 static func _merge(s: GameState, p: int, lane: int, c: CardData, targets: Array[Dictionary], ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	var into: CardData = CardDB.card(c.merges_into)
 	var from: CardData = cr.card
 	cr.card = into
@@ -404,25 +405,24 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 	var p: int = s.active
 	_run_lane_triggers(s, p, &"end_of_turn", ev)
 	# Bask: creatures that didn't attack this turn grow +1/+1.
-	for l: int in GameState.LANES:
-		var bk: GameState.CreatureState = s.players[p].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var bk: GameState.CreatureState = s.players[p].at(l)
 		if bk and bk.attacks_used == 0 and has_keyword(s, p, l, &"bask"):
 			buff(s, p, l, 1, 1, ev)
 	Fields.run(s, p, &"field_end", ev)
-	for l: int in GameState.LANES:
-		var mine: GameState.CreatureState = s.players[p].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var mine: GameState.CreatureState = s.players[p].at(l)
 		if mine and mine.doomed:
 			destroy_creature(s, p, l, ev)
 	resolve_deaths(s, ev)
 	s.players[p].spell_discount = 0
 	for q: int in 2:
-		for lane: GameState.LaneState in s.players[q].lanes:
-			if lane.creature:
-				lane.creature.temp_atk = 0
+		for sp: int in s.players[q].creature_spots():
+			s.players[q].at(sp).temp_atk = 0
 	if s.phase == GameState.Phase.OVER:
 		return
-	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var cr: GameState.CreatureState = s.players[p].at(l)
 		if cr == null:
 			continue
 		if cr.freeze_turn >= 0 and cr.freeze_turn < s.turn:
@@ -437,13 +437,13 @@ static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
 
 ## Start of p's turn: creatures at home on Mushroom Forest heal 2 (Rooted); Grove heals the hero.
 static func _start_of_turn_lands(s: GameState, p: int, ev: Array[GameEvent]) -> void:
-	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var cr: GameState.CreatureState = s.players[p].at(l)
 		if cr and cr.damage > 0 and Lands.home(s, p, l) == CardData.Land.MUSHROOM:
 			heal_creature(s, p, l, 2, ev)
 	# Sun-baked: 1 armour per creature at home on Sunny Dunes.
 	var baked: int = 0
-	for l: int in GameState.LANES:
+	for l: int in GameState.SPOTS:
 		if Lands.home(s, p, l) == CardData.Land.DUNES:
 			baked += 1
 	if baked > 0:
@@ -456,14 +456,14 @@ static func _start_of_turn_lands(s: GameState, p: int, ev: Array[GameEvent]) -> 
 
 static func _run_lane_triggers(s: GameState, p: int, trigger: StringName, ev: Array[GameEvent]) -> void:
 	for l: int in GameState.LANES:
-		var b: CardData = s.players[p].lanes[l].building
+		var b: CardData = s.players[p].lane(l).building
 		if b:
 			Effects.run(s, p, l, b, trigger, [], ev)
 
 
 ## Printed ATK plus buffs, building auras, home (Fired up, Plump), tribe (Pack), level and field.
 static func effective_attack(s: GameState, p: int, lane: int) -> int:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return 0
 	var atk: int = cr.card.attack + cr.atk_bonus + cr.temp_atk + _aura(s, p, lane, &"lane_atk") - _aura(s, s.opponent(p), lane, &"opposing_atk")
@@ -476,7 +476,7 @@ static func effective_attack(s: GameState, p: int, lane: int) -> int:
 
 ## Printed HP plus buffs, building auras, home (Plump), tribe (Squish), level and field.
 static func effective_max_hp(s: GameState, p: int, lane: int) -> int:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return 0
 	var hp: int = cr.card.health + cr.hp_bonus + _aura(s, p, lane, &"lane_hp")
@@ -487,7 +487,7 @@ static func effective_max_hp(s: GameState, p: int, lane: int) -> int:
 
 ## Sum of a building aura's amounts in player p's lane.
 static func _aura(s: GameState, p: int, lane: int, op: StringName) -> int:
-	var b: CardData = s.players[p].lanes[lane].building
+	var b: CardData = s.players[p].lane(lane).building
 	var n: int = 0
 	if b:
 		for e: EffectData in b.effects:
@@ -507,7 +507,7 @@ static func damage_reduction(s: GameState, p: int, lane: int) -> int:
 
 static func keywords_of(s: GameState, p: int, lane: int) -> Array[StringName]:
 	var out: Array[StringName] = []
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return out
 	if not cr.hushed:
@@ -517,7 +517,7 @@ static func keywords_of(s: GameState, p: int, lane: int) -> Array[StringName]:
 	for k: StringName in cr.gained:
 		if not k in out:
 			out.append(k)
-	var b: CardData = s.players[p].lanes[lane].building
+	var b: CardData = s.players[p].lane(lane).building
 	if b:
 		for e: EffectData in b.effects:
 			if e.when == &"aura" and e.op == &"lane_keyword" and not e.keyword in out:
@@ -532,9 +532,10 @@ static func has_keyword(s: GameState, p: int, lane: int, kw: StringName) -> bool
 ## Bonus damage for player p's spells: the sum over their un-hushed creatures.
 static func spell_power(s: GameState, p: int) -> int:
 	var n: int = 0
-	for lane: GameState.LaneState in s.players[p].lanes:
-		if lane.creature and not lane.creature.hushed:
-			n += lane.creature.card.spell_power
+	for sp: int in s.players[p].creature_spots():
+		var cr: GameState.CreatureState = s.players[p].at(sp)
+		if not cr.hushed:
+			n += cr.card.spell_power
 	return n + Tribes.spell_power(s, p)
 
 
@@ -546,7 +547,7 @@ static func enter_creature(s: GameState, p: int, lane: int, c: CardData, _ev: Ar
 	cr.ready = false
 	cr.bubble = &"bubble" in c.keywords
 	cr.hidden = &"hidden" in c.keywords
-	s.players[p].lanes[lane].creature = cr
+	s.players[p].put(lane, cr)
 	return cr
 
 
@@ -554,7 +555,7 @@ static func enter_creature(s: GameState, p: int, lane: int, c: CardData, _ev: Ar
 ## attack | hit_back | ability | spell}. Applies Bubble, Venom, Leech and the source's
 ## after_damage effects. Returns the damage dealt.
 static func damage_creature(s: GameState, p: int, lane: int, amount: int, src: Dictionary, ev: Array[GameEvent], hit: Action.Hit = Action.Hit.NORMAL, blocked: bool = false) -> int:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return 0
 	var dealt: int = maxi(amount, 0)
@@ -567,7 +568,7 @@ static func damage_creature(s: GameState, p: int, lane: int, amount: int, src: D
 		dealt = 0
 	var sp: int = int(src.get("player", -1))
 	var sl: int = int(src.get("lane", -1))
-	var sc: GameState.CreatureState = s.players[sp].lanes[sl].creature if sp >= 0 and sl >= 0 else null
+	var sc: GameState.CreatureState = s.players[sp].at(sl) if sp >= 0 and sl >= 0 else null
 	var venom: bool = false
 	if dealt > 0:
 		cr.damage += dealt
@@ -579,7 +580,7 @@ static func damage_creature(s: GameState, p: int, lane: int, amount: int, src: D
 		_leech(s, sp, sl, dealt, ev)
 		Effects.run(s, sp, sl, sc.card, &"after_damage", [], ev, {"damaged": {"player": p, "lane": lane}})
 	# "After this takes damage" (Pain Shroom, Emberkit): the damaged creature's own trigger.
-	if dealt > 0 and s.players[p].lanes[lane].creature == cr:
+	if dealt > 0 and s.players[p].at(lane) == cr:
 		Effects.run(s, p, lane, cr.card, &"on_hurt", [], ev)
 	return dealt
 
@@ -592,7 +593,7 @@ static func _leech(s: GameState, sp: int, sl: int, dealt: int, ev: Array[GameEve
 
 ## Removes keywords, effects, stat changes and freeze (spec 4.2). Damage stays.
 static func hush(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return
 	cr.hushed = true
@@ -606,7 +607,7 @@ static func hush(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
 
 
 static func give_keyword(s: GameState, p: int, lane: int, kw: StringName, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return
 	if not kw in cr.gained:
@@ -619,7 +620,7 @@ static func give_keyword(s: GameState, p: int, lane: int, kw: StringName, ev: Ar
 
 
 static func buff(s: GameState, p: int, lane: int, atk: int, hp: int, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return
 	cr.atk_bonus += atk
@@ -629,13 +630,13 @@ static func buff(s: GameState, p: int, lane: int, atk: int, hp: int, ev: Array[G
 
 ## Marks a creature to die; resolve_deaths removes it.
 static func destroy_creature(s: GameState, p: int, lane: int, _ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr:
 		cr.damage = maxi(cr.damage, effective_max_hp(s, p, lane))
 
 
 static func reveal(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr and cr.hidden:
 		cr.hidden = false
 		ev.append(GameEvent.make(&"revealed", {"player": p, "lane": lane}))
@@ -657,7 +658,7 @@ static func offer_dream_up(s: GameState, p: int, filter_kind: int, filter_land: 
 
 
 static func heal_creature(s: GameState, p: int, lane: int, amount: int, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return
 	var healed: int = mini(amount, cr.damage)
@@ -674,7 +675,7 @@ static func damage_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent],
 	ev.append(GameEvent.make(&"hero_damaged", {"player": p, "amount": amount - soaked, "armour": soaked}))
 	var sp: int = int(src.get("player", -1))
 	var sl: int = int(src.get("lane", -1))
-	if amount > 0 and sp >= 0 and sl >= 0 and s.players[sp].lanes[sl].creature:
+	if amount > 0 and sp >= 0 and sl >= 0 and s.players[sp].at(sl):
 		_leech(s, sp, sl, amount, ev)
 
 
@@ -692,7 +693,7 @@ static func heal_hero(s: GameState, p: int, amount: int, ev: Array[GameEvent]) -
 
 
 static func freeze(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return
 	cr.freeze_turn = s.turn
@@ -718,18 +719,24 @@ static func card_cost(s: GameState, p: int, c: CardData) -> int:
 
 ## Takes a creature off the board back to its owner's hand (discarded if the hand is full). Not a death.
 static func bounce_creature(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> void:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	if cr == null:
 		return
-	s.players[p].lanes[lane].creature = null
+	s.players[p].put(lane, null)
 	ev.append(GameEvent.make(&"creature_bounced", {"player": p, "lane": lane, "card": cr.card.id}))
-	return_to_hand(s, p, cr.card, ev)
+	# A pack goes back as one card: its follower token leaves too. A follower alone just leaves.
+	var fol: GameState.CreatureState = s.players[p].at(lane + GameState.LANES) if lane < GameState.LANES else null
+	if fol:
+		s.players[p].put(lane + GameState.LANES, null)
+		ev.append(GameEvent.make(&"creature_bounced", {"player": p, "lane": lane + GameState.LANES, "card": fol.card.id}))
+	if not GameState.is_follower(lane):
+		return_to_hand(s, p, cr.card, ev)
 
 
 ## Turns a creature into `into` where it stands: a fresh creature (no damage, buffs, keywords or level) that keeps
 ## its readiness for this turn.
 static func transform_creature(s: GameState, p: int, lane: int, into: CardData, ev: Array[GameEvent]) -> void:
-	var old: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var old: GameState.CreatureState = s.players[p].at(lane)
 	if old == null:
 		return
 	var cr: GameState.CreatureState = enter_creature(s, p, lane, into, ev)
@@ -738,6 +745,44 @@ static func transform_creature(s: GameState, p: int, lane: int, into: CardData, 
 	cr.attacks_used = old.attacks_used
 	cr.booped = old.booped
 	ev.append(GameEvent.make(&"creature_transformed", {"player": p, "lane": lane, "from": old.card.id, "card": into.id}))
+
+
+## A pack card's follower token enters the lane's follower spot.
+static func _enter_follower(s: GameState, p: int, lane: int, c: CardData, ev: Array[GameEvent]) -> void:
+	if c.follower_id == &"" or not CardDB.has_card(c.follower_id) or s.players[p].at(lane + GameState.LANES) != null:
+		return
+	var tok: CardData = CardDB.card(c.follower_id)
+	enter_creature(s, p, lane + GameState.LANES, tok, ev)
+	ev.append(GameEvent.make(&"follower_entered", {"player": p, "lane": lane + GameState.LANES, "card": tok.id, "leader": c.id}))
+
+
+## After a lane's main creature left: its follower (if any) becomes the main creature.
+static func _promote_follower(s: GameState, p: int, spot: int, ev: Array[GameEvent]) -> void:
+	if GameState.is_follower(spot) or s.players[p].at(spot) != null:
+		return
+	var fol: GameState.CreatureState = s.players[p].at(spot + GameState.LANES)
+	if fol == null:
+		return
+	s.players[p].put(spot + GameState.LANES, null)
+	s.players[p].put(spot, fol)
+	ev.append(GameEvent.make(&"follower_promoted", {"player": p, "from": spot + GameState.LANES, "to": spot}))
+
+
+## Moves the creatures at `from` to the empty lane `to`: a main creature brings its follower; a
+## follower alone becomes the main creature there.
+static func move_unit(s: GameState, p: int, from: int, to: int, ev: Array[GameEvent]) -> void:
+	var ps: GameState.PlayerState = s.players[p]
+	if ps.at(from) == null or to < 0 or to >= GameState.LANES or ps.at(to) != null:
+		return
+	ps.put(to, ps.at(from))
+	ps.put(from, null)
+	ev.append(GameEvent.make(&"creature_moved", {"player": p, "from": from, "to": to}))
+	if not GameState.is_follower(from):
+		var fol: GameState.CreatureState = ps.at(from + GameState.LANES)
+		if fol:
+			ps.put(to + GameState.LANES, fol)
+			ps.put(from + GameState.LANES, null)
+			ev.append(GameEvent.make(&"creature_moved", {"player": p, "from": from + GameState.LANES, "to": to + GameState.LANES}))
 
 
 static func _hero_down(s: GameState) -> bool:
@@ -751,19 +796,20 @@ static func resolve_deaths(s: GameState, ev: Array[GameEvent]) -> void:
 	while any and not _hero_down(s):
 		any = false
 		for p: int in [s.active, s.opponent(s.active)]:
-			for l: int in GameState.LANES:
+			for l: int in GameState.SPOTS:
 				if _hero_down(s):
 					break
-				var cr: GameState.CreatureState = s.players[p].lanes[l].creature
+				var cr: GameState.CreatureState = s.players[p].at(l)
 				if cr and cr.damage >= effective_max_hp(s, p, l):
 					any = true
 					var second_wind: bool = has_keyword(s, p, l, &"second_wind") and not cr.second_wind_used
-					s.players[p].lanes[l].creature = null
+					s.players[p].put(l, null)
 					s.players[p].discard.append(cr.card)
 					ev.append(GameEvent.make(&"creature_destroyed", {"player": p, "lane": l, "card": cr.card.id}))
+					_promote_follower(s, p, l, ev)
 					if not cr.hushed:
 						Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)
-					if second_wind and not _hero_down(s) and s.players[p].lanes[l].creature == null:
+					if second_wind and not _hero_down(s) and s.players[p].at(l) == null:
 						s.players[p].discard.erase(cr.card)
 						var back: GameState.CreatureState = enter_creature(s, p, l, cr.card, ev)
 						back.second_wind_used = true

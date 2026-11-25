@@ -110,8 +110,8 @@ func evaluate(s: GameState) -> float:
 	score += LAND_VALUE * float(_useful_lanes(s, me))
 	for q: int in 2:
 		var sign: float = 0.5 if q == me else -0.5
-		for l: int in GameState.LANES:
-			if s.players[q].lanes[l].creature:
+		for l: int in GameState.SPOTS:
+			if s.players[q].at(l):
 				score += sign * _creature_value(s, q, l)
 	score += HAND_CARD * s.players[me].hand.size()
 	if enemy_has_lethal(s):
@@ -120,7 +120,7 @@ func evaluate(s: GameState) -> float:
 
 
 func _creature_value(s: GameState, p: int, lane: int) -> float:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	var atk: float = float(Rules.effective_attack(s, p, lane))
 	var v: float = atk + float(Rules.effective_max_hp(s, p, lane) - cr.damage)
 	for k: StringName in Rules.keywords_of(s, p, lane):
@@ -170,15 +170,15 @@ func enemy_has_lethal(s: GameState) -> bool:
 	var me: int = player
 	var foe: int = s.opponent(me)
 	var total: int = 0
-	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[foe].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var cr: GameState.CreatureState = s.players[foe].at(l)
 		if cr == null or cr.is_frozen():
 			continue
 		var atk: int = Rules.effective_attack(s, foe, l)
 		total += atk * (2 if Rules.has_keyword(s, foe, l, &"flurry") else 1)
 	var soak: int = 0
-	for l: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[me].lanes[l].creature
+	for l: int in GameState.SPOTS:
+		var cr: GameState.CreatureState = s.players[me].at(l)
 		if cr and not cr.hidden and Rules.has_keyword(s, me, l, &"guard"):
 			soak += Rules.effective_max_hp(s, me, l) - cr.damage
 	return total > 0 and total - soak >= s.players[me].hero_hp

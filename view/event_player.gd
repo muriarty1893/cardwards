@@ -153,6 +153,10 @@ func _play_one(e: GameEvent) -> void:
 			await _second_wind(d)
 		&"creature_bounced":
 			await _bounced(d)
+		&"follower_entered":
+			await _follower_entered(d)
+		&"follower_promoted":
+			await move_piece(d, false)
 		&"creature_merged":
 			await _merged(d)
 		&"creature_transformed":
@@ -229,6 +233,26 @@ func _rival_react(e: GameEvent) -> void:
 				r.win()
 			else:
 				r.lose()
+
+
+## A pack's follower pops up beside its leader.
+func _follower_entered(d: Dictionary) -> void:
+	var p: int = d["player"]
+	var sp: int = d["lane"]
+	if _view(p, sp):
+		return
+	var v: CreatureView = m.place_creature(p, sp, CardDB.card(d["card"]))
+	var full: Vector3 = v.scale
+	v.scale = Vector3.ONE * 0.05
+	v.busy = true
+	Burst.spawn(m, &"stars", v.global_position + Vector3(0, 0.3, 0), Palette.LAND_CARD[v.card.land], 1.0)
+	Audio.sfx(&"card_play")
+	var tw := v.create_tween()
+	tw.tween_property(v, "scale", full, 0.35 / speed).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	if is_instance_valid(v):
+		v.busy = false
+	m.refresh_pieces()
 
 
 ## Second Wind: the creature that just fell springs back up in its lane with 1 HP.

@@ -21,8 +21,8 @@ const GROVE_HEAL: Array[int] = [0, 2, 3]
 
 static func count(s: GameState, p: int, tribe: StringName) -> int:
 	var n: int = 0
-	for l: GameState.LaneState in s.players[p].lanes:
-		if l.creature and l.creature.card.tribe == tribe:
+	for sp: int in s.players[p].creature_spots():
+		if s.players[p].at(sp).card.tribe == tribe:
 			n += 1
 	return n
 
@@ -30,8 +30,8 @@ static func count(s: GameState, p: int, tribe: StringName) -> int:
 ## Creatures of `tribe` player p controls other than the one in `except_lane`.
 static func count_other(s: GameState, p: int, tribe: StringName, except_lane: int) -> int:
 	var n: int = 0
-	for i: int in GameState.LANES:
-		var cr: GameState.CreatureState = s.players[p].lanes[i].creature
+	for i: int in GameState.SPOTS:
+		var cr: GameState.CreatureState = s.players[p].at(i)
 		if i != except_lane and cr and cr.card.tribe == tribe:
 			n += 1
 	return n
@@ -44,7 +44,7 @@ static func tier(s: GameState, p: int, tribe: StringName) -> int:
 
 
 static func _tribe_at(s: GameState, p: int, lane: int) -> StringName:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	return cr.card.tribe if cr else &""
 
 

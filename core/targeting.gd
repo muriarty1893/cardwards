@@ -28,24 +28,24 @@ static func valid(s: GameState, p: int, who: StringName, source_lane: int = -1) 
 	match who:
 		&"chosen_creature":
 			for q: int in [p, s.opponent(p)]:
-				for l: int in GameState.LANES:
-					var cr: GameState.CreatureState = s.players[q].lanes[l].creature
+				for l: int in GameState.SPOTS:
+					var cr: GameState.CreatureState = s.players[q].at(l)
 					if cr and not (q != p and cr.hidden):
 						out.append({"player": q, "lane": l})
 			out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 				return a["player"] < b["player"] if a["player"] != b["player"] else a["lane"] < b["lane"])
 		&"chosen_own_creature", &"chosen_two_own_creatures":
-			for l: int in GameState.LANES:
-				if s.players[p].lanes[l].creature:
+			for l: int in GameState.SPOTS:
+				if s.players[p].at(l):
 					out.append({"player": p, "lane": l})
 		&"chosen_own_empty_lane":
 			for l: int in GameState.LANES:
-				if l != source_lane and s.players[p].lanes[l].creature == null:
+				if (source_lane < 0 or l != GameState.lane_of(source_lane)) and s.players[p].at(l) == null:
 					out.append({"player": p, "lane": l})
 		&"chosen_enemy_creature", &"chosen_damaged_enemy", &"chosen_frozen_enemy":
 			var foe: int = s.opponent(p)
-			for l: int in GameState.LANES:
-				var cr: GameState.CreatureState = s.players[foe].lanes[l].creature
+			for l: int in GameState.SPOTS:
+				var cr: GameState.CreatureState = s.players[foe].at(l)
 				if cr == null or cr.hidden:
 					continue
 				if who == &"chosen_damaged_enemy" and cr.damage <= 0:
@@ -55,8 +55,8 @@ static func valid(s: GameState, p: int, who: StringName, source_lane: int = -1) 
 				out.append({"player": foe, "lane": l})
 		&"chosen_undamaged_creature":
 			for q: int in [p, s.opponent(p)]:
-				for l: int in GameState.LANES:
-					var cr: GameState.CreatureState = s.players[q].lanes[l].creature
+				for l: int in GameState.SPOTS:
+					var cr: GameState.CreatureState = s.players[q].at(l)
 					if cr and cr.damage == 0 and not (q != p and cr.hidden):
 						out.append({"player": q, "lane": l})
 		&"chosen_discard_creature":
@@ -77,21 +77,21 @@ static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Ar
 		&"self", &"lane_creature":
 			out.append({"player": p, "lane": lane})
 		&"opposing":
-			out.append({"player": foe, "lane": lane})
+			out.append({"player": foe, "lane": GameState.lane_of(lane)})
 		&"all_enemy_creatures", &"all_own_creatures":
 			var q: int = foe if who == &"all_enemy_creatures" else p
-			for l: int in GameState.LANES:
-				if s.players[q].lanes[l].creature:
+			for l: int in GameState.SPOTS:
+				if s.players[q].at(l):
 					out.append({"player": q, "lane": l})
 		&"all_away_creatures":
 			# Every creature on both sides that isn't at home (Heatwave).
 			for q: int in 2:
-				for l: int in GameState.LANES:
-					if s.players[q].lanes[l].creature and not Lands.is_home(s, q, l):
+				for l: int in GameState.SPOTS:
+					if s.players[q].at(l) and not Lands.is_home(s, q, l):
 						out.append({"player": q, "lane": l})
 		&"own_on_land":
-			for l: int in GameState.LANES:
-				if s.players[p].lanes[l].creature and s.players[p].lanes[l].land == filter_land:
+			for l: int in GameState.SPOTS:
+				if s.players[p].at(l) and s.players[p].lane(l).land == filter_land:
 					out.append({"player": p, "lane": l})
 		&"enemy_hero":
 			out.append({"hero": foe})
@@ -104,9 +104,9 @@ static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Ar
 			out.assign(ctx.get("last", []))
 		&"other_enemies":
 			var last: Array = ctx.get("last", [])
-			for l: int in GameState.LANES:
+			for l: int in GameState.SPOTS:
 				var t := {"player": foe, "lane": l}
-				if s.players[foe].lanes[l].creature and not t in last:
+				if s.players[foe].at(l) and not t in last:
 					out.append(t)
 			if not {"hero": foe} in last:
 				out.append({"hero": foe})

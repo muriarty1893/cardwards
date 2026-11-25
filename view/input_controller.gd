@@ -50,7 +50,7 @@ func on_drag_started(i: int) -> void:
 				var merge: bool = Rules.can_merge(_state(), _human(), l, _card)
 				match_ctl.board.island(_human(), l).set_highlight(Island.Highlight.MERGE if merge else Island.Highlight.VALID)
 				if merge:
-					var partner: CardData = _state().players[_human()].lanes[l].creature.card
+					var partner: CardData = _state().players[_human()].at(l).card
 					match_ctl.toast.show_message("Drop on %s to MERGE" % partner.display_name, 2.0)
 
 
@@ -143,7 +143,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if is_inside_tree():
 			get_viewport().set_input_as_handled()
 		return
-	var hit: Dictionary = match_ctl.board.lane_at_screen(match_ctl.rig.camera, mb.position)
+	var hit: Dictionary = spot_at_screen(mb.position)
 	if hit.is_empty():
 		return
 	var t: Dictionary = {"player": int(hit["player"]), "lane": int(hit["lane"])}
@@ -151,7 +151,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if t in _targets:
 			return
 		_targets.append(t)
-		match_ctl.board.island(t["player"], t["lane"]).set_highlight(Island.Highlight.VALID)
+		match_ctl.board.island(t["player"], GameState.lane_of(t["lane"])).set_highlight(Island.Highlight.VALID)
 		if _targets.size() >= _needed:
 			_send()
 		return
@@ -193,12 +193,13 @@ func _start_aim(lane: int, pos: Vector2) -> void:
 		av.aim_at = av.position + Vector3(0, 0, -1)
 	var foe: int = 1 - _human()
 	var targets: Array[int] = Rules.attack_targets(_state(), _human(), lane)
-	for l: int in 4:
-		if _state().players[foe].lanes[l].creature == null:
+	for l: int in GameState.SPOTS:
+		if _state().players[foe].at(l) == null:
 			continue
 		if l in targets:
 			var guard: bool = Rules.has_keyword(_state(), foe, l, &"guard")
-			match_ctl.board.island(foe, l).set_highlight(Island.Highlight.GUARD if guard else Island.Highlight.TARGET)
+			if not GameState.is_follower(l) or not (GameState.lane_of(l) in targets):
+				match_ctl.board.island(foe, GameState.lane_of(l)).set_highlight(Island.Highlight.GUARD if guard else Island.Highlight.TARGET)
 		elif match_ctl.creature_views[foe][l]:
 			(match_ctl.creature_views[foe][l] as CreatureView).set_dimmed(true)
 	_update_aim(pos)
@@ -229,7 +230,7 @@ static func table_strip() -> Rect2:
 ## table in front of them), -2 for nothing.
 func _target_at(pos: Vector2) -> int:
 	var cam: Camera3D = match_ctl.rig.camera
-	var hit: Dictionary = match_ctl.board.lane_at_screen(cam, pos)
+	var hit: Dictionary = spot_at_screen(pos)
 	if not hit.is_empty() and int(hit["player"]) != _human():
 		return int(hit["lane"])
 	if match_ctl.hud.hero_rect(false).has_point(pos):
@@ -240,6 +241,24 @@ func _target_at(pos: Vector2) -> int:
 	if g.is_finite() and table_strip().has_point(Vector2(g.x, g.z)):
 		return -1
 	return -2
+
+
+## {"player", "lane"} under the pointer, where "lane" is the creature spot: in a lane with a
+## follower, whichever of the two creatures is nearer the pointer on screen. {} for none.
+func spot_at_screen(pos: Vector2) -> Dictionary:
+	var cam: Camera3D = match_ctl.rig.camera
+	var hit: Dictionary = match_ctl.board.lane_at_screen(cam, pos)
+	if hit.is_empty():
+		return hit
+	var p: int = hit["player"]
+	var l: int = hit["lane"]
+	var fv: Variant = match_ctl.creature_views[p][l + GameState.LANES]
+	if not is_instance_valid(fv):
+		return hit
+	var mv: Variant = match_ctl.creature_views[p][l]
+	var df: float = cam.unproject_position((fv as Node3D).global_position).distance_to(pos)
+	var dm: float = cam.unproject_position((mv as Node3D).global_position).distance_to(pos) if is_instance_valid(mv) else INF
+	return {"player": p, "lane": l + GameState.LANES} if df < dm else hit
 
 
 func _update_aim(pos: Vector2) -> void:
@@ -286,7 +305,7 @@ func try_plate(ground: Vector3) -> bool:
 func can_boop(lane: int) -> bool:
 	if not enabled or mode != Mode.IDLE:
 		return false
-	var cr: GameState.CreatureState = _state().players[_human()].lanes[lane].creature
+	var cr: GameState.CreatureState = _state().players[_human()].at(lane)
 	if cr == null or not cr.card.has_effect(&"on_boop") or cr.hushed:
 		return false
 	var err: String = Rules.validate(_state(), Action.boop(_human(), lane, []))
@@ -297,7 +316,7 @@ func can_boop(lane: int) -> bool:
 func request_boop(lane: int) -> void:
 	if not enabled:
 		return
-	var cr: GameState.CreatureState = _state().players[_human()].lanes[lane].creature
+	var cr: GameState.CreatureState = _state().players[_human()].at(lane)
 	if cr == null:
 		return
 	if not cr.card.has_effect(&"on_boop") or cr.hushed:
@@ -333,8 +352,9 @@ func _clear_highlights() -> void:
 	if match_ctl.attack_arrow:
 		match_ctl.attack_arrow.clear()
 	for p: int in 2:
-		for l: int in 4:
-			match_ctl.board.island(p, l).set_highlight(Island.Highlight.OFF)
+		for l: int in GameState.SPOTS:
+			if l < GameState.LANES:
+				match_ctl.board.island(p, l).set_highlight(Island.Highlight.OFF)
 			var v: CreatureView = match_ctl.creature_views[p][l]
 			if is_instance_valid(v):
 				v.set_dimmed(false)

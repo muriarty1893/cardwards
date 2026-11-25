@@ -195,7 +195,7 @@ static func summarize(events: Array[GameEvent], s: GameState) -> Dictionary:
 	var p: int = int(d.get("player", -1))
 	var card := StringName(str(d.get("into", d.get("card", ""))))
 	if primary.type == &"booped" or (primary.type == &"attack" and card == &""):
-		var cr: GameState.CreatureState = s.players[p].lanes[int(d["lane"])].creature
+		var cr: GameState.CreatureState = s.players[p].at(int(d["lane"]))
 		card = cr.card.id if cr else _destroyed_card(events, p, int(d["lane"]))
 	var badge: StringName = {&"creature_merged": &"merged", &"creature_played": &"play", &"building_played": &"built",
 		&"spell_cast": &"spell", &"attack": &"attack", &"booped": &"boop"}[primary.type]
@@ -340,5 +340,5 @@ static func _card_name(id: Variant) -> String:
 
 ## The creature's name in the lane now, or "a creature" if it's gone already.
 static func _name_at(s: GameState, p: int, lane: int) -> String:
-	var cr: GameState.CreatureState = s.players[p].lanes[lane].creature
+	var cr: GameState.CreatureState = s.players[p].at(lane)
 	return cr.card.display_name if cr else "a creature"
