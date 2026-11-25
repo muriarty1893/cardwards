@@ -29,6 +29,10 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Dream Up: the cards on offer and who picks.
 var pending_choice: Array[CardData] = []
 var pending_player: int = -1
+## The pending choice is a Dark Gift: the pick gets a random Gifts bonus.
+var pending_gift: bool = false
+## Choices waiting behind the pending one (echoed Dream Ups): {"player", "kind", "land", "gift"}.
+var pending_queue: Array[Dictionary] = []
 ## The field spell in play for both players (null: none) and who played it.
 var field: CardData = null
 var field_owner: int = -1
@@ -47,6 +51,8 @@ class PlayerState:
 	var cards_played: int = 0
 	## Your next spell this turn costs this much less (Sugar High); cleared at the end of the turn.
 	var spell_discount: int = 0
+	## Your next N spells happen twice (next_spell_twice).
+	var spell_twice: int = 0
 	## Highest max magic the turn growth reaches (Deep Roots raises it, up to MAGIC_CAP_MAX).
 	var magic_cap: int = MAGIC_CAP
 	var deck: Array[CardData] = []
@@ -92,6 +98,7 @@ class PlayerState:
 		p.fatigue = fatigue
 		p.cards_played = cards_played
 		p.spell_discount = spell_discount
+		p.spell_twice = spell_twice
 		p.magic_cap = magic_cap
 		p.deck = deck.duplicate()
 		p.hand = hand.duplicate()
@@ -187,6 +194,8 @@ func clone() -> GameState:
 	s.winner = winner
 	s.pending_choice = pending_choice.duplicate()
 	s.pending_player = pending_player
+	s.pending_gift = pending_gift
+	s.pending_queue = pending_queue.duplicate(true)
 	s.field = field
 	s.field_owner = field_owner
 	s.rng.seed = rng.seed

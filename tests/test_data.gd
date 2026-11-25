@@ -194,7 +194,7 @@ const SPEC_TEXT: Dictionary = {
 	&"taffy_snail": "On play: Gain 1 magic. On play, if you control 2 other Blobs: Gain 1 magic.",
 	&"lollibat": "Flurry. Boop: Move this creature to one of your empty lanes. Merges with Cotton Puff.",
 	&"sugar_sprite": "Hidden. On play, Combo: Return the opposing building to its owner's hand. Level up: Draw a card.",
-	&"jellywobble": "When destroyed: Draw 2 cards.",
+	&"jellywobble": "Last Breath: Draw 2 cards.",
 	&"bonbon_behemoth": "On play: Dream Up a Candy Hills card. Boop: Draw 2 cards.",
 	&"sugar_shack": "The creature in this lane has +1 ATK and +1 HP.",
 	&"candy_mill": "Start of your turn: Gain 1 magic.",

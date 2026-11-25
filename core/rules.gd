@@ -82,6 +82,12 @@ static func draw(s: GameState, p: int, ev: Array[GameEvent]) -> void:
 	else:
 		ps.hand.append(c)
 		ev.append(GameEvent.make(&"card_drawn", {"player": p, "card": c.id}))
+		if c.has_effect(&"on_draw"):
+			# Curses that go off when drawn: they act on their drawer, then are gone.
+			ps.hand.erase(c)
+			ev.append(GameEvent.make(&"curse_triggered", {"player": p, "card": c.id}))
+			Effects.run(s, p, -1, c, &"on_draw", [], ev)
+			ps.discard.append(c)
 
 
 # --- Validation --------------------------------------------------------------
@@ -241,9 +247,15 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 
 static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	var c: CardData = s.pending_choice[a.choice]
+	var gift: bool = s.pending_gift
 	s.pending_choice = []
 	s.pending_player = -1
+	s.pending_gift = false
 	s.phase = GameState.Phase.MAIN
+	if gift:
+		var g: StringName = Gifts.ORDER[s.rng.randi_range(0, Gifts.ORDER.size() - 1)]
+		c = CardDB.variant(c, Gifts.delta(g))
+		ev.append(GameEvent.make(&"dark_gift", {"player": a.player, "card": c.id, "gift": g}))
 	ev.append(GameEvent.make(&"dream_up_chosen", {"player": a.player, "card": c.id}))
 	var ps: GameState.PlayerState = s.players[a.player]
 	if ps.hand.size() >= GameState.HAND_LIMIT:
@@ -251,6 +263,9 @@ static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 		ev.append(GameEvent.make(&"card_burned", {"player": a.player, "card": c.id}))
 	else:
 		ps.hand.append(c)
+	if not s.pending_queue.is_empty():
+		var q: Dictionary = s.pending_queue.pop_front()
+		offer_dream_up(s, int(q["player"]), int(q["kind"]), int(q["land"]), ev, bool(q["gift"]))
 
 
 ## Every legal action for the active player. Used by the AI and tests.
@@ -367,20 +382,30 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 			ev.append(GameEvent.make(&"creature_played", {"player": p, "lane": a.lane, "card": c.id}))
 			_enter_follower(s, p, a.lane, c, ev)
 			Lands.claim(s, p, a.lane, c, ev)
-			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
+			for i: int in _on_play_times(s, p, c):
+				Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.BUILDING:
 			ps.lane(a.lane).building = c
 			ev.append(GameEvent.make(&"building_played", {"player": p, "lane": a.lane, "card": c.id}))
 			Lands.claim(s, p, a.lane, c, ev)
-			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
+			for i: int in _on_play_times(s, p, c):
+				Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.SPELL:
 			ev.append(GameEvent.make(&"spell_cast", {"player": p, "card": c.id}))
 			GameHistory.record_spell(ps, c)
 			if c.field:
 				Fields.set_field(s, p, c, ev)
-			Effects.run(s, p, -1, c, &"on_play", a.targets, ev)
+			var times: int = 1
+			if ps.spell_twice > 0:
+				ps.spell_twice -= 1
+				times = 2
+			for i: int in times:
+				if i > 0:
+					ev.append(GameEvent.make(&"spell_echoed", {"player": p, "card": c.id}))
+				Effects.run(s, p, -1, c, &"on_play", a.targets, ev)
 			if not c.field:
 				ps.discard.append(c)
+			_grow_held(s, p, ev)
 	ps.cards_played += 1
 	if ps.cards_played == 1:
 		ev.append(GameEvent.make(&"combo_active", {"player": p}))
@@ -390,6 +415,33 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 ## Merges hand card `c` into p's partner in `lane`: the creature becomes the merged form, keeping its damage, level,
 ## buffs, gained keywords, freeze, hush and readiness; the form's printed Bubble / Hidden switch on and its on-play
 ## ("When merged") runs. The hand card is absorbed.
+## How many times a creature's or building's on-play runs: twice while p has an Echo creature.
+static func _on_play_times(s: GameState, p: int, c: CardData) -> int:
+	return 2 if c.has_effect(&"on_play") and echoes(s, p) else 1
+
+
+## True while player p controls an un-hushed creature with the Echo aura.
+static func echoes(s: GameState, p: int) -> bool:
+	for sp: int in s.players[p].creature_spots():
+		var cr: GameState.CreatureState = s.players[p].at(sp)
+		if cr.hushed:
+			continue
+		for e: EffectData in cr.card.effects_for(&"aura"):
+			if e.op == &"echo":
+				return true
+	return false
+
+
+## After p casts a spell: held creatures that grow on spells get their bonus (as changed copies).
+static func _grow_held(s: GameState, p: int, ev: Array[GameEvent]) -> void:
+	var ps: GameState.PlayerState = s.players[p]
+	for i: int in ps.hand.size():
+		for e: EffectData in ps.hand[i].effects_for(&"in_hand"):
+			if e.op == &"grow_on_spell":
+				ps.hand[i] = CardDB.variant(ps.hand[i], {"attack": e.amount, "health": e.amount2})
+				ev.append(GameEvent.make(&"hand_card_grew", {"player": p, "index": i, "card": ps.hand[i].id}))
+
+
 static func _merge(s: GameState, p: int, lane: int, c: CardData, targets: Array[Dictionary], ev: Array[GameEvent]) -> void:
 	var cr: GameState.CreatureState = s.players[p].at(lane)
 	var into: CardData = CardDB.card(c.merges_into)
@@ -400,7 +452,8 @@ static func _merge(s: GameState, p: int, lane: int, c: CardData, targets: Array[
 	if &"hidden" in into.keywords:
 		cr.hidden = true
 	ev.append(GameEvent.make(&"creature_merged", {"player": p, "lane": lane, "from": from.id, "card": c.id, "into": into.id}))
-	Effects.run(s, p, lane, into, &"on_play", targets, ev)
+	for i: int in _on_play_times(s, p, into):
+		Effects.run(s, p, lane, into, &"on_play", targets, ev)
 
 
 static func _end_turn(s: GameState, ev: Array[GameEvent]) -> void:
@@ -645,13 +698,19 @@ static func reveal(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> voi
 
 
 ## Offers up to 3 different random cards matching the filter; play waits for CHOOSE.
-static func offer_dream_up(s: GameState, p: int, filter_kind: int, filter_land: int, ev: Array[GameEvent]) -> void:
-	var pool: Array[CardData] = CardDB.dream_up_pool(filter_kind, filter_land)
+## A Dark Gift (`gift`) offers creatures and the pick gets a random bonus. While another choice
+## is open, the offer waits in the queue.
+static func offer_dream_up(s: GameState, p: int, filter_kind: int, filter_land: int, ev: Array[GameEvent], gift: bool = false) -> void:
+	if s.phase == GameState.Phase.CHOOSING:
+		s.pending_queue.append({"player": p, "kind": filter_kind, "land": filter_land, "gift": gift})
+		return
+	var pool: Array[CardData] = CardDB.dream_up_pool(CardData.Kind.CREATURE if gift else filter_kind, filter_land)
 	if pool.is_empty():
 		return
 	_shuffle(s, pool)
 	s.pending_choice = pool.slice(0, mini(3, pool.size()))
 	s.pending_player = p
+	s.pending_gift = gift
 	s.phase = GameState.Phase.CHOOSING
 	var ids: Array[StringName] = []
 	for c: CardData in s.pending_choice:
@@ -714,9 +773,13 @@ static func return_to_hand(s: GameState, p: int, c: CardData, ev: Array[GameEven
 
 ## What `c` costs player p right now: spells get the pending spell discount (never below 0).
 static func card_cost(s: GameState, p: int, c: CardData) -> int:
+	var cost: int = c.cost
+	for e: EffectData in c.effects_for(&"in_hand"):
+		if e.op == &"cost_per_death":
+			cost -= e.amount * GameHistory.deaths_all(s)
 	if c.kind == CardData.Kind.SPELL:
-		return maxi(c.cost - s.players[p].spell_discount, 0)
-	return c.cost
+		cost -= s.players[p].spell_discount
+	return maxi(cost, 0)
 
 
 ## Takes a creature off the board back to its owner's hand (discarded if the hand is full). Not a death.
@@ -785,6 +848,102 @@ static func move_unit(s: GameState, p: int, from: int, to: int, ev: Array[GameEv
 			ps.put(to + GameState.LANES, fol)
 			ps.put(from + GameState.LANES, null)
 			ev.append(GameEvent.make(&"creature_moved", {"player": p, "from": from + GameState.LANES, "to": to + GameState.LANES}))
+
+
+## `total` single hits, each on a random living enemy (creature or hero) of p.
+static func split_damage(s: GameState, p: int, total: int, src: Dictionary, ev: Array[GameEvent]) -> void:
+	var foe: int = s.opponent(p)
+	for i: int in total:
+		if s.phase == GameState.Phase.OVER or _hero_down(s):
+			return
+		var pool: Array[int] = [-1]
+		for sp: int in s.players[foe].creature_spots():
+			if s.players[foe].at(sp).damage < effective_max_hp(s, foe, sp):
+				pool.append(sp)
+		var pick: int = pool[s.rng.randi_range(0, pool.size() - 1)]
+		if pick < 0:
+			damage_hero(s, foe, 1, ev, src)
+		else:
+			damage_creature(s, foe, pick, 1, src, ev)
+
+
+## Casts again every spell p cast this game (of `land`, -1 any) on random legal targets. Cards that
+## replay spells are skipped, and replays don't count as new casts.
+static func replay_spells(s: GameState, p: int, land: int, ev: Array[GameEvent]) -> void:
+	var ids: Array = (s.players[p].history["spells"] as Array).duplicate()
+	for id: Variant in ids:
+		if s.phase == GameState.Phase.OVER or _hero_down(s):
+			return
+		if not CardDB.has_card(StringName(id)):
+			continue
+		var c: CardData = CardDB.card(StringName(id))
+		if c.field or (land >= 0 and c.land != land) or _replays(c):
+			continue
+		var targets: Array[Dictionary] = []
+		var who: StringName = Targeting.chosen_who(c, &"on_play")
+		if who != &"":
+			var valid: Array[Dictionary] = Targeting.valid(s, p, who, -1)
+			var needed: int = Targeting.needed(who)
+			if valid.size() < needed:
+				continue
+			_shuffle_dicts(s, valid)
+			targets.assign(valid.slice(0, needed))
+		ev.append(GameEvent.make(&"spell_replayed", {"player": p, "card": c.id}))
+		Effects.run(s, p, -1, c, &"on_play", targets, ev)
+		resolve_deaths(s, ev)
+
+
+static func _replays(c: CardData) -> bool:
+	for e: EffectData in c.effects:
+		if e.op == &"replay_spells":
+			return true
+	return false
+
+
+static func _shuffle_dicts(s: GameState, arr: Array[Dictionary]) -> void:
+	for i: int in range(arr.size() - 1, 0, -1):
+		var j: int = s.rng.randi_range(0, i)
+		var tmp: Dictionary = arr[i]
+		arr[i] = arr[j]
+		arr[j] = tmp
+
+
+## A made card goes to p's hand (burned if the hand is full).
+static func add_to_hand(s: GameState, p: int, c: CardData, ev: Array[GameEvent]) -> void:
+	var ps: GameState.PlayerState = s.players[p]
+	if ps.hand.size() >= GameState.HAND_LIMIT:
+		ps.discard.append(c)
+		ev.append(GameEvent.make(&"card_burned", {"player": p, "card": c.id}))
+	else:
+		ps.hand.append(c)
+		ev.append(GameEvent.make(&"card_added", {"player": p, "card": c.id}))
+
+
+## `n` copies of `c` into p's deck at random places.
+static func shuffle_into_deck(s: GameState, p: int, c: CardData, n: int, ev: Array[GameEvent]) -> void:
+	var deck: Array[CardData] = s.players[p].deck
+	for i: int in n:
+		deck.insert(s.rng.randi_range(0, deck.size()), c)
+	ev.append(GameEvent.make(&"shuffled_in", {"player": p, "card": c.id, "count": n}))
+
+
+## Puts `c` on p's board without playing it (no on-play): into lane `prefer` if empty, else the
+## first empty lane from the left. Nothing happens when every lane is full.
+static func summon(s: GameState, p: int, c: CardData, prefer: int, ev: Array[GameEvent]) -> void:
+	var ps: GameState.PlayerState = s.players[p]
+	var lane: int = -1
+	if prefer >= 0 and ps.at(GameState.lane_of(prefer)) == null:
+		lane = GameState.lane_of(prefer)
+	else:
+		for l: int in GameState.LANES:
+			if ps.at(l) == null:
+				lane = l
+				break
+	if lane < 0:
+		return
+	enter_creature(s, p, lane, c, ev)
+	ev.append(GameEvent.make(&"creature_summoned", {"player": p, "lane": lane, "card": c.id}))
+	_enter_follower(s, p, lane, c, ev)
 
 
 static func _hero_down(s: GameState) -> bool:

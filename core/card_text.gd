@@ -4,7 +4,7 @@ extends RefCounted
 ## text, so the words on a card always match what it does.
 
 const _PREFIX: Dictionary = {
-	&"on_boop": "Boop: ", &"on_destroyed": "When destroyed: ",
+	&"on_boop": "Boop: ", &"on_destroyed": "Last Breath: ", &"on_draw": "When drawn: ", &"in_hand": "",
 	&"start_of_turn": "Start of your turn: ", &"end_of_turn": "End of your turn: ",
 	&"after_damage": "After this damages a creature, ", &"on_hurt": "After this takes damage, ",
 	&"on_level_up": "Level up: ", &"field_start": "Start of each turn: ", &"field_end": "End of each turn: ",
@@ -64,6 +64,10 @@ static func mechanics(c: CardData) -> Array[StringName]:
 		var k: StringName = &""
 		if e.op == &"hush" or e.op == &"dream_up":
 			k = e.op
+			if e.gift:
+				k = &"dark_gift"
+		elif e.op == &"echo":
+			k = &"echo"
 		elif e.op == &"lane_keyword" or e.op == &"give_keyword":
 			k = e.keyword
 		if k != &"" and not k in used:
@@ -74,8 +78,12 @@ static func mechanics(c: CardData) -> Array[StringName]:
 			used.append(&"armour")
 		if e.when == &"on_level_up" and not &"level_up" in used:
 			used.append(&"level_up")
+		if e.when == &"on_destroyed" and not &"last_breath" in used:
+			used.append(&"last_breath")
 	if c.field:
 		used.push_front(&"field")
+	if c.curse:
+		used.push_front(&"curse")
 	return used
 
 
@@ -106,7 +114,7 @@ static func _render(c: CardData, bold: bool) -> String:
 			parts.append("The creature in this lane has %s." % " and ".join(bits))
 			run_key = ""
 			continue
-		var key: String = "%s|%s|%s%d" % [e.when, e.combo, e.tribe, e.need]
+		var key: String = "%s|%s|%s%d|%s" % [e.when, e.combo, e.tribe, e.need, e.need_cond]
 		var prefix: String = "" if key == run_key else _prefix(c, e, bold)
 		run_key = key
 		# "Freeze X. If it was already frozen, deal N damage to it instead." (Icicle)
@@ -148,6 +156,9 @@ static func _prefix(c: CardData, e: EffectData, bold: bool) -> String:
 		base = "" if c.kind == CardData.Kind.SPELL else ("When merged: " if not c.collectible and c.kind == CardData.Kind.CREATURE and not CardDB.merge_partners(c.id).is_empty() else "On play: ")
 	else:
 		base = _PREFIX.get(e.when, "")
+	if e.need_cond != &"":
+		var cond_t: String = Conditions.text(e.need_cond)
+		base = cond_t + ": " if base == "" else "%s, %s: " % [base.trim_suffix(": "), cond_t.substr(0, 1).to_lower() + cond_t.substr(1)]
 	if e.need > 0:
 		var other: String = "another %s" % Tribes.NAMES[e.tribe] if e.need == 1 else "%d other %s" % [e.need, Tribes.PLURALS[e.tribe]]
 		var cond: String = "if you control %s" % other
@@ -197,7 +208,10 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			var land: String = CardData.LAND_NAMES[e.filter_land] + " " if e.filter_land >= 0 else ""
 			var kind: String = _KIND_WORDS[e.filter_kind] if e.filter_kind >= 0 else "card"
 			var noun: String = land + kind
-			s = "%s %s %s" % [_b("Dream Up", bold), "an" if noun.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a", noun]
+			if e.gift:
+				s = "%s: Dream Up a creature; it gets a random bonus" % _b("Dark Gift", bold)
+			else:
+				s = "%s %s %s" % [_b("Dream Up", bold), "an" if noun.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a", noun]
 		&"lane_damage_taken":
 			s = "The creature in this lane takes %d less damage from attacks and hit-back (minimum 1)" % e.amount
 		&"opposing_atk":
@@ -237,6 +251,37 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			s = "Creatures on %s have %+d HP" % [CardData.LAND_NAMES[e.filter_land], e.amount]
 		&"no_quirk":
 			s = "%s give no home bonus" % CardData.LAND_NAMES[e.filter_land]
+		&"split_damage":
+			s = "Deal %d damage split randomly between all enemies" % e.amount
+		&"double_stats":
+			s = "Double %s's ATK and HP" % x
+		&"next_spell_twice":
+			s = "Your next spell happens twice" if e.amount <= 1 else "Your next %d spells happen twice" % e.amount
+		&"replay_spells":
+			var sl: String = CardData.LAND_NAMES[e.filter_land] + " " if e.filter_land >= 0 else ""
+			s = "Cast every %sspell you've cast this game again (random targets)" % sl
+		&"add_to_hand", &"shuffle_into_deck", &"summon":
+			var made: CardData = CardDB.card(e.card_id) if CardDB.has_card(e.card_id) else null
+			var nm: String = made.display_name if made else String(e.card_id).capitalize()
+			if made and made.is_creature():
+				nm = "%d/%d %s" % [made.attack, made.health, nm]
+			var n: int = maxi(e.amount, 1)
+			var what: String = ("a " + nm) if n == 1 else "%d %s" % [n, nm + ("s" if not nm.ends_with("s") else "")]
+			match e.op:
+				&"add_to_hand":
+					s = "Add %s to %s hand" % [what, "your rival's" if e.who == &"enemy_hero" else "your"]
+				&"shuffle_into_deck":
+					s = "Shuffle %s into %s deck" % [what, "your rival's" if e.who == &"enemy_hero" else "your"]
+				_:
+					s = "Summon %s%s" % [what, " for your rival" if e.who == &"enemy_hero" else ""]
+		&"buff_hand":
+			s = "Give the creatures in your hand +%d/+%d" % [e.amount, e.amount2]
+		&"cost_per_death":
+			s = "Costs %d less for each creature that died this game" % e.amount
+		&"grow_on_spell":
+			s = "While in your hand, gets +%d/+%d each time you cast a spell" % [e.amount, e.amount2]
+		&"echo":
+			s = "Your %s happen twice" % _b("on-play effects", bold)
 		_:
 			s = String(e.op)
 	# "it" sentences continue an earlier clause, so they start lower-case.

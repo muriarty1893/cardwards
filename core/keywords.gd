@@ -10,6 +10,7 @@ const NAMES: Dictionary = {
 	&"leech": "Leech", &"flurry": "Flurry", &"hidden": "Hidden", &"second_wind": "Second Wind",
 	&"hush": "Hush", &"dream_up": "Dream Up", &"combo": "Combo", &"spell_power": "Spell Power",
 	&"field": "Field", &"armour": "Armour", &"level_up": "Level up", &"sturdy": "Sturdy", &"bask": "Bask",
+	&"last_breath": "Last Breath", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo",
 }
 
 const RULES: Dictionary = {
@@ -29,5 +30,9 @@ const RULES: Dictionary = {
 	&"armour": "Soaks damage to your hero before its HP does.",
 	&"sturdy": "Takes 1 less damage from every hit.",
 	&"bask": "At the end of your turn, if it didn't attack, it gets +1/+1.",
+	&"last_breath": "Happens when this creature dies (not if it's Hushed).",
+	&"curse": "A bad card made for the rival. Some go off when drawn.",
+	&"dark_gift": "Choose one of 3 random creatures; the one you take gets a random bonus.",
+	&"echo": "While this is in play, your creatures' and buildings' on-play effects happen twice.",
 	&"level_up": "A creature gains XP for each attack it survives (+1 more for a kill): Lv 2 at 2 XP, Lv 3 at 4 XP, +1/+1 each.",
 }

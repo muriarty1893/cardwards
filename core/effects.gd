@@ -21,6 +21,8 @@ static func run(s: GameState, p: int, lane: int, card: CardData, when: StringNam
 			continue
 		if e.need > 0 and Tribes.count_other(s, p, e.tribe, lane if card.kind == CardData.Kind.CREATURE else -1) < e.need:
 			continue
+		if e.need_cond != &"" and not Conditions.ok(s, p, e.need_cond):
+			continue
 		if not announced:
 			# Informational only: tells the view what caused the events that follow.
 			ev.append(GameEvent.make(&"ability_triggered", {"player": p, "lane": lane, "card": card.id}))
@@ -126,7 +128,39 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 			else:
 				push_warning("Effects: discard target gone")
 		&"dream_up":
-			Rules.offer_dream_up(s, p, e.filter_kind, e.filter_land, ev)
+			Rules.offer_dream_up(s, p, e.filter_kind, e.filter_land, ev, e.gift)
+		&"split_damage":
+			var total: int = e.amount
+			if card.kind == CardData.Kind.SPELL and not card.field:
+				total += Rules.spell_power(s, p)
+			Rules.split_damage(s, p, total, {"player": p, "lane": -1, "kind": &"spell" if card.kind == CardData.Kind.SPELL else &"ability"}, ev)
+		&"double_stats":
+			for t: Dictionary in ts:
+				if _creature(s, t):
+					var cr: GameState.CreatureState = s.players[t["player"]].at(t["lane"])
+					var hp_now: int = Rules.effective_max_hp(s, t["player"], t["lane"]) - cr.damage
+					Rules.buff(s, t["player"], t["lane"], Rules.effective_attack(s, t["player"], t["lane"]), hp_now, ev)
+		&"next_spell_twice":
+			ps.spell_twice += maxi(e.amount, 1)
+		&"replay_spells":
+			Rules.replay_spells(s, p, e.filter_land, ev)
+		&"add_to_hand":
+			if CardDB.has_card(e.card_id):
+				for i: int in maxi(e.amount, 1):
+					Rules.add_to_hand(s, _owner(s, p, e.who), CardDB.card(e.card_id), ev)
+		&"shuffle_into_deck":
+			if CardDB.has_card(e.card_id):
+				Rules.shuffle_into_deck(s, _owner(s, p, e.who), CardDB.card(e.card_id), maxi(e.amount, 1), ev)
+		&"summon":
+			if CardDB.has_card(e.card_id):
+				var q: int = _owner(s, p, e.who)
+				for i: int in maxi(e.amount, 1):
+					Rules.summon(s, q, CardDB.card(e.card_id), lane if (e.who == &"self" and q == p) else -1, ev)
+		&"buff_hand":
+			for i: int in ps.hand.size():
+				if ps.hand[i].is_creature():
+					ps.hand[i] = CardDB.variant(ps.hand[i], {"attack": e.amount, "health": e.amount2})
+			ev.append(GameEvent.make(&"hand_buffed", {"player": p, "atk": e.amount, "hp": e.amount2}))
 		&"armour":
 			for t: Dictionary in ts:
 				if t.has("hero"):
@@ -172,6 +206,8 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 		&"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken", &"opposing_atk", \
 				&"on_land_atk", &"off_land_atk", &"on_land_hp", &"no_quirk":
 			pass  # auras: read by Rules.effective_* / keywords_of / damage_reduction / Fields
+		&"echo", &"cost_per_death", &"grow_on_spell":
+			pass  # passives: Rules.echoes / card_cost / _grow_held
 		_:
 			push_warning("Effects: unknown op '%s'" % e.op)
 
@@ -186,6 +222,11 @@ static func _cond_ok(s: GameState, cond: StringName, t: Dictionary) -> bool:
 		&"target_not_frozen":
 			return not frozen
 	return true
+
+
+## Whose hand/deck/board a step aimed at `who` reaches: the rival for enemy_hero, else the owner.
+static func _owner(s: GameState, p: int, who: StringName) -> int:
+	return s.opponent(p) if who == &"enemy_hero" else p
 
 
 static func _creature(s: GameState, t: Dictionary) -> bool:
