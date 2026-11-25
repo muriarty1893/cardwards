@@ -251,6 +251,17 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			s = "Creatures on %s have %+d HP" % [CardData.LAND_NAMES[e.filter_land], e.amount]
 		&"no_quirk":
 			s = "%s give no home bonus" % CardData.LAND_NAMES[e.filter_land]
+		&"dark_moon":
+			s = "Choose left or right: every creature moves to the next occupied land around the board. Crossing sides changes owner"
+		&"steal_hand":
+			if e.amount2 > 0:
+				s = "Steal the most expensive card in your rival's hand" if e.amount <= 1 else "Steal the %d most expensive cards in your rival's hand" % e.amount
+			else:
+				s = "Steal a random card from your rival's hand" if e.amount <= 1 else "Steal %d random cards from your rival's hand" % e.amount
+		&"copy_rival":
+			s = "Copy a random card from your rival's hand or deck" if e.amount <= 1 else "Copy %d random cards from your rival's hand or deck" % e.amount
+		&"steal_creature":
+			s = "Take control of %s%s" % [x, " with %d or less ATK" % e.amount if e.amount > 0 else ""]
 		&"split_damage":
 			s = "Deal %d damage split randomly between all enemies" % e.amount
 		&"double_stats":

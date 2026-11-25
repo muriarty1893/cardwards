@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_dark_moon_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"dark_moon"
+who = &"own_hero"
+amount = 0
+
+[resource]
+script = ExtResource("1_card")
+id = &"dark_moon"
+display_name = "Dark Moon"
+kind = 2
+land = 4
+level = 0
+cost = 4
+effects = Array[ExtResource("2_eff")]([SubResource("eff_dark_moon_0")])
+legendary = true

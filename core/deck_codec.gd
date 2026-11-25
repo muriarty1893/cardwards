@@ -23,7 +23,7 @@ static func check(d: Variant) -> String:
 	if lands.size() != 4:
 		return "Not a deck"
 	for l: Variant in lands:
-		if not (l is int or l is float) or int(l) != l or int(l) < 0 or int(l) > 4:
+		if not (l is int or l is float) or int(l) != l or int(l) < 0 or int(l) > CardData.Land.DUNES:
 			return "Not a deck"
 	var cards: Array[CardData] = []
 	for id: Variant in dict["cards"]:

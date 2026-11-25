@@ -32,6 +32,10 @@ describe("protocol", () => {
     expect(checkDeckShape(ok)).toBe(true);
     expect(checkDeckShape({ ...ok, cards: ok.cards.slice(1) })).toBe(false);
     expect(checkDeckShape({ ...ok, lands: [0, 0, 9, 0] })).toBe(false);
+    expect(checkDeckShape({ ...ok, lands: [5, 5, 3, 5] })).toBe(true); // Sunny Dunes
+    expect(checkDeckShape({ ...ok, lands: [6, 0, 0, 0] })).toBe(false);
+    expect(checkDeckShape({ ...ok, cards: Array(40).fill("mossback") })).toBe(true); // 40-card decks
+    expect(checkDeckShape({ ...ok, cards: Array(35).fill("mossback") })).toBe(false);
     expect(checkDeckShape({ ...ok, name: "x".repeat(LIMITS.deckNameMax + 1) })).toBe(false);
     expect(checkDeckShape({ ...ok, cards: [...ok.cards.slice(1), 3] })).toBe(false);
     expect(checkDeckShape(null)).toBe(false);

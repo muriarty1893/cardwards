@@ -129,6 +129,16 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 				push_warning("Effects: discard target gone")
 		&"dream_up":
 			Rules.offer_dream_up(s, p, e.filter_kind, e.filter_land, ev, e.gift)
+		&"dark_moon":
+			Rules.offer_direction(s, p, ev)
+		&"steal_hand":
+			Rules.steal_from_hand(s, p, maxi(e.amount, 1), e.amount2 > 0, ev)
+		&"copy_rival":
+			Rules.copy_rival_card(s, p, maxi(e.amount, 1), ev)
+		&"steal_creature":
+			for t: Dictionary in ts:
+				if _creature(s, t) and int(t["player"]) != p and (e.amount <= 0 or Rules.effective_attack(s, t["player"], t["lane"]) <= e.amount):
+					Rules.steal_creature(s, p, t["player"], t["lane"], ev)
 		&"split_damage":
 			var total: int = e.amount
 			if card.kind == CardData.Kind.SPELL and not card.field:

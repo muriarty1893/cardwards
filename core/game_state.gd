@@ -31,6 +31,8 @@ var pending_choice: Array[CardData] = []
 var pending_player: int = -1
 ## The pending choice is a Dark Gift: the pick gets a random Gifts bonus.
 var pending_gift: bool = false
+## &"" for a Dream Up card pick; &"direction" for Dark Moon's left (0) / right (1).
+var pending_kind: StringName = &""
 ## Choices waiting behind the pending one (echoed Dream Ups): {"player", "kind", "land", "gift"}.
 var pending_queue: Array[Dictionary] = []
 ## The field spell in play for both players (null: none) and who played it.
@@ -195,6 +197,7 @@ func clone() -> GameState:
 	s.pending_choice = pending_choice.duplicate()
 	s.pending_player = pending_player
 	s.pending_gift = pending_gift
+	s.pending_kind = pending_kind
 	s.pending_queue = pending_queue.duplicate(true)
 	s.field = field
 	s.field_owner = field_owner

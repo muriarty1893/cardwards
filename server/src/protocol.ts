@@ -1,6 +1,6 @@
 // Messages between the Dream Isles game and the relay (spec section 4), and their limits.
 
-export const LIMITS = { maxBytes: 4096, perSecond: 20, nameMax: 16, deckNameMax: 24, deckSize: 30 } as const;
+export const LIMITS = { maxBytes: 4096, perSecond: 20, nameMax: 16, deckNameMax: 24, deckSize: 30, bigDeckSize: 40, maxLand: 5 } as const;
 
 export const TIMES = {
   blockMs: 10_000,
@@ -125,10 +125,10 @@ export function cleanName(s: unknown): string {
 export function checkDeckShape(d: unknown): d is DeckMsg {
   if (!isObject(d)) return false;
   if (!shortString(d.name, LIMITS.deckNameMax)) return false;
-  if (!Array.isArray(d.lands) || d.lands.length !== 4 || !d.lands.every((l) => isInt(l, 0, 4))) return false;
+  if (!Array.isArray(d.lands) || d.lands.length !== 4 || !d.lands.every((l) => isInt(l, 0, LIMITS.maxLand))) return false;
   return (
     Array.isArray(d.cards) &&
-    d.cards.length === LIMITS.deckSize &&
+    (d.cards.length === LIMITS.deckSize || d.cards.length === LIMITS.bigDeckSize) &&
     d.cards.every((c) => typeof c === "string" && c.length > 0 && c.length <= 40)
   );
 }

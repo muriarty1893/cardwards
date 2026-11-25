@@ -246,6 +246,15 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 
 
 static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
+	if s.pending_kind == &"direction":
+		s.pending_choice = []
+		s.pending_player = -1
+		s.pending_kind = &""
+		s.phase = GameState.Phase.MAIN
+		dark_moon(s, a.player, -1 if a.choice == 0 else 1, ev)
+		resolve_deaths(s, ev)
+		_next_choice(s, ev)
+		return
 	var c: CardData = s.pending_choice[a.choice]
 	var gift: bool = s.pending_gift
 	s.pending_choice = []
@@ -263,8 +272,17 @@ static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 		ev.append(GameEvent.make(&"card_burned", {"player": a.player, "card": c.id}))
 	else:
 		ps.hand.append(c)
-	if not s.pending_queue.is_empty():
-		var q: Dictionary = s.pending_queue.pop_front()
+	_next_choice(s, ev)
+
+
+## Opens the next queued choice, if any.
+static func _next_choice(s: GameState, ev: Array[GameEvent]) -> void:
+	if s.pending_queue.is_empty() or s.phase != GameState.Phase.MAIN:
+		return
+	var q: Dictionary = s.pending_queue.pop_front()
+	if q.get("type", "") == "direction":
+		offer_direction(s, int(q["player"]), ev)
+	else:
 		offer_dream_up(s, int(q["player"]), int(q["kind"]), int(q["land"]), ev, bool(q["gift"]))
 
 
@@ -944,6 +962,116 @@ static func summon(s: GameState, p: int, c: CardData, prefer: int, ev: Array[Gam
 	enter_creature(s, p, lane, c, ev)
 	ev.append(GameEvent.make(&"creature_summoned", {"player": p, "lane": lane, "card": c.id}))
 	_enter_follower(s, p, lane, c, ev)
+
+
+# --- Dark Moon and stealing (Dark Moon spec 2.2, 2.3) ------------------------
+
+## The ring of the 8 lands as seen by player p: p's lanes left to right, then the rival's right to
+## left. Each entry is [player, lane].
+static func ring(p: int) -> Array:
+	var q: int = 1 - p
+	return [[p, 0], [p, 1], [p, 2], [p, 3], [q, 3], [q, 2], [q, 1], [q, 0]]
+
+
+## Dark Moon asks p for a direction: choice 0 = left, 1 = right.
+static func offer_direction(s: GameState, p: int, ev: Array[GameEvent]) -> void:
+	if s.phase == GameState.Phase.CHOOSING:
+		s.pending_queue.append({"type": "direction", "player": p})
+		return
+	s.pending_choice = [CardDB.card(&"moon_left"), CardDB.card(&"moon_right")]
+	s.pending_player = p
+	s.pending_kind = &"direction"
+	s.pending_gift = false
+	s.phase = GameState.Phase.CHOOSING
+	ev.append(GameEvent.make(&"direction_offered", {"player": p}))
+
+
+## Every lane's creatures (main + follower as one) move to the next occupied land along p's ring
+## (dir 1 = right, -1 = left), once. Crossing sides changes owner; such creatures can't attack this
+## turn. Buildings stay.
+static func dark_moon(s: GameState, p: int, dir: int, ev: Array[GameEvent]) -> void:
+	var places: Array = []
+	for at: Array in ring(p):
+		if s.players[at[0]].at(at[1]) != null:
+			places.append(at)
+	var moves: Array[Dictionary] = []
+	if places.size() >= 2:
+		var units: Array = []
+		for at: Array in places:
+			var l: GameState.LaneState = s.players[at[0]].lanes[at[1]]
+			units.append([l.creature, l.follower])
+			l.creature = null
+			l.follower = null
+		var n: int = places.size()
+		for i: int in n:
+			var to: Array = places[posmod(i + dir, n)]
+			var from: Array = places[i]
+			var u: Array = units[i]
+			var l: GameState.LaneState = s.players[to[0]].lanes[to[1]]
+			l.creature = u[0]
+			l.follower = u[1]
+			if to[0] != from[0]:
+				for cr: Variant in u:
+					if cr:
+						(cr as GameState.CreatureState).ready = false
+			moves.append({"from_player": from[0], "from_lane": from[1], "to_player": to[0], "to_lane": to[1]})
+	ev.append(GameEvent.make(&"dark_moon", {"player": p, "dir": dir, "moves": moves}))
+
+
+## p takes `n` cards from the rival's hand: random ones, or the most expensive (`priciest`).
+static func steal_from_hand(s: GameState, p: int, n: int, priciest: bool, ev: Array[GameEvent]) -> void:
+	var foe: GameState.PlayerState = s.players[s.opponent(p)]
+	for i: int in n:
+		if foe.hand.is_empty():
+			return
+		var k: int = 0
+		if priciest:
+			for j: int in foe.hand.size():
+				if foe.hand[j].cost > foe.hand[k].cost:
+					k = j
+		else:
+			k = s.rng.randi_range(0, foe.hand.size() - 1)
+		var c: CardData = foe.hand[k]
+		foe.hand.remove_at(k)
+		ev.append(GameEvent.make(&"card_stolen", {"player": p, "from": s.opponent(p), "card": c.id}))
+		GameHistory.record_steal(s.players[p])
+		add_to_hand(s, p, c, ev)
+
+
+## p gets copies of `n` random cards from the rival's hand or deck (they keep theirs).
+static func copy_rival_card(s: GameState, p: int, n: int, ev: Array[GameEvent]) -> void:
+	var foe: GameState.PlayerState = s.players[s.opponent(p)]
+	var pool: Array[CardData] = foe.hand + foe.deck
+	for i: int in n:
+		if pool.is_empty():
+			return
+		var c: CardData = pool[s.rng.randi_range(0, pool.size() - 1)]
+		ev.append(GameEvent.make(&"card_copied", {"player": p, "from": s.opponent(p), "card": c.id}))
+		add_to_hand(s, p, c, ev)
+
+
+## p takes control of the rival's creature at `spot` (with its follower if it is a main creature)
+## into p's first empty lane. Nothing happens without an empty lane.
+static func steal_creature(s: GameState, p: int, q: int, spot: int, ev: Array[GameEvent]) -> void:
+	var to: int = -1
+	for l: int in GameState.LANES:
+		if s.players[p].at(l) == null:
+			to = l
+			break
+	if to < 0 or s.players[q].at(spot) == null:
+		return
+	var cr: GameState.CreatureState = s.players[q].at(spot)
+	var fol: GameState.CreatureState = s.players[q].at(spot + GameState.LANES) if not GameState.is_follower(spot) else null
+	s.players[q].put(spot, null)
+	cr.ready = false
+	s.players[p].put(to, cr)
+	if fol:
+		s.players[q].put(spot + GameState.LANES, null)
+		fol.ready = false
+		s.players[p].put(to + GameState.LANES, fol)
+	ev.append(GameEvent.make(&"creature_stolen", {"player": p, "from_player": q, "from_lane": spot, "to_lane": to, "card": cr.card.id}))
+	GameHistory.record_steal(s.players[p])
+	_promote_follower(s, q, spot, ev)
 
 
 static func _hero_down(s: GameState) -> bool:

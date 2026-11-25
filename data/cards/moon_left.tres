@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"moon_left"
+display_name = "Wane Left"
+kind = 2
+land = 4
+level = 0
+cost = 0
+collectible = false
+deck_legal = false
