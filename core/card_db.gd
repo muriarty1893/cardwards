@@ -4,7 +4,7 @@ extends RefCounted
 
 const CARD_DIR := "res://data/cards"
 const DECK_DIR := "res://data/decks"
-const DECK_ORDER: Array[StringName] = [&"grove_guard", &"blaze_rush", &"sugar_storm", &"deep_freeze", &"sun_fortress"]
+const DECK_ORDER: Array[StringName] = [&"grove_guard", &"blaze_rush", &"sugar_storm", &"deep_freeze", &"sun_fortress", &"moonlit_bandits"]
 
 static var _cards: Dictionary[StringName, CardData] = {}
 static var _card_list: Array[CardData] = []

@@ -9,6 +9,7 @@ const FLAVOUR: Dictionary = {
 	&"sugar_storm": "Draw, trick, overwhelm.",
 	&"deep_freeze": "Lock the board down.",
 	&"sun_fortress": "Stand firm and grow in the sun.",
+	&"moonlit_bandits": "Steal their best, curse the rest.",
 }
 
 var _cam: Camera3D
@@ -81,11 +82,14 @@ func _build_ui() -> void:
 	decks.alignment = BoxContainer.ALIGNMENT_CENTER
 	decks.add_theme_constant_override("separation", 14)
 	vb.add_child(decks)
+	var n: int = CardDB.all_decks().size()
+	# Six starter decks fit a 1280-wide window side by side.
+	var w: float = minf(200.0, (1236.0 - 14.0 * (n - 1)) / n)
 	for d: DeckData in CardDB.all_decks():
 		var btn := Button.new()
 		btn.name = "Deck_%s" % d.id
 		btn.toggle_mode = true
-		btn.custom_minimum_size = Vector2(200, 214)
+		btn.custom_minimum_size = Vector2(w, 214)
 		btn.text = "%s\n%s + %s\n%s" % [d.display_name, CardData.LAND_NAMES[d.lands[0]], CardData.LAND_NAMES[d.lands[2]], FLAVOUR.get(d.id, "")]
 		btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		btn.add_theme_font_size_override("font_size", 14)

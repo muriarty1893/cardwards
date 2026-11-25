@@ -445,7 +445,7 @@ func test_cards_validate() -> bool:
 
 func test_decks() -> bool:
 	var decks: Array[DeckData] = CardDB.all_decks()
-	assert_eq(decks.size(), 5, "5 decks")
+	assert_eq(decks.size(), 6, "6 decks (Dark Moon adds Moonlit Bandits)")
 	for d: DeckData in decks:
 		assert_eq(d.cards.size(), 30, "%s 30 cards" % d.id)
 		assert_eq(d.lands.size(), 4, "%s 4 lands" % d.id)

@@ -10,18 +10,22 @@
 [ext_resource type="Resource" path="res://data/cards/fireball.tres" id="8_fireball"]
 [ext_resource type="Resource" path="res://data/cards/ember_rain.tres" id="9_ember_rain"]
 [ext_resource type="Resource" path="res://data/cards/gumdrop.tres" id="10_gumdrop"]
-[ext_resource type="Resource" path="res://data/cards/taffy_snail.tres" id="11_taffy_snail"]
-[ext_resource type="Resource" path="res://data/cards/lollibat.tres" id="12_lollibat"]
-[ext_resource type="Resource" path="res://data/cards/sugar_shack.tres" id="13_sugar_shack"]
-[ext_resource type="Resource" path="res://data/cards/volcano.tres" id="14_volcano"]
-[ext_resource type="Resource" path="res://data/cards/emberkit.tres" id="15_emberkit"]
-[ext_resource type="Resource" path="res://data/cards/stoke.tres" id="16_stoke"]
-[ext_resource type="Resource" path="res://data/cards/hot_head.tres" id="17_hot_head"]
-[ext_resource type="Resource" path="res://data/cards/finish_off.tres" id="18_finish_off"]
+[ext_resource type="Resource" path="res://data/cards/lollibat.tres" id="11_lollibat"]
+[ext_resource type="Resource" path="res://data/cards/sugar_shack.tres" id="12_sugar_shack"]
+[ext_resource type="Resource" path="res://data/cards/volcano.tres" id="13_volcano"]
+[ext_resource type="Resource" path="res://data/cards/emberkit.tres" id="14_emberkit"]
+[ext_resource type="Resource" path="res://data/cards/stoke.tres" id="15_stoke"]
+[ext_resource type="Resource" path="res://data/cards/hot_head.tres" id="16_hot_head"]
+[ext_resource type="Resource" path="res://data/cards/ember_hornet.tres" id="17_ember_hornet"]
+[ext_resource type="Resource" path="res://data/cards/cinder_barrage.tres" id="18_cinder_barrage"]
+[ext_resource type="Resource" path="res://data/cards/firestorm.tres" id="19_firestorm"]
+[ext_resource type="Resource" path="res://data/cards/magma_chieftain.tres" id="20_magma_chieftain"]
+[ext_resource type="Resource" path="res://data/cards/overcharge.tres" id="21_overcharge"]
+[ext_resource type="Resource" path="res://data/cards/kindle_pups.tres" id="22_kindle_pups"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"blaze_rush"
 display_name = "Blaze Rush"
 lands = Array[int]([1, 1, 2, 1])
-cards = Array[Resource]([ExtResource("2_cinderpup"), ExtResource("2_cinderpup"), ExtResource("3_flarebeak"), ExtResource("3_flarebeak"), ExtResource("4_magmaw"), ExtResource("4_magmaw"), ExtResource("5_blazehorn"), ExtResource("5_blazehorn"), ExtResource("6_inferno_drake"), ExtResource("6_inferno_drake"), ExtResource("7_kiln_tower"), ExtResource("7_kiln_tower"), ExtResource("8_fireball"), ExtResource("8_fireball"), ExtResource("9_ember_rain"), ExtResource("9_ember_rain"), ExtResource("10_gumdrop"), ExtResource("10_gumdrop"), ExtResource("11_taffy_snail"), ExtResource("12_lollibat"), ExtResource("12_lollibat"), ExtResource("13_sugar_shack"), ExtResource("13_sugar_shack"), ExtResource("14_volcano"), ExtResource("15_emberkit"), ExtResource("15_emberkit"), ExtResource("16_stoke"), ExtResource("16_stoke"), ExtResource("17_hot_head"), ExtResource("18_finish_off")])
+cards = Array[Resource]([ExtResource("2_cinderpup"), ExtResource("2_cinderpup"), ExtResource("3_flarebeak"), ExtResource("3_flarebeak"), ExtResource("4_magmaw"), ExtResource("4_magmaw"), ExtResource("5_blazehorn"), ExtResource("6_inferno_drake"), ExtResource("6_inferno_drake"), ExtResource("7_kiln_tower"), ExtResource("8_fireball"), ExtResource("8_fireball"), ExtResource("9_ember_rain"), ExtResource("10_gumdrop"), ExtResource("10_gumdrop"), ExtResource("11_lollibat"), ExtResource("12_sugar_shack"), ExtResource("13_volcano"), ExtResource("14_emberkit"), ExtResource("14_emberkit"), ExtResource("15_stoke"), ExtResource("16_hot_head"), ExtResource("17_ember_hornet"), ExtResource("17_ember_hornet"), ExtResource("18_cinder_barrage"), ExtResource("18_cinder_barrage"), ExtResource("19_firestorm"), ExtResource("20_magma_chieftain"), ExtResource("21_overcharge"), ExtResource("22_kindle_pups")])

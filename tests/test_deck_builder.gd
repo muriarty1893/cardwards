@@ -84,6 +84,12 @@ func test_builder_edits_and_saves() -> bool:
 	assert_true(not b.add_card(&"star_shard"), "no star shard")
 	b.set_filter(2)
 	assert_true(b.visible_cards() > 0 and b.visible_cards() < 46, "land filter narrows the collection")
+	b.set_filter(DeckBuilder.FILTERS.find("NEUTRAL"))
+	assert_eq(b.visible_cards(), CardDB.collectible_cards().filter(func(c: CardData) -> bool:
+		return c.land == CardData.Land.NEUTRAL and c.deck_legal).size(), "NEUTRAL shows the neutral cards (no Star Shard)")
+	assert_true(b.add_card(&"dark_moon"), "a legendary")
+	assert_true(not b.add_card(&"dark_moon"), "only one")
+	assert_true(b.add_card(&"shiba_shepherd"), "neutral cards can go in")
 	b.open_deck(id)
 	assert_eq(b.cards.size(), 29, "reopening your deck shows its saved cards")
 	b.close()

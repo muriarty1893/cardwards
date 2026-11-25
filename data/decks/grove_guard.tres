@@ -7,23 +7,24 @@
 [ext_resource type="Resource" path="res://data/cards/rootstalker.tres" id="5_rootstalker"]
 [ext_resource type="Resource" path="res://data/cards/elder_shroomhulk.tres" id="6_elder_shroomhulk"]
 [ext_resource type="Resource" path="res://data/cards/spore_hut.tres" id="7_spore_hut"]
-[ext_resource type="Resource" path="res://data/cards/glowcap_lantern.tres" id="8_glowcap_lantern"]
-[ext_resource type="Resource" path="res://data/cards/rain_of_spores.tres" id="9_rain_of_spores"]
-[ext_resource type="Resource" path="res://data/cards/snowmite.tres" id="10_snowmite"]
-[ext_resource type="Resource" path="res://data/cards/iceling.tres" id="11_iceling"]
-[ext_resource type="Resource" path="res://data/cards/frostfang.tres" id="12_frostfang"]
-[ext_resource type="Resource" path="res://data/cards/ice_wall.tres" id="13_ice_wall"]
-[ext_resource type="Resource" path="res://data/cards/cold_snap.tres" id="14_cold_snap"]
-[ext_resource type="Resource" path="res://data/cards/spore_bloom.tres" id="15_spore_bloom"]
-[ext_resource type="Resource" path="res://data/cards/barkbeetle.tres" id="16_barkbeetle"]
-[ext_resource type="Resource" path="res://data/cards/bark_coat.tres" id="17_bark_coat"]
-[ext_resource type="Resource" path="res://data/cards/thorn_lash.tres" id="18_thorn_lash"]
-[ext_resource type="Resource" path="res://data/cards/deep_roots.tres" id="19_deep_roots"]
-[ext_resource type="Resource" path="res://data/cards/pain_shroom.tres" id="20_pain_shroom"]
+[ext_resource type="Resource" path="res://data/cards/rain_of_spores.tres" id="8_rain_of_spores"]
+[ext_resource type="Resource" path="res://data/cards/snowmite.tres" id="9_snowmite"]
+[ext_resource type="Resource" path="res://data/cards/iceling.tres" id="10_iceling"]
+[ext_resource type="Resource" path="res://data/cards/ice_wall.tres" id="11_ice_wall"]
+[ext_resource type="Resource" path="res://data/cards/cold_snap.tres" id="12_cold_snap"]
+[ext_resource type="Resource" path="res://data/cards/spore_bloom.tres" id="13_spore_bloom"]
+[ext_resource type="Resource" path="res://data/cards/barkbeetle.tres" id="14_barkbeetle"]
+[ext_resource type="Resource" path="res://data/cards/thorn_lash.tres" id="15_thorn_lash"]
+[ext_resource type="Resource" path="res://data/cards/deep_roots.tres" id="16_deep_roots"]
+[ext_resource type="Resource" path="res://data/cards/grave_toad.tres" id="17_grave_toad"]
+[ext_resource type="Resource" path="res://data/cards/spore_drifter.tres" id="18_spore_drifter"]
+[ext_resource type="Resource" path="res://data/cards/mycel_gravekeeper.tres" id="19_mycel_gravekeeper"]
+[ext_resource type="Resource" path="res://data/cards/moss_ape_matriarch.tres" id="20_moss_ape_matriarch"]
+[ext_resource type="Resource" path="res://data/cards/fungal_feast.tres" id="21_fungal_feast"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"grove_guard"
 display_name = "Grove Guard"
 lands = Array[int]([0, 0, 3, 0])
-cards = Array[Resource]([ExtResource("2_sporeling"), ExtResource("2_sporeling"), ExtResource("3_mossback"), ExtResource("3_mossback"), ExtResource("4_glimmer_morel"), ExtResource("4_glimmer_morel"), ExtResource("5_rootstalker"), ExtResource("5_rootstalker"), ExtResource("6_elder_shroomhulk"), ExtResource("6_elder_shroomhulk"), ExtResource("7_spore_hut"), ExtResource("7_spore_hut"), ExtResource("8_glowcap_lantern"), ExtResource("9_rain_of_spores"), ExtResource("9_rain_of_spores"), ExtResource("10_snowmite"), ExtResource("10_snowmite"), ExtResource("11_iceling"), ExtResource("11_iceling"), ExtResource("12_frostfang"), ExtResource("13_ice_wall"), ExtResource("13_ice_wall"), ExtResource("14_cold_snap"), ExtResource("15_spore_bloom"), ExtResource("16_barkbeetle"), ExtResource("16_barkbeetle"), ExtResource("17_bark_coat"), ExtResource("18_thorn_lash"), ExtResource("19_deep_roots"), ExtResource("20_pain_shroom")])
+cards = Array[Resource]([ExtResource("2_sporeling"), ExtResource("2_sporeling"), ExtResource("3_mossback"), ExtResource("3_mossback"), ExtResource("4_glimmer_morel"), ExtResource("4_glimmer_morel"), ExtResource("5_rootstalker"), ExtResource("6_elder_shroomhulk"), ExtResource("6_elder_shroomhulk"), ExtResource("7_spore_hut"), ExtResource("7_spore_hut"), ExtResource("8_rain_of_spores"), ExtResource("8_rain_of_spores"), ExtResource("9_snowmite"), ExtResource("10_iceling"), ExtResource("10_iceling"), ExtResource("11_ice_wall"), ExtResource("12_cold_snap"), ExtResource("13_spore_bloom"), ExtResource("14_barkbeetle"), ExtResource("14_barkbeetle"), ExtResource("15_thorn_lash"), ExtResource("16_deep_roots"), ExtResource("17_grave_toad"), ExtResource("17_grave_toad"), ExtResource("18_spore_drifter"), ExtResource("18_spore_drifter"), ExtResource("19_mycel_gravekeeper"), ExtResource("20_moss_ape_matriarch"), ExtResource("21_fungal_feast")])

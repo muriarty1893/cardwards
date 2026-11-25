@@ -13,6 +13,12 @@ const WIN_SCORE := 1000.0
 ## Chance that Easy plays a random legal action instead of its best one.
 const EASY_RANDOM := 0.25
 const HAND_CARD := 0.6
+## A curse in hand or deck (Dark Moon): worth less than nothing.
+const CURSE_VALUE := -1.0
+## Per point of attack/health a changed copy in hand gained.
+const HAND_BUFF_VALUE := 0.15
+## A living creature's Last Breath still to come.
+const LAST_BREATH_VALUE := 1.0
 const ENEMY_LETHAL_PENALTY := 4.0
 ## Armour is worth a little less than HP (fatigue goes around it).
 const ARMOUR_VALUE := 0.9
@@ -113,7 +119,14 @@ func evaluate(s: GameState) -> float:
 		for l: int in GameState.SPOTS:
 			if s.players[q].at(l):
 				score += sign * _creature_value(s, q, l)
-	score += HAND_CARD * s.players[me].hand.size()
+	for c: CardData in s.players[me].hand:
+		if c.curse:
+			score += CURSE_VALUE
+		else:
+			score += HAND_CARD + HAND_BUFF_VALUE * float(int(c.changes.get("attack", 0)) + int(c.changes.get("health", 0)) - int(c.changes.get("cost", 0)))
+	for c: CardData in s.players[me].deck:
+		if c.curse:
+			score += CURSE_VALUE * 0.5
 	if enemy_has_lethal(s):
 		score -= ENEMY_LETHAL_PENALTY
 	return score
@@ -135,6 +148,8 @@ func _creature_value(s: GameState, p: int, lane: int) -> float:
 		v -= KEYWORD_VALUE[&"hidden"]  # already revealed
 	if not cr.hushed:
 		v += 0.8 * cr.card.spell_power
+		if cr.card.has_effect(&"on_destroyed"):
+			v += LAST_BREATH_VALUE
 	return v + XP_VALUE * float(cr.xp)
 
 

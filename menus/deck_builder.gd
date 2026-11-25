@@ -8,7 +8,7 @@ extends Control
 signal closed
 signal deck_chosen(id: StringName)
 
-const FILTERS: Array[String] = ["ALL", "MUSHROOM", "EMBER", "CANDY", "FROST", "DUNES", "SPELLS"]
+const FILTERS: Array[String] = ["ALL", "MUSHROOM", "EMBER", "CANDY", "FROST", "DUNES", "NEUTRAL", "SPELLS"]
 const THUMB := 0.72
 const COLUMNS := 6
 
@@ -116,6 +116,8 @@ func _build_middle() -> Control:
 		b.add_theme_font_size_override("font_size", 14)
 		UiStyle.title(b)
 		var base: Color = Palette.LAND_CARD[CardData.REAL_LANDS[i - 1]] if i >= 1 and i <= CardData.REAL_LANDS.size() else UiStyle.PARCHMENT.darkened(0.08)
+		if i == CardData.REAL_LANDS.size() + 1:
+			base = Palette.LAND_CARD[CardData.Land.NEUTRAL]
 		for st: String in ["normal", "hover", "pressed", "focus"]:
 			var sb := UiStyle.panel(base.lerp(Color.WHITE, 0.35) if st == "normal" else base, 10)
 			sb.set_border_width_all(3 if st != "pressed" else 5)
@@ -145,7 +147,7 @@ func _build_middle() -> Control:
 	_grid.add_theme_constant_override("v_separation", 12)
 	pad.add_child(_grid)
 	for c: CardData in CardDB.collectible_cards():
-		if c.land == CardData.Land.NEUTRAL:
+		if not c.deck_legal or c.curse:
 			continue
 		_grid.add_child(_make_thumb(c))
 	set_filter(0)
@@ -290,7 +292,12 @@ func add_card(id: StringName) -> bool:
 		_status.text = "Starter decks are view only: COPY TO EDIT."
 		return false
 	if not DeckStore.can_add(cards, c):
-		_status.text = "The deck is full." if cards.size() >= DeckStore.DECK_SIZE else "At most %d of each card." % DeckStore.MAX_COPIES
+		if cards.size() >= DeckStore.size_for(cards) and not c.allows_40:
+			_status.text = "The deck is full."
+		elif c.legendary:
+			_status.text = "Only 1 of each legendary."
+		else:
+			_status.text = "At most %d of each card." % DeckStore.MAX_COPIES
 		return false
 	cards.append(c)
 	Audio.sfx(&"card_deal", 0.05)
@@ -320,7 +327,8 @@ func set_filter(i: int) -> void:
 	for id: StringName in _thumbs:
 		var c: CardData = _thumbs[id]["card"]
 		var lands: int = CardData.REAL_LANDS.size()
-		var show: bool = i == 0 or (i <= lands and c.land == CardData.REAL_LANDS[i - 1]) or (i == lands + 1 and c.kind == CardData.Kind.SPELL)
+		var show: bool = i == 0 or (i <= lands and c.land == CardData.REAL_LANDS[i - 1]) \
+			or (i == lands + 1 and c.land == CardData.Land.NEUTRAL) or (i == lands + 2 and c.kind == CardData.Kind.SPELL)
 		(_thumbs[id]["holder"] as Control).visible = show
 
 
@@ -395,8 +403,11 @@ func _refresh() -> void:
 		tmp.cards = cards
 		_back.texture = CardBacks.texture_for(tmp)
 	var err: String = DeckStore.validate(cards)
-	_count.text = "%d / %d cards" % [cards.size(), DeckStore.DECK_SIZE]
-	_count.add_theme_color_override("font_color", UiStyle.WOOD_INK if cards.size() == DeckStore.DECK_SIZE else Palette.HP.darkened(0.1))
+	var want: int = DeckStore.size_for(cards)
+	var full: bool = cards.size() == DeckStore.DECK_SIZE or cards.size() == want
+	# A deck with a 40-card enabler may stop at 30 or go on to 40.
+	_count.text = ("%d / 30 cards" if want == DeckStore.DECK_SIZE else "%d / 30 or 40 cards") % cards.size()
+	_count.add_theme_color_override("font_color", UiStyle.WOOD_INK if full else Palette.HP.darkened(0.1))
 	_status.text = "" if err == "" or not editable else err
 	_use_b.disabled = err != ""
 	# Badges and dimming in the collection.

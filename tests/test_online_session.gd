@@ -93,6 +93,9 @@ func test_rejoin_replays_to_same_digest() -> bool:
 	again.hello()
 	relay.pump()
 	assert_eq(again.seat, 1, "same seat back")
+	# s0 may still hold a move the relay already logged: let its bot take it in (it may also send its next act,
+	# which is not applied until the relay echoes it).
+	b0.step(s0)
 	assert_eq(again.applied, s0.applied, "log replayed")
 	assert_eq(again.state.digest(), s0.state.digest(), "same state as the other player")
 	assert_true(again.take_opening().is_empty(), "no opening after a rejoin")

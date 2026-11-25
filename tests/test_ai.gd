@@ -208,3 +208,48 @@ func test_ai_resolves_dream_up() -> bool:
 	assert_true(&"dream_up_chosen" in Fx.types(ev), "picked a Dream Up card")
 	assert_eq(s.active, 0, "turn passed")
 	return true
+
+
+func test_ai_picks_a_good_dark_moon_direction() -> bool:
+	var s: GameState = Fx.blank()
+	# Right turn: my 1/1 at lane 3 goes over to the rival, their 9/9 at lane 3 comes to me. Left is worse.
+	Fx.put(s, 0, 3, _mk(1, 1))
+	Fx.put(s, 1, 3, _mk(9, 9))
+	Fx.put(s, 0, 0, _mk(2, 2))
+	Rules.offer_direction(s, 0, [])
+	var ai := AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1)
+	var a: Action = ai.choose_action(s)
+	assert_eq(a.type, Action.Type.CHOOSE, "a direction")
+	Rules.apply(s, a)
+	# Right: (0,0)->(0,3), (0,3)->(1,3), (1,3)->(0,0). Keeps the 2/2 and takes the 9/9 (left keeps only the 1/1).
+	assert_eq(s.players[0].at(0).card.attack, 9, "took the 9/9")
+	assert_eq(s.players[0].at(3).card.attack, 2, "and kept the 2/2")
+	return true
+
+
+func test_ai_counts_curses_as_bad() -> bool:
+	var s: GameState = Fx.blank()
+	var ai := AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1)
+	var base: float = ai.evaluate(s)
+	s.players[0].hand.append(CardDB.card(&"toothache"))
+	assert_true(ai.evaluate(s) < base, "a curse in hand is a minus")
+	var t: GameState = Fx.blank()
+	t.players[0].deck.append(CardDB.card(&"nightmare"))
+	assert_true(ai.evaluate(t) < ai.evaluate(Fx.blank()), "a curse in my deck is a minus")
+	var u: GameState = Fx.blank()
+	u.players[0].hand.append(CardDB.card(&"gumdrop"))
+	var plain: float = ai.evaluate(u)
+	u.players[0].hand[0] = CardDB.variant(CardDB.card(&"gumdrop"), {"attack": 2, "health": 2})
+	assert_true(ai.evaluate(u) > plain, "a buffed card in hand is worth more")
+	return true
+
+
+func test_ai_values_last_breath() -> bool:
+	var s: GameState = Fx.blank()
+	var ai := AIPlayer.new(0, AIPlayer.Difficulty.MEDIUM, 1)
+	Fx.put(s, 0, 0, _mk(2, 2))
+	var plain: float = ai.evaluate(s)
+	var t: GameState = Fx.blank()
+	Fx.put(t, 0, 0, Fx.card(&"ai_lb", CR, 1, 2, 2, [], [Fx.eff(&"on_destroyed", &"draw", 1, &"own_hero")]))
+	assert_true(ai.evaluate(t) > plain, "Last Breath adds value")
+	return true

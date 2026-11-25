@@ -96,7 +96,7 @@ func test_main_menu_loads() -> bool:
 	tree.root.add_child(menu)
 	await tree.process_frame
 	var decks: Array[Node] = menu.find_children("Deck_*", "Button", true, false)
-	assert_eq(decks.size(), 5, "five deck buttons")
+	assert_eq(decks.size(), 6, "six deck buttons")
 	for b: Node in decks:
 		assert_true((b as Button).icon != null, "%s shows champion art" % b.name)
 	menu.queue_free()

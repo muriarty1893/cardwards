@@ -7,21 +7,24 @@
 [ext_resource type="Resource" path="res://data/cards/rimewing.tres" id="5_rimewing"]
 [ext_resource type="Resource" path="res://data/cards/blizzard_titan.tres" id="6_blizzard_titan"]
 [ext_resource type="Resource" path="res://data/cards/ice_wall.tres" id="7_ice_wall"]
-[ext_resource type="Resource" path="res://data/cards/frost_spire.tres" id="8_frost_spire"]
-[ext_resource type="Resource" path="res://data/cards/cold_snap.tres" id="9_cold_snap"]
-[ext_resource type="Resource" path="res://data/cards/avalanche.tres" id="10_avalanche"]
-[ext_resource type="Resource" path="res://data/cards/cinderpup.tres" id="11_cinderpup"]
-[ext_resource type="Resource" path="res://data/cards/kiln_tower.tres" id="12_kiln_tower"]
-[ext_resource type="Resource" path="res://data/cards/fireball.tres" id="13_fireball"]
-[ext_resource type="Resource" path="res://data/cards/snowstorm.tres" id="14_snowstorm"]
-[ext_resource type="Resource" path="res://data/cards/snow_pup.tres" id="15_snow_pup"]
-[ext_resource type="Resource" path="res://data/cards/icicle.tres" id="16_icicle"]
-[ext_resource type="Resource" path="res://data/cards/whiteout.tres" id="17_whiteout"]
-[ext_resource type="Resource" path="res://data/cards/crack_the_ice.tres" id="18_crack_the_ice"]
+[ext_resource type="Resource" path="res://data/cards/cold_snap.tres" id="8_cold_snap"]
+[ext_resource type="Resource" path="res://data/cards/avalanche.tres" id="9_avalanche"]
+[ext_resource type="Resource" path="res://data/cards/cinderpup.tres" id="10_cinderpup"]
+[ext_resource type="Resource" path="res://data/cards/fireball.tres" id="11_fireball"]
+[ext_resource type="Resource" path="res://data/cards/snowstorm.tres" id="12_snowstorm"]
+[ext_resource type="Resource" path="res://data/cards/snow_pup.tres" id="13_snow_pup"]
+[ext_resource type="Resource" path="res://data/cards/icicle.tres" id="14_icicle"]
+[ext_resource type="Resource" path="res://data/cards/rime_dart.tres" id="15_rime_dart"]
+[ext_resource type="Resource" path="res://data/cards/snowdrift_sage.tres" id="16_snowdrift_sage"]
+[ext_resource type="Resource" path="res://data/cards/glacier_shark.tres" id="17_glacier_shark"]
+[ext_resource type="Resource" path="res://data/cards/blizzard_echo.tres" id="18_blizzard_echo"]
+[ext_resource type="Resource" path="res://data/cards/hoarfrost.tres" id="19_hoarfrost"]
+[ext_resource type="Resource" path="res://data/cards/tundra_stomper.tres" id="20_tundra_stomper"]
+[ext_resource type="Resource" path="res://data/cards/permafrost.tres" id="21_permafrost"]
 
 [resource]
 script = ExtResource("1_deck")
 id = &"deep_freeze"
 display_name = "Deep Freeze"
 lands = Array[int]([3, 3, 1, 3])
-cards = Array[Resource]([ExtResource("2_iceling"), ExtResource("2_iceling"), ExtResource("3_frostfang"), ExtResource("3_frostfang"), ExtResource("4_glacier_tortoise"), ExtResource("4_glacier_tortoise"), ExtResource("5_rimewing"), ExtResource("5_rimewing"), ExtResource("6_blizzard_titan"), ExtResource("6_blizzard_titan"), ExtResource("7_ice_wall"), ExtResource("7_ice_wall"), ExtResource("8_frost_spire"), ExtResource("9_cold_snap"), ExtResource("9_cold_snap"), ExtResource("10_avalanche"), ExtResource("10_avalanche"), ExtResource("11_cinderpup"), ExtResource("11_cinderpup"), ExtResource("12_kiln_tower"), ExtResource("12_kiln_tower"), ExtResource("13_fireball"), ExtResource("13_fireball"), ExtResource("14_snowstorm"), ExtResource("15_snow_pup"), ExtResource("15_snow_pup"), ExtResource("16_icicle"), ExtResource("16_icicle"), ExtResource("17_whiteout"), ExtResource("18_crack_the_ice")])
+cards = Array[Resource]([ExtResource("2_iceling"), ExtResource("2_iceling"), ExtResource("3_frostfang"), ExtResource("3_frostfang"), ExtResource("4_glacier_tortoise"), ExtResource("4_glacier_tortoise"), ExtResource("5_rimewing"), ExtResource("6_blizzard_titan"), ExtResource("6_blizzard_titan"), ExtResource("7_ice_wall"), ExtResource("8_cold_snap"), ExtResource("8_cold_snap"), ExtResource("9_avalanche"), ExtResource("10_cinderpup"), ExtResource("10_cinderpup"), ExtResource("11_fireball"), ExtResource("11_fireball"), ExtResource("12_snowstorm"), ExtResource("13_snow_pup"), ExtResource("14_icicle"), ExtResource("14_icicle"), ExtResource("15_rime_dart"), ExtResource("15_rime_dart"), ExtResource("16_snowdrift_sage"), ExtResource("16_snowdrift_sage"), ExtResource("17_glacier_shark"), ExtResource("18_blizzard_echo"), ExtResource("19_hoarfrost"), ExtResource("20_tundra_stomper"), ExtResource("21_permafrost")])
