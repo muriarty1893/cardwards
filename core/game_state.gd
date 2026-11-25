@@ -11,8 +11,8 @@ const MAX_HP := 40
 const START_HAND := 5
 const HAND_LIMIT := 8
 ## Max magic grows by 1 each turn up to this.
-const MAGIC_CAP := 8
-const MAGIC_CAP_MAX := 10
+const MAGIC_CAP := 10
+const MAGIC_CAP_MAX := 15
 const FATIGUE_DAMAGE := 2
 const LANES := 4
 

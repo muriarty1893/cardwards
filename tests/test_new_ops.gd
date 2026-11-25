@@ -66,14 +66,32 @@ func test_grow_magic() -> bool:
 	assert_eq(ps.magic_cap, GameState.MAGIC_CAP + 1, "the cap rises too")
 	ps.max_magic = 10
 	ps.magic_cap = 10
-	_cast(s, _spell(&"roots", 0, [Fx.eff(&"on_play", &"grow_magic", 1, &"own_hero")]))
-	assert_eq(ps.max_magic, 10, "max magic stays at 10")
-	assert_eq(ps.magic_cap, 10, "the cap stays at 10")
-	ps.max_magic = 8
-	ps.magic_cap = 9
+	_cast(s, _spell(&"roots", 0, [Fx.eff(&"on_play", &"grow_magic", 3, &"own_hero")]))
+	assert_eq(ps.max_magic, 13, "cards push max magic past 10")
+	assert_eq(ps.magic_cap, 13, "the cap rises with it")
+	_cast(s, _spell(&"roots", 0, [Fx.eff(&"on_play", &"grow_magic", 5, &"own_hero")]))
+	assert_eq(ps.max_magic, 15, "max magic stops at 15")
+	assert_eq(ps.magic_cap, 15, "the cap stops at 15")
+	ps.max_magic = 10
+	ps.magic_cap = 11
 	Rules.apply(s, Action.end_turn(0))
 	Rules.apply(s, Action.end_turn(1))
-	assert_eq(ps.max_magic, 9, "turn growth goes up to the raised cap")
+	assert_eq(ps.max_magic, 11, "turn growth goes up to the raised cap")
+	return true
+
+
+func test_magic_grows_to_10() -> bool:
+	assert_eq(GameState.MAGIC_CAP, 10, "turn growth stops at 10")
+	assert_eq(GameState.MAGIC_CAP_MAX, 15, "cards can raise it to 15")
+	var s: GameState = Fx.blank()
+	var ps: GameState.PlayerState = s.players[0]
+	ps.max_magic = 9
+	Rules.apply(s, Action.end_turn(0))
+	Rules.apply(s, Action.end_turn(1))
+	assert_eq(ps.max_magic, 10, "grows to 10")
+	Rules.apply(s, Action.end_turn(0))
+	Rules.apply(s, Action.end_turn(1))
+	assert_eq(ps.max_magic, 10, "and stays at 10")
 	return true
 
 

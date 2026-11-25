@@ -89,7 +89,7 @@ func test_magic_curve_and_cap() -> bool:
 		if s.active == first:
 			seen.append(s.players[first].magic)
 		_pass(s)
-	assert_eq(seen, [1, 2, 3, 4, 5, 6, 7, 8, 8, 8] as Array[int], "curve to the cap")
+	assert_eq(seen, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as Array[int], "curve to the cap")
 	return true
 
 

@@ -171,11 +171,13 @@ func test_eight_cards_fit() -> bool:
 func test_magic_gems() -> bool:
 	var g := MagicGems.new()
 	g.set_magic(3, 5)
-	assert_eq(g.gem_states(), [2, 2, 2, 1, 1, 0, 0, 0] as Array[int], "3 filled, 2 empty, 3 hidden")
+	assert_eq(g.gem_states(), [2, 2, 2, 1, 1, 0, 0, 0, 0, 0] as Array[int], "3 filled, 2 empty, 3 hidden")
 	assert_eq(g.extra(), 0, "no overflow")
-	g.set_magic(9, 8)
-	assert_eq(g.gem_states(), [2, 2, 2, 2, 2, 2, 2, 2] as Array[int], "all filled")
+	g.set_magic(11, 10)
+	assert_eq(g.gem_states(), [2, 2, 2, 2, 2, 2, 2, 2, 2, 2] as Array[int], "all filled")
 	assert_eq(g.extra(), 1, "+1 beyond the cap")
+	g.set_magic(14, 15)
+	assert_eq(g.extra(), 4, "cards push magic to 15: +4 over the gems")
 	g.free()
 	return true
 
