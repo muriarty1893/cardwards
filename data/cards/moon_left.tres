@@ -13,3 +13,4 @@ level = 0
 cost = 0
 collectible = false
 deck_legal = false
+rules_note = "Every creature moves to the next occupied land on its left, around the board."

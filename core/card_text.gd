@@ -18,7 +18,7 @@ const _WHO: Dictionary = {
 	&"damaged_creature": "it", &"same_target": "it",
 	&"chosen_enemy_creature": "an enemy creature", &"chosen_damaged_enemy": "a damaged enemy creature",
 	&"chosen_undamaged_creature": "an undamaged creature", &"chosen_frozen_enemy": "a frozen enemy creature",
-	&"other_enemies": "every other enemy",
+	&"other_enemies": "every other enemy", &"all_creatures": "all creatures",
 	&"all_away_creatures": "every creature that isn't at home",
 }
 const _LANE_AURAS: Array[StringName] = [&"lane_atk", &"lane_hp", &"lane_keyword"]
@@ -78,12 +78,16 @@ static func mechanics(c: CardData) -> Array[StringName]:
 			used.append(&"armour")
 		if e.when == &"on_level_up" and not &"level_up" in used:
 			used.append(&"level_up")
+		if e.op == &"dream_up" and e.gift and not &"dark_gift" in used:
+			used.append(&"dark_gift")
 		if e.when == &"on_destroyed" and not &"last_breath" in used:
 			used.append(&"last_breath")
 	if c.field:
 		used.push_front(&"field")
 	if c.curse:
 		used.push_front(&"curse")
+	if c.follower_id != &"":
+		used.append(&"follower")
 	return used
 
 
@@ -133,6 +137,11 @@ static func _render(c: CardData, bold: bool) -> String:
 			sentence += " and " + _phrase(effs[i], bold)
 			i += 1
 		parts.append(prefix + sentence + ".")
+	if c.follower_id != &"" and CardDB.has_card(c.follower_id):
+		var f: CardData = CardDB.card(c.follower_id)
+		parts.append("Comes with a %d/%d %s %s." % [f.attack, f.health, f.display_name, _b("follower", bold)])
+	if c.rules_note != "":
+		parts.push_front(c.rules_note)
 	if c.merge_with != &"":
 		var other: CardData = CardDB.card(c.merge_with) if CardDB.has_card(c.merge_with) else null
 		parts.append("%s %s." % [_b("Merges with", bold), other.display_name if other else String(c.merge_with)])
@@ -144,6 +153,11 @@ static func _as_who(e: EffectData, who: StringName) -> EffectData:
 	var c: EffectData = e.duplicate()
 	c.who = who
 	return c
+
+
+static func _count_word(n: int) -> String:
+	var words: Array[String] = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+	return words[n] if n < words.size() else str(n)
 
 
 static func _b(word: String, bold: bool) -> String:
@@ -209,7 +223,7 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			var kind: String = _KIND_WORDS[e.filter_kind] if e.filter_kind >= 0 else "card"
 			var noun: String = land + kind
 			if e.gift:
-				s = "%s: Dream Up a creature; it gets a random bonus" % _b("Dark Gift", bold)
+				s = "%s (Dream Up a creature with a random bonus)" % _b("Dark Gift", bold)
 			else:
 				s = "%s %s %s" % [_b("Dream Up", bold), "an" if noun.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a", noun]
 		&"lane_damage_taken":
@@ -265,7 +279,7 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 		&"split_damage":
 			s = "Deal %d damage split randomly between all enemies" % e.amount
 		&"double_stats":
-			s = "Double %s's ATK and HP" % x
+			s = "Double the ATK and HP of %s" % x
 		&"next_spell_twice":
 			s = "Your next spell happens twice" if e.amount <= 1 else "Your next %d spells happen twice" % e.amount
 		&"replay_spells":
@@ -277,7 +291,7 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			if made and made.is_creature():
 				nm = "%d/%d %s" % [made.attack, made.health, nm]
 			var n: int = maxi(e.amount, 1)
-			var what: String = ("a " + nm) if n == 1 else "%d %s" % [n, nm + ("s" if not nm.ends_with("s") else "")]
+			var what: String = ("a " + nm) if n == 1 else "%s %s" % [_count_word(n), nm + ("s" if not nm.ends_with("s") else "")]
 			match e.op:
 				&"add_to_hand":
 					s = "Add %s to %s hand" % [what, "your rival's" if e.who == &"enemy_hero" else "your"]
@@ -293,6 +307,13 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			s = "While in your hand, gets +%d/+%d each time you cast a spell" % [e.amount, e.amount2]
 		&"echo":
 			s = "Your %s happen twice" % _b("on-play effects", bold)
+		&"echo_death":
+			s = "Your creatures' %s happen twice" % _b("Last Breaths", bold)
+		&"resurrect":
+			if e.keyword == &"last_breath":
+				s = "Summon every other creature of yours with %s that died this game" % _b("Last Breath", bold)
+			else:
+				s = "Summon a random creature of yours that died this game" if e.amount <= 1 else "Summon %d random creatures of yours that died this game" % e.amount
 		_:
 			s = String(e.op)
 	# "it" sentences continue an earlier clause, so they start lower-case.

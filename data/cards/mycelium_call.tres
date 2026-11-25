@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_mycelium_call_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"summon"
+who = &"own_hero"
+card_id = &"sporeling"
+amount = 3
+
+[resource]
+script = ExtResource("1_card")
+id = &"mycelium_call"
+display_name = "Mycelium Call"
+kind = 2
+land = 0
+level = 0
+cost = 5
+effects = Array[ExtResource("2_eff")]([SubResource("eff_mycelium_call_0")])

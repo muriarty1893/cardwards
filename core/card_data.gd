@@ -45,6 +45,8 @@ const REAL_LANDS: Array[int] = [Land.MUSHROOM, Land.EMBER, Land.CANDY, Land.FROS
 ## Keys: "cost", "attack", "health" (int deltas), "keywords" (Array[StringName] gained),
 ## "gift" (StringName, a Dark Gift bonus). Empty for printed cards. Made only by CardDB.variant.
 var changes: Dictionary = {}
+## Extra words for cards whose meaning isn't in their effects (Dark Moon's direction choices).
+@export var rules_note: String = ""
 ## Pack (Dark Moon spec 2.1): the token that enters this creature's lane as its follower.
 @export var follower_id: StringName = &""
 

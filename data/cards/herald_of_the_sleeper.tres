@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_herald_of_the_sleeper_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"buff"
+who = &"self"
+need_cond = &"started_with:sleeper_beneath"
+amount = 2
+amount2 = 2
+
+[sub_resource type="Resource" id="eff_herald_of_the_sleeper_1"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"give_keyword"
+who = &"same_target"
+keyword = &"guard"
+need_cond = &"started_with:sleeper_beneath"
+amount = 0
+
+[resource]
+script = ExtResource("1_card")
+id = &"herald_of_the_sleeper"
+display_name = "Herald of the Sleeper"
+kind = 0
+land = 4
+level = 1
+cost = 3
+attack = 2
+health = 3
+tribe = &"blob"
+effects = Array[ExtResource("2_eff")]([SubResource("eff_herald_of_the_sleeper_0"), SubResource("eff_herald_of_the_sleeper_1")])

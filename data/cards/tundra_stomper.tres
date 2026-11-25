@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[resource]
+script = ExtResource("1_card")
+id = &"tundra_stomper"
+display_name = "Tundra Stomper"
+kind = 0
+land = 3
+level = 2
+cost = 7
+attack = 6
+health = 7
+tribe = &"beast"
+follower_id = &"snow_pup"

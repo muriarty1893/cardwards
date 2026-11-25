@@ -87,3 +87,14 @@ func test_history() -> bool:
 	assert_eq(int(b.players[1].history["deaths_own"]), 1, "owner's deaths")
 	assert_eq(GameHistory.deaths_all(b), 1, "deaths this game, both sides")
 	return true
+
+
+func test_forty_enabler_still_allows_thirty() -> bool:
+	var big: CardData = Fx.card(&"t_big40b", CardData.Kind.CREATURE, 4, 4, 4)
+	big.allows_40 = true
+	CardDB.add_test_card(big)
+	var cards: Array[CardData] = CardDB.deck(&"grove_guard").cards.duplicate()
+	cards[29] = big
+	assert_eq(DeckStore.validate(cards), "", "30 cards with a 40-card enabler is fine")
+	CardDB.remove_test_card(&"t_big40b")
+	return true

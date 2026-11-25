@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_mycel_gravekeeper_0"]
+script = ExtResource("2_eff")
+when = &"aura"
+op = &"echo_death"
+who = &"self"
+amount = 0
+
+[resource]
+script = ExtResource("1_card")
+id = &"mycel_gravekeeper"
+display_name = "Mycel the Gravekeeper"
+kind = 0
+land = 0
+level = 2
+cost = 5
+attack = 3
+health = 6
+tribe = &"sprout"
+effects = Array[ExtResource("2_eff")]([SubResource("eff_mycel_gravekeeper_0")])
+legendary = true

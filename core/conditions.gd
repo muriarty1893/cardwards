@@ -49,7 +49,8 @@ static func text(cond: StringName) -> String:
 			var id := StringName(bits[1])
 			return "If %s started in your deck" % (CardDB.card(id).display_name if CardDB.has_card(id) else bits[1])
 		"holding_land":
-			return "If you're holding a %s card" % CardData.LAND_NAMES[int(bits[1])]
+			var ln: String = CardData.LAND_NAMES[int(bits[1])]
+			return "If you're holding %s %s card" % ["an" if ln.substr(0, 1) in ["A", "E", "I", "O", "U"] else "a", ln]
 		"holding_big":
 			return "If you're holding a creature with 6 or more ATK"
 		"max_magic_at_least":

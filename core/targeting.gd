@@ -78,6 +78,11 @@ static func resolve(s: GameState, p: int, lane: int, who: StringName, chosen: Ar
 			out.append({"player": p, "lane": lane})
 		&"opposing":
 			out.append({"player": foe, "lane": GameState.lane_of(lane)})
+		&"all_creatures":
+			for q: int in [p, foe]:
+				for l: int in GameState.SPOTS:
+					if s.players[q].at(l):
+						out.append({"player": q, "lane": l})
 		&"all_enemy_creatures", &"all_own_creatures":
 			var q: int = foe if who == &"all_enemy_creatures" else p
 			for l: int in GameState.SPOTS:

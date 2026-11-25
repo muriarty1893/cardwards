@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_ignis_ember_storm_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"split_damage"
+who = &"own_hero"
+amount = 8
+
+[sub_resource type="Resource" id="eff_ignis_ember_storm_1"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"split_damage"
+who = &"own_hero"
+need_cond = &"spells_of_land_at_least:1:5"
+amount = 8
+
+[resource]
+script = ExtResource("1_card")
+id = &"ignis_ember_storm"
+display_name = "Ignis, the Ember Storm"
+kind = 0
+land = 1
+level = 3
+cost = 9
+attack = 6
+health = 6
+tribe = &"flyer"
+effects = Array[ExtResource("2_eff")]([SubResource("eff_ignis_ember_storm_0"), SubResource("eff_ignis_ember_storm_1")])
+legendary = true

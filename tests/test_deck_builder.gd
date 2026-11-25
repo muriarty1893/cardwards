@@ -24,7 +24,7 @@ func _restore(old: String) -> void:
 func _thirty() -> Array[CardData]:
 	var out: Array[CardData] = []
 	for c: CardData in CardDB.all_cards():
-		if c.land == CardData.Land.NEUTRAL:
+		if c.land == CardData.Land.NEUTRAL or c.legendary or not c.collectible or not c.deck_legal or c.curse:
 			continue
 		for i: int in 2:
 			if out.size() < 30:

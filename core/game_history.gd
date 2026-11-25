@@ -5,7 +5,7 @@ extends RefCounted
 
 
 static func fresh() -> Dictionary:
-	return {"spells": [] as Array[StringName], "spell_lands": [] as Array[int], "deaths_own": 0, "stolen": 0,
+	return {"spells": [] as Array[StringName], "spell_lands": [] as Array[int], "deaths_own": 0, "dead": [] as Array[StringName], "stolen": 0,
 		"start_size": 0, "start_no_dupes": false, "start_ids": [] as Array[StringName]}
 
 
@@ -28,8 +28,10 @@ static func record_spell(ps: GameState.PlayerState, c: CardData) -> void:
 	(ps.history["spell_lands"] as Array).append(c.land)
 
 
-static func record_death(ps: GameState.PlayerState) -> void:
+static func record_death(ps: GameState.PlayerState, c: CardData = null) -> void:
 	ps.history["deaths_own"] = int(ps.history["deaths_own"]) + 1
+	if c:
+		(ps.history["dead"] as Array).append(c.id)
 
 
 static func record_steal(ps: GameState.PlayerState, n: int = 1) -> void:

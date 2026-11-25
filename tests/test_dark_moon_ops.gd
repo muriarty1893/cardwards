@@ -279,3 +279,41 @@ func test_new_ops_have_text() -> bool:
 	var lb: CardData = Fx.card(&"t_lbt", C, 0, 1, 1, [], [_eff(&"on_destroyed", &"draw", 1, &"own_hero")])
 	assert_true(CardText.render(lb).begins_with("Last Breath: "), "Last Breath wording: %s" % CardText.render(lb))
 	return true
+
+
+func test_resurrect() -> bool:
+	var s: GameState = Fx.blank()
+	var lb: CardData = Fx.card(&"t_lbc", C, 1, 2, 2, [], [_eff(&"on_destroyed", &"draw", 1, &"own_hero")])
+	CardDB.add_test_card(lb)
+	Fx.put(s, 0, 0, lb)
+	Fx.put_creature(s, 0, 1, &"gumdrop")
+	for sp: int in [0, 1]:
+		Rules.destroy_creature(s, 0, sp, [])
+	Rules.resolve_deaths(s, [])
+	assert_eq(s.players[0].history["dead"], [&"t_lbc", &"gumdrop"] as Array[StringName], "the dead are remembered")
+	_cast(s, _spell(&"t_raise_lb", [_eff(&"on_play", &"resurrect", 4, &"own_hero", {"keyword": &"last_breath"})]))
+	assert_eq(s.players[0].creature_spots().size(), 1, "only the Last Breath one comes back")
+	assert_eq(s.players[0].at(0).card.id, &"t_lbc", "it's back")
+	_cast(s, _spell(&"t_raise", [_eff(&"on_play", &"resurrect", 1, &"own_hero")]))
+	assert_eq(s.players[0].creature_spots().size(), 2, "one random dead creature back")
+	CardDB.remove_test_card(&"t_lbc")
+	return true
+
+
+func test_echo_death_doubles_last_breath() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put(s, 0, 0, Fx.card(&"t_keeper", C, 1, 1, 5, [], [_eff(&"aura", &"echo_death", 0, &"self")]))
+	Fx.put(s, 0, 1, Fx.card(&"t_lb2", C, 1, 1, 1, [], [_eff(&"on_destroyed", &"damage", 2, &"enemy_hero")]))
+	var hp: int = s.players[1].hero_hp
+	Rules.destroy_creature(s, 0, 1, [])
+	Rules.resolve_deaths(s, [])
+	assert_eq(s.players[1].hero_hp, hp - 4, "Last Breath happens twice")
+	return true
+
+
+func test_neutral_creature_needs_no_land() -> bool:
+	var s: GameState = Fx.blank([CardData.Land.EMBER, CardData.Land.EMBER, CardData.Land.EMBER, CardData.Land.EMBER])
+	s.players[0].hand.append(CardDB.card(&"shiba_shepherd"))
+	s.players[0].magic = 10
+	assert_eq(Rules.validate(s, Action.play(0, s.players[0].hand.size() - 1, 0)), "", "a neutral creature fits any land")
+	return true

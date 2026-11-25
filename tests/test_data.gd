@@ -2,20 +2,24 @@ extends TestCase
 ## Card data matches the Rules 2.0 spec (section 6) and the living board spec (section 10):
 ## numbers, keywords and generated text.
 
-const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura", &"on_level_up", &"field_aura", &"field_start", &"field_end", &"on_hurt"]
+const WHENS: Array[StringName] = [&"on_play", &"on_boop", &"on_destroyed", &"after_damage", &"start_of_turn", &"end_of_turn", &"aura", &"on_level_up", &"field_aura", &"field_start", &"field_end", &"on_hurt", &"in_hand", &"on_draw"]
 const OPS: Array[StringName] = [
 	&"damage", &"heal", &"draw", &"freeze", &"gain_magic", &"hush", &"return_building", &"move", &"swap",
 	&"dream_up", &"return_from_discard", &"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken",
 	&"opposing_atk", &"buff", &"give_keyword", &"destroy", &"armour", &"sprout_meadow", &"land_draw",
 	&"on_land_atk", &"off_land_atk", &"on_land_hp", &"no_quirk",
 	&"temp_atk", &"doom", &"grow_magic", &"bounce", &"spell_discount", &"transform",
+	# Dark Moon
+	&"split_damage", &"double_stats", &"next_spell_twice", &"replay_spells", &"add_to_hand", &"shuffle_into_deck",
+	&"summon", &"buff_hand", &"cost_per_death", &"grow_on_spell", &"echo", &"echo_death", &"resurrect",
+	&"dark_moon", &"steal_hand", &"copy_rival", &"steal_creature",
 ]
 const WHOS: Array[StringName] = [
 	&"chosen_creature", &"chosen_own_creature", &"chosen_own_empty_lane", &"chosen_two_own_creatures",
 	&"chosen_discard_creature", &"self", &"opposing", &"damaged_creature", &"lane_creature",
 	&"all_enemy_creatures", &"all_own_creatures", &"enemy_hero", &"own_hero", &"same_target", &"own_on_land",
 	&"chosen_enemy_creature", &"chosen_damaged_enemy", &"chosen_undamaged_creature", &"chosen_frozen_enemy", &"other_enemies",
-	&"all_away_creatures",
+	&"all_away_creatures", &"all_creatures",
 ]
 
 ## id: [level, cost, atk, hp, keywords, spell_power] (spec section 6; card expansion 2 spec 5).
@@ -93,6 +97,87 @@ const SPEC: Dictionary = {
 	&"volcano": [0, 4, 0, 0, [], 0], &"snowstorm": [0, 4, 0, 0, [], 0],
 	&"spore_bloom": [0, 3, 0, 0, [], 0], &"sugar_rain": [0, 3, 0, 0, [], 0],
 	&"bark_shield": [0, 1, 0, 0, [], 0], &"candy_shell": [0, 2, 0, 0, [], 0],
+	# Dark Moon expansion
+	&"dark_moon": [0, 4, 0, 0, [], 0],
+	&"moon_left": [0, 0, 0, 0, [], 0],
+	&"moon_right": [0, 0, 0, 0, [], 0],
+	&"spore_drifter": [1, 1, 1, 2, [], 0],
+	&"grave_toad": [2, 4, 4, 4, [], 0],
+	&"moss_ape_matriarch": [2, 6, 5, 6, [], 0],
+	&"mycel_gravekeeper": [2, 5, 3, 6, [], 0],
+	&"mycelia_spore_weaver": [3, 9, 7, 9, [], 0],
+	&"ancient_hollowneck": [3, 10, 9, 10, [], 0],
+	&"fungal_feast": [0, 2, 0, 0, [], 0],
+	&"mycelium_call": [0, 5, 0, 0, [], 0],
+	&"rot_harvest": [0, 7, 0, 0, [], 0],
+	&"grave_bloom": [0, 3, 0, 0, [], 0],
+	&"necrospore": [0, 4, 0, 0, [], 0],
+	&"spore_burst": [0, 1, 0, 0, [], 0],
+	&"ember_hornet": [1, 2, 2, 2, [], 0],
+	&"flame_tiki": [1, 3, 2, 4, [], 1],
+	&"ignis_ember_storm": [3, 9, 6, 6, [], 0],
+	&"cinder_fiend": [3, 7, 6, 5, [], 2],
+	&"magma_chieftain": [2, 6, 5, 5, [], 0],
+	&"molten_titan": [3, 10, 10, 10, [], 0],
+	&"firestorm": [0, 5, 0, 0, [], 0],
+	&"cinder_barrage": [0, 2, 0, 0, [], 0],
+	&"overcharge": [0, 1, 0, 0, [], 0],
+	&"hex_of_cinders": [0, 2, 0, 0, [], 0],
+	&"smolder": [0, 0, 0, 0, [], 0],
+	&"lava_wave": [0, 3, 0, 0, [], 0],
+	&"kindle_pups": [0, 3, 0, 0, [], 0],
+	&"sprinkle_sprite": [1, 1, 1, 1, [], 0],
+	&"gumdrop_baker": [1, 3, 2, 4, [], 0],
+	&"bonbon_unicorn_queen": [2, 7, 5, 7, [], 0],
+	&"twinstripe_peppermare": [2, 5, 3, 5, [], 0],
+	&"taffy_wolf_matron": [2, 6, 5, 6, [], 0],
+	&"cakequake_behemoth": [3, 9, 8, 9, [], 0],
+	&"bakery_rush": [0, 2, 0, 0, [], 0],
+	&"cookie_jar": [0, 2, 0, 0, [], 0],
+	&"sweet_treat": [0, 0, 0, 0, [], 0],
+	&"cavity_hex": [0, 1, 0, 0, [], 0],
+	&"toothache": [0, 1, 0, 0, [], 0],
+	&"party_favors": [0, 3, 0, 0, [], 0],
+	&"gumdrop_parade": [0, 4, 0, 0, [], 0],
+	&"snowdrift_sage": [1, 3, 2, 4, [], 1],
+	&"glacier_shark": [2, 5, 5, 5, [], 0],
+	&"aurora_skywhale": [3, 10, 7, 9, [], 0],
+	&"glacial_archmage": [3, 7, 5, 7, [], 1],
+	&"tundra_stomper": [2, 7, 6, 7, [], 0],
+	&"rimeback_stegosaur": [3, 9, 8, 9, [], 0],
+	&"rime_dart": [0, 1, 0, 0, [], 0],
+	&"hoarfrost": [0, 2, 0, 0, [], 0],
+	&"blizzard_echo": [0, 3, 0, 0, [], 0],
+	&"permafrost": [0, 6, 0, 0, [], 0],
+	&"snow_call": [0, 4, 0, 0, [], 0],
+	&"sand_pickpocket": [1, 2, 2, 2, [], 0],
+	&"dune_bandit": [1, 3, 3, 3, [], 0],
+	&"alpaking_thief_king": [3, 8, 6, 7, [], 0],
+	&"sandglider_sphinx": [2, 6, 5, 5, [], 0],
+	&"caravan_master": [2, 6, 5, 6, [], 0],
+	&"dune_leviathan": [3, 9, 8, 9, [&"sturdy"], 0],
+	&"swindle": [0, 2, 0, 0, [], 0],
+	&"lure_of_gold": [0, 4, 0, 0, [], 0],
+	&"hex_of_the_dunes": [0, 2, 0, 0, [], 0],
+	&"cursed_coin": [0, 0, 0, 0, [], 0],
+	&"grand_heist": [0, 5, 0, 0, [], 0],
+	&"mirage_army": [0, 5, 0, 0, [], 0],
+	&"gluttonous_dreamer": [1, 6, 6, 6, [], 0],
+	&"shadow_peddler": [1, 3, 2, 3, [], 0],
+	&"shiba_shepherd": [1, 4, 3, 4, [], 0],
+	&"sleeper_beneath": [1, 10, 12, 12, [], 0],
+	&"herald_of_the_sleeper": [1, 3, 2, 3, [], 0],
+	&"moonlit_stalker": [1, 4, 4, 3, [&"hidden"], 0],
+	&"dusk_wasp": [1, 2, 2, 1, [&"dash"], 0],
+	&"moon_guppy": [1, 2, 1, 2, [], 0],
+	&"night_market": [0, 2, 0, 0, [], 0],
+	&"bad_dream": [0, 3, 0, 0, [], 0],
+	&"nightmare": [0, 0, 0, 0, [], 0],
+	&"lullaby": [0, 2, 0, 0, [], 0],
+	&"shooting_stars": [0, 3, 0, 0, [], 0],
+	&"moon_elixir": [0, 3, 0, 0, [], 0],
+	&"moonwell": [0, 3, 0, 0, [], 0],
+	&"twin_guardians": [0, 3, 0, 0, [], 0],
 }
 
 ## Rules text, verbatim from spec section 6.
@@ -217,21 +302,103 @@ const SPEC_TEXT: Dictionary = {
 	&"sugar_rain": "Field. Start of each turn: If that player has a creature on Candy Hills, they draw a card.",
 	&"bark_shield": "Gain 4 armour.",
 	&"candy_shell": "Gain 3 armour. Draw a card.",
+	# Dark Moon expansion
+	&"dark_moon": "Choose left or right: every creature moves to the next occupied land around the board. Crossing sides changes owner.",
+	&"moon_left": "Every creature moves to the next occupied land on its left, around the board.",
+	&"moon_right": "Every creature moves to the next occupied land on its right, around the board.",
+	&"spore_drifter": "Last Breath: Summon a 1/2 Sporeling.",
+	&"grave_toad": "Last Breath: Deal 2 damage to all enemy creatures.",
+	&"moss_ape_matriarch": "Comes with a 2/2 Leaf Finch follower.",
+	&"mycel_gravekeeper": "Your creatures' Last Breaths happen twice.",
+	&"mycelia_spore_weaver": "Last Breath: Summon every other creature of yours with Last Breath that died this game.",
+	&"ancient_hollowneck": "On play: Summon three 1/2 Sporelings.",
+	&"fungal_feast": "Destroy one of your creatures. Draw 2 cards.",
+	&"mycelium_call": "Summon three 1/2 Sporelings.",
+	&"rot_harvest": "Costs 1 less for each creature that died this game. Deal 3 damage to all creatures.",
+	&"grave_bloom": "Summon a random creature of yours that died this game.",
+	&"necrospore": "Deal 2 damage to all creatures. If 4 or more creatures died this game: Draw 2 cards.",
+	&"spore_burst": "Deal 1 damage to all creatures.",
+	&"ember_hornet": "On play: Deal 2 damage split randomly between all enemies.",
+	&"flame_tiki": "Spell Power +1. Boop: Deal 2 damage split randomly between all enemies.",
+	&"ignis_ember_storm": "On play: Deal 8 damage split randomly between all enemies. On play, if you've cast 5 or more Ember Flats spells this game: Deal 8 damage split randomly between all enemies.",
+	&"cinder_fiend": "Spell Power +2. On play: Your next spell happens twice.",
+	&"magma_chieftain": "Comes with a 2/1 Cinderpup follower.",
+	&"molten_titan": "On play: Deal 3 damage to all enemy creatures.",
+	&"firestorm": "Deal 6 damage split randomly between all enemies.",
+	&"cinder_barrage": "Deal 3 damage split randomly between all enemies.",
+	&"overcharge": "Your next spell happens twice.",
+	&"hex_of_cinders": "Shuffle two Smolders into your rival's deck. Deal 2 damage to the enemy hero.",
+	&"smolder": "When drawn: Deal 3 damage to your hero.",
+	&"lava_wave": "Deal 2 damage to all enemy creatures. If you're holding an Ember Flats card: Deal 2 damage to the enemy hero.",
+	&"kindle_pups": "Summon two 2/1 Cinderpups.",
+	&"sprinkle_sprite": "On play: Give the creatures in your hand +1/+1.",
+	&"gumdrop_baker": "On play: Add two Sweet Treats to your hand.",
+	&"bonbon_unicorn_queen": "On play, if your deck started with no duplicates: Summon three 3/4 Taffy Snails.",
+	&"twinstripe_peppermare": "Your on-play effects happen twice.",
+	&"taffy_wolf_matron": "Comes with a 1/3 Gummy Cub follower.",
+	&"cakequake_behemoth": "On play: Give the creatures in your hand +2/+2.",
+	&"bakery_rush": "Give the creatures in your hand +2/+2.",
+	&"cookie_jar": "Add three Sweet Treats to your hand.",
+	&"sweet_treat": "Heal your hero 3.",
+	&"cavity_hex": "Add two Toothaches to your rival's hand.",
+	&"toothache": "Deal 1 damage to your hero.",
+	&"party_favors": "Add a Sweet Treat to your hand. Give the creatures in your hand +1/+1.",
+	&"gumdrop_parade": "Summon two 2/4 Gumdrops.",
+	&"snowdrift_sage": "Spell Power +1. On play, if you're holding a Frostpeak card: Draw a card.",
+	&"glacier_shark": "On play, if you're holding a Frostpeak card: Freeze the opposing creature.",
+	&"aurora_skywhale": "On play, if you have 10 or more max magic: Cast every Frostpeak spell you've cast this game again (random targets).",
+	&"glacial_archmage": "Spell Power +1. On play: Your next 2 spells happen twice.",
+	&"tundra_stomper": "Comes with a 2/3 Snow Pup follower.",
+	&"rimeback_stegosaur": "On play: Freeze all enemy creatures.",
+	&"rime_dart": "Deal 2 damage to an enemy creature and freeze it.",
+	&"hoarfrost": "Draw a card. If you're holding a Frostpeak card: Draw a card.",
+	&"blizzard_echo": "Freeze all enemy creatures. If you've cast 3 or more Frostpeak spells this game: Deal 2 damage to all enemy creatures.",
+	&"permafrost": "Deal 3 damage to all enemy creatures. Freeze all enemy creatures.",
+	&"snow_call": "Summon two 2/3 Icelings.",
+	&"sand_pickpocket": "On play: Copy a random card from your rival's hand or deck.",
+	&"dune_bandit": "On play, Combo: Steal a random card from your rival's hand.",
+	&"alpaking_thief_king": "On play: Steal the 2 most expensive cards in your rival's hand.",
+	&"sandglider_sphinx": "On play: Take control of an enemy creature with 4 or less ATK.",
+	&"caravan_master": "Comes with a 3/2 Sand Fox follower.",
+	&"dune_leviathan": "Sturdy. On play: Steal a random card from your rival's hand.",
+	&"swindle": "Copy 2 random cards from your rival's hand or deck.",
+	&"lure_of_gold": "Take control of an enemy creature with 2 or less ATK.",
+	&"hex_of_the_dunes": "Shuffle three Cursed Coins into your rival's deck.",
+	&"cursed_coin": "When drawn: Deal 2 damage to your hero.",
+	&"grand_heist": "Steal 2 random cards from your rival's hand.",
+	&"mirage_army": "Summon three 2/3 Sand Scuttlers.",
+	&"gluttonous_dreamer": "On play, if your deck started with 40 cards: Give the creatures in your hand +2/+2. Draw 2 cards.",
+	&"shadow_peddler": "On play: Dark Gift (Dream Up a creature with a random bonus).",
+	&"shiba_shepherd": "Comes with a 2/2 Cotton Puff follower.",
+	&"sleeper_beneath": "Costs 1 less for each creature that died this game.",
+	&"herald_of_the_sleeper": "On play, if The Sleeper Beneath started in your deck: Give this creature +2/+2 and give it Guard.",
+	&"moonlit_stalker": "Hidden. Last Breath: Dark Gift (Dream Up a creature with a random bonus).",
+	&"dusk_wasp": "Dash. Last Breath: Deal 2 damage split randomly between all enemies.",
+	&"moon_guppy": "On play: Gain 1 max magic.",
+	&"night_market": "Dark Gift (Dream Up a creature with a random bonus).",
+	&"bad_dream": "Shuffle two Nightmares into your rival's deck. Draw a card.",
+	&"nightmare": "When drawn: Deal 3 damage to your hero. Draw a card.",
+	&"lullaby": "Hush an enemy creature. Draw a card.",
+	&"shooting_stars": "Deal 4 damage split randomly between all enemies.",
+	&"moon_elixir": "Double the ATK and HP of one of your creatures.",
+	&"moonwell": "Gain 2 max magic.",
+	&"twin_guardians": "Summon two 1/5 Mossbacks.",
 }
 
 
 func test_card_count() -> bool:
 	var cards: Array[CardData] = CardDB.all_cards()
-	assert_eq(cards.size(), 118, "118 cards (47 + card expansion 2's 41 + Sunny Dunes 14 + 16 more)")
-	assert_eq(CardDB.collectible_cards().size(), 109, "109 collectible")
+	assert_eq(cards.size(), 198, "198 cards (47 + card expansion 2's 41 + Sunny Dunes 14 + 16 more + Dark Moon's 80)")
+	assert_eq(CardDB.collectible_cards().size(), 182, "182 collectible (Dark Moon adds 73 and 7 tokens)")
 	# 10 per land from Rules 2.0, each land's field spell, the two armour spells, then expansion 2 (10 per land,
 	# Frost 11 with the Snowman token), then 4 per land and Sunny Dunes' 14.
-	var per_land: Dictionary = {0: 26, 1: 25, 2: 26, 3: 26, 5: 14}
+	# Dark Moon: 12 Mushroom, 13 Ember, 13 Candy, 11 Frost, 12 Dunes, 19 Neutral.
+	var per_land: Dictionary = {0: 38, 1: 38, 2: 39, 3: 37, 5: 26}
 	for land: int in per_land:
 		assert_eq(cards.filter(func(c: CardData) -> bool: return c.land == land).size(), per_land[land], "%d cards for land %d" % [per_land[land], land])
 	var neutral: Array = cards.filter(func(c: CardData) -> bool: return c.land == CardData.Land.NEUTRAL)
-	assert_eq(neutral.size(), 1, "one neutral card")
-	assert_eq((neutral[0] as CardData).id, &"star_shard", "star shard")
+	assert_eq(neutral.size(), 20, "Star Shard and Dark Moon's 19 neutral cards")
+	assert_true(neutral.any(func(c: CardData) -> bool: return c.id == &"star_shard"), "star shard")
 	return true
 
 
@@ -262,13 +429,17 @@ func test_cards_validate() -> bool:
 		for e: EffectData in c.effects:
 			assert_true(e.when in WHENS and e.op in OPS and e.who in WHOS, "%s effect %s/%s/%s" % [c.id, e.when, e.op, e.who])
 		if c.is_creature() and c.collectible:
-			var band: Array = [[], [1, 3], [3, 5], [6, 8]][c.level]
+			# Magic grows to 10 (Dark Moon), so late creatures go up to 10; neutral creatures need no lanes,
+			# so their level doesn't limit their cost.
+			var band: Array = [[], [1, 3], [3, 7], [6, 10]][c.level]
+			if c.land == CardData.Land.NEUTRAL:
+				band = [1, 10]
 			assert_true(c.cost >= band[0] and c.cost <= band[1], "%s cost in level band" % c.id)
 			assert_true(c.attack >= 0 and c.health > 0, "%s stats" % c.id)
 		elif not c.is_creature():
 			assert_eq(c.level, 0, "%s non-creature level 0" % c.id)
 			# Expansion 2 has 0-cost trade-off spells (Stoke, Sugar Shiv, Sugar High).
-			assert_true(c.cost >= 0 and c.cost <= 5, "%s cost 0-5" % c.id)
+			assert_true(c.cost >= 0 and c.cost <= 7, "%s cost 0-7" % c.id)
 	return true
 
 

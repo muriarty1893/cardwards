@@ -5,10 +5,10 @@ extends RefCounted
 const ORDER: Array[StringName] = [&"big", &"guard", &"leech", &"cheap", &"haunt"]
 const TEXT: Dictionary = {
 	&"big": "+2/+2", &"guard": "Guard", &"leech": "Leech", &"cheap": "Costs 2 less",
-	&"haunt": "Last Breath: Summon a 2/2 Wisp",
+	&"haunt": "Last Breath: Summon a Glowmoth",
 }
-## The token the "haunt" gift summons.
-const WISP := &"gift_wisp"
+## The creature the "haunt" gift summons.
+const WISP := &"glowmoth"
 
 
 ## The changes (for CardDB.variant) a gift makes.

@@ -50,8 +50,8 @@ func _post_import(scene: Node) -> Object:
 					lib.rename_animation(a, plain)
 			_alias(lib, "Idle", IDLE_NAMES)
 			_alias(lib, "Walk", WALK_NAMES)
-			_alias(lib, "Bite_Front", ["Attack", "Attack2"])
-			_alias(lib, "HitReact", ["Hit"])
+			_alias(lib, "Bite_Front", ["Attack", "Attack2", "Attack_Headbutt", "Attack_Kick"])
+			_alias(lib, "HitReact", ["Hit", "Idle_HitReact1"])
 			# Models with a single clip (a loop): use it for standing too.
 			var all: PackedStringArray = lib.get_animation_list()
 			if not lib.has_animation("Idle") and all.size() > 0:

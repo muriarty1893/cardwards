@@ -10,7 +10,7 @@ const NAMES: Dictionary = {
 	&"leech": "Leech", &"flurry": "Flurry", &"hidden": "Hidden", &"second_wind": "Second Wind",
 	&"hush": "Hush", &"dream_up": "Dream Up", &"combo": "Combo", &"spell_power": "Spell Power",
 	&"field": "Field", &"armour": "Armour", &"level_up": "Level up", &"sturdy": "Sturdy", &"bask": "Bask",
-	&"last_breath": "Last Breath", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo",
+	&"last_breath": "Last Breath", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo", &"follower": "Follower",
 }
 
 const RULES: Dictionary = {
@@ -33,6 +33,7 @@ const RULES: Dictionary = {
 	&"last_breath": "Happens when this creature dies (not if it's Hushed).",
 	&"curse": "A bad card made for the rival. Some go off when drawn.",
 	&"dark_gift": "Choose one of 3 random creatures; the one you take gets a random bonus.",
+	&"follower": "Shares its leader's land. It fights and can be hit on its own, and takes over the land if its leader falls.",
 	&"echo": "While this is in play, your creatures' and buildings' on-play effects happen twice.",
 	&"level_up": "A creature gains XP for each attack it survives (+1 more for a kill): Lv 2 at 2 XP, Lv 3 at 4 XP, +1/+1 each.",
 }

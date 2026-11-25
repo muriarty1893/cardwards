@@ -29,7 +29,7 @@ func test_new_cards_load() -> bool:
 		assert_true(CardDB.has_card(id), "%s exists" % id)
 		if CardDB.has_card(id):
 			assert_true(not CardDB.card(id).collectible, "%s is not collectible" % id)
-	assert_eq(CardDB.collectible_cards().size(), 47 + 32 + 30, "109 collectible cards")
+	assert_eq(CardDB.collectible_cards().size(), 47 + 32 + 30 + 73, "182 collectible cards (Dark Moon adds 73)")
 	return true
 
 

@@ -166,6 +166,8 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 				var q: int = _owner(s, p, e.who)
 				for i: int in maxi(e.amount, 1):
 					Rules.summon(s, q, CardDB.card(e.card_id), lane if (e.who == &"self" and q == p) else -1, ev)
+		&"resurrect":
+			Rules.resurrect(s, p, maxi(e.amount, 1), e.keyword == &"last_breath", card.id if card.kind == CardData.Kind.CREATURE else &"", ev)
 		&"buff_hand":
 			for i: int in ps.hand.size():
 				if ps.hand[i].is_creature():
@@ -216,7 +218,7 @@ static func _apply(s: GameState, p: int, lane: int, card: CardData, e: EffectDat
 		&"lane_atk", &"lane_hp", &"lane_keyword", &"lane_damage_taken", &"opposing_atk", \
 				&"on_land_atk", &"off_land_atk", &"on_land_hp", &"no_quirk":
 			pass  # auras: read by Rules.effective_* / keywords_of / damage_reduction / Fields
-		&"echo", &"cost_per_death", &"grow_on_spell":
+		&"echo", &"echo_death", &"cost_per_death", &"grow_on_spell":
 			pass  # passives: Rules.echoes / card_cost / _grow_held
 		_:
 			push_warning("Effects: unknown op '%s'" % e.op)

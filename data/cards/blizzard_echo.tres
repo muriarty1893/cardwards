@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_blizzard_echo_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"freeze"
+who = &"all_enemy_creatures"
+amount = 0
+
+[sub_resource type="Resource" id="eff_blizzard_echo_1"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"damage"
+who = &"all_enemy_creatures"
+need_cond = &"spells_of_land_at_least:3:3"
+amount = 2
+
+[resource]
+script = ExtResource("1_card")
+id = &"blizzard_echo"
+display_name = "Blizzard Echo"
+kind = 2
+land = 3
+level = 0
+cost = 3
+effects = Array[ExtResource("2_eff")]([SubResource("eff_blizzard_echo_0"), SubResource("eff_blizzard_echo_1")])

@@ -20,11 +20,11 @@ static var _loaded_from: String = ""
 ## it), at most 2 of each and 1 of each legendary, nothing that can't go in decks (Star Shard,
 ## tokens, merged forms).
 static func validate(cards: Array[CardData]) -> String:
-	var want: int = size_for(cards)
-	if cards.size() != want:
-		if cards.size() == 40:
+	var big: bool = size_for(cards) == BIG_DECK_SIZE
+	if cards.size() != DECK_SIZE and not (big and cards.size() == BIG_DECK_SIZE):
+		if cards.size() == BIG_DECK_SIZE:
 			return "A 40-card deck needs a card that allows it"
-		return "A deck needs %d cards (%d now)" % [want, cards.size()]
+		return ("A deck needs 30 or 40 cards (%d now)" if big else "A deck needs 30 cards (%d now)") % cards.size()
 	var counts: Dictionary = {}
 	for c: CardData in cards:
 		if not c.deck_legal or not c.collectible or c.curse:
@@ -36,7 +36,7 @@ static func validate(cards: Array[CardData]) -> String:
 	return ""
 
 
-## 40 when the cards include one that allows a 40-card deck, else 30.
+## 40 when the cards include one that allows a 40-card deck (such a deck may also have 30), else 30.
 static func size_for(cards: Array[CardData]) -> int:
 	for c: CardData in cards:
 		if c.allows_40:

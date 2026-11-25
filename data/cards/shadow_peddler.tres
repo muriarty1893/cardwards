@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_shadow_peddler_0"]
+script = ExtResource("2_eff")
+when = &"on_play"
+op = &"dream_up"
+who = &"own_hero"
+amount = 0
+gift = true
+
+[resource]
+script = ExtResource("1_card")
+id = &"shadow_peddler"
+display_name = "Shadow Peddler"
+kind = 0
+land = 4
+level = 1
+cost = 3
+attack = 2
+health = 3
+tribe = &"spirit"
+effects = Array[ExtResource("2_eff")]([SubResource("eff_shadow_peddler_0")])

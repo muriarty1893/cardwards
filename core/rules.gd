@@ -145,7 +145,8 @@ static func _validate_play(s: GameState, a: Action) -> String:
 			return "Lane already has a creature"
 		if c.kind == CardData.Kind.BUILDING and lane.building != null:
 			return "Lane already has a building"
-	if c.kind == CardData.Kind.CREATURE and Lands.count_after_play(s, a.player, a.lane, c.land) < c.level:
+	# Neutral creatures belong to no land, so they need no lanes of one.
+	if c.kind == CardData.Kind.CREATURE and c.land != CardData.Land.NEUTRAL and Lands.count_after_play(s, a.player, a.lane, c.land) < c.level:
 		return "Needs %d %s lane%s" % [c.level, CardData.LAND_NAMES[c.land], "" if c.level == 1 else "s"]
 	return _validate_targets(s, a.player, _played_form(s, a.player, a.lane, c), &"on_play", a.lane if c.kind != CardData.Kind.SPELL else -1, a.targets)
 
@@ -448,6 +449,39 @@ static func echoes(s: GameState, p: int) -> bool:
 			if e.op == &"echo":
 				return true
 	return false
+
+
+## True while player p controls an un-hushed creature whose aura doubles Last Breaths.
+static func _echoes_death(s: GameState, p: int) -> bool:
+	for sp: int in s.players[p].creature_spots():
+		var cr: GameState.CreatureState = s.players[p].at(sp)
+		if cr.hushed:
+			continue
+		for e: EffectData in cr.card.effects_for(&"aura"):
+			if e.op == &"echo_death":
+				return true
+	return false
+
+
+## Brings back up to `n` of p's creatures that died this game (each card once, newest first when
+## `last_breath_only`, else random), into empty lanes.
+static func resurrect(s: GameState, p: int, n: int, last_breath_only: bool, except: StringName, ev: Array[GameEvent]) -> void:
+	var pool: Array[StringName] = []
+	for id: Variant in s.players[p].history["dead"]:
+		var sid := StringName(id)
+		if sid == except or sid in pool or not CardDB.has_card(sid):
+			continue
+		if last_breath_only and not CardDB.card(sid).has_effect(&"on_destroyed"):
+			continue
+		pool.append(sid)
+	if not last_breath_only:
+		for i: int in range(pool.size() - 1, 0, -1):
+			var j: int = s.rng.randi_range(0, i)
+			var tmp: StringName = pool[i]
+			pool[i] = pool[j]
+			pool[j] = tmp
+	for i: int in mini(n, pool.size()):
+		summon(s, p, CardDB.card(pool[i]), -1, ev)
 
 
 ## After p casts a spell: held creatures that grow on spells get their bonus (as changed copies).
@@ -1095,10 +1129,11 @@ static func resolve_deaths(s: GameState, ev: Array[GameEvent]) -> void:
 					s.players[p].put(l, null)
 					s.players[p].discard.append(cr.card)
 					ev.append(GameEvent.make(&"creature_destroyed", {"player": p, "lane": l, "card": cr.card.id}))
-					GameHistory.record_death(s.players[p])
+					GameHistory.record_death(s.players[p], cr.card)
 					_promote_follower(s, p, l, ev)
 					if not cr.hushed:
-						Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)
+						for i: int in (2 if _echoes_death(s, p) else 1):
+							Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)
 					if second_wind and not _hero_down(s) and s.players[p].at(l) == null:
 						s.players[p].discard.erase(cr.card)
 						var back: GameState.CreatureState = enter_creature(s, p, l, cr.card, ev)
