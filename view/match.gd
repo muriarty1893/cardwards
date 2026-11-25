@@ -145,6 +145,10 @@ func _ready() -> void:
 		return
 	if "--full-board" in OS.get_cmdline_user_args():
 		_demo_full_board()
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--demo-cards="):
+			_demo_cards(arg.substr(13).split(","))
+			return
 	if "--demo-expansion" in OS.get_cmdline_user_args():
 		_demo_expansion()
 		return
@@ -399,6 +403,20 @@ func _demo_keywords() -> void:
 			cr.gained.append(kws[p * 4 + l])
 			cr.bubble = kws[p * 4 + l] == &"bubble"
 			cr.hidden = kws[p * 4 + l] == &"hidden"
+	sync_all()
+	board.reveal_split(false)
+	refresh_ui()
+
+
+## Dev view (screenshots): puts up to 16 cards on the board — your lanes 0..3, the rival's 0..3, then
+## your followers 4..7 and the rival's (empty ids skip a spot). --demo-cards=a,b,,c
+func _demo_cards(ids: PackedStringArray) -> void:
+	for i: int in mini(ids.size(), 16):
+		if ids[i] == "" or not CardDB.has_card(StringName(ids[i])):
+			continue
+		var p: int = (i / 4) % 2
+		var spot: int = i % 4 + (4 if i >= 8 else 0)
+		_demo_put(p, spot, StringName(ids[i]))
 	sync_all()
 	board.reveal_split(false)
 	refresh_ui()
