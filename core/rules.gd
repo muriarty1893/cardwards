@@ -7,7 +7,8 @@ extends RefCounted
 
 ## `first` >= 0 forces who goes first (online: the room decides). The coin flip is still rolled so the
 ## random stream, and so every later shuffle, is the same either way.
-static func setup(deck_a: DeckData, deck_b: DeckData, seed: int, first: int = -1) -> GameState:
+## `mulligan`: each player may redraw starting cards at the start of their first turn.
+static func setup(deck_a: DeckData, deck_b: DeckData, seed: int, first: int = -1, mulligan: bool = false) -> GameState:
 	var s := GameState.new()
 	s.rng.seed = seed
 	for deck: DeckData in [deck_a, deck_b]:
@@ -29,6 +30,8 @@ static func setup(deck_a: DeckData, deck_b: DeckData, seed: int, first: int = -1
 	# Going second: a Star Shard to make up for it (spec 3.1).
 	s.players[1 - s.first_player].hand.append(CardDB.card(&"star_shard"))
 	s.active = s.first_player
+	for ps: GameState.PlayerState in s.players:
+		ps.mulligan_pending = mulligan
 	s.turn = 1
 	s.phase = GameState.Phase.MAIN
 	return s
@@ -46,6 +49,15 @@ static func start_turn(s: GameState) -> Array[GameEvent]:
 	var ev: Array[GameEvent] = []
 	var p: int = s.active
 	var ps: GameState.PlayerState = s.players[p]
+	if ps.mulligan_pending:
+		# The turn waits for the redraw choice; CHOOSE then starts it for real.
+		s.phase = GameState.Phase.CHOOSING
+		s.pending_kind = &"mulligan"
+		s.pending_player = p
+		s.pending_gift = false
+		s.pending_choice = ps.hand.duplicate()
+		ev.append(GameEvent.make(&"mulligan_offered", {"player": p}))
+		return ev
 	s.phase = GameState.Phase.MAIN
 	ev.append(GameEvent.make(&"turn_started", {"player": p, "turn": s.turn}))
 	ps.max_magic = maxi(ps.max_magic, mini(ps.max_magic + 1, ps.magic_cap))
@@ -100,6 +112,8 @@ static func validate(s: GameState, a: Action) -> String:
 			return "Choose a card first"
 		if a.player != s.pending_player:
 			return "Not your choice"
+		if s.pending_kind == &"mulligan":
+			return _validate_mulligan(s, a.player, a.choice)
 		if a.choice < 0 or a.choice >= s.pending_choice.size():
 			return "No such card"
 		return ""
@@ -114,6 +128,16 @@ static func validate(s: GameState, a: Action) -> String:
 			return _validate_boop(s, a)
 		Action.Type.ATTACK:
 			return _validate_attack(s, a)
+	return ""
+
+
+static func _validate_mulligan(s: GameState, p: int, mask: int) -> String:
+	var hand: Array[CardData] = s.players[p].hand
+	if mask < 0 or mask >= (1 << hand.size()):
+		return "No such card"
+	for i: int in hand.size():
+		if mask & (1 << i) and hand[i].id == &"star_shard":
+			return "The Star Shard stays"
 	return ""
 
 
@@ -247,6 +271,9 @@ static func apply(s: GameState, a: Action) -> Array[GameEvent]:
 
 
 static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
+	if s.pending_kind == &"mulligan":
+		_mulligan(s, a.player, a.choice, ev)
+		return
 	if s.pending_kind == &"direction":
 		s.pending_choice = []
 		s.pending_player = -1
@@ -276,6 +303,26 @@ static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	_next_choice(s, ev)
 
 
+## Redraws the starting cards marked in `mask` (new cards first, then the old ones shuffle back),
+## then starts the turn.
+static func _mulligan(s: GameState, p: int, mask: int, ev: Array[GameEvent]) -> void:
+	var ps: GameState.PlayerState = s.players[p]
+	s.pending_choice = []
+	s.pending_player = -1
+	s.pending_kind = &""
+	s.phase = GameState.Phase.MAIN
+	ps.mulligan_pending = false
+	var back: Array[CardData] = []
+	for i: int in ps.hand.size():
+		if mask & (1 << i) and not ps.deck.is_empty():
+			back.append(ps.hand[i])
+			ps.hand[i] = ps.deck.pop_back()
+	for c: CardData in back:
+		ps.deck.insert(s.rng.randi_range(0, ps.deck.size()), c)
+	ev.append(GameEvent.make(&"mulligan_done", {"player": p, "count": back.size()}))
+	ev.append_array(start_turn(s))
+
+
 ## Opens the next queued choice, if any.
 static func _next_choice(s: GameState, ev: Array[GameEvent]) -> void:
 	if s.pending_queue.is_empty() or s.phase != GameState.Phase.MAIN:
@@ -293,8 +340,13 @@ static func legal_actions(s: GameState) -> Array[Action]:
 	var p: int = s.active
 	match s.phase:
 		GameState.Phase.CHOOSING:
-			for i: int in s.pending_choice.size():
-				out.append(Action.choose(s.pending_player, i))
+			if s.pending_kind == &"mulligan":
+				for mask: int in (1 << s.players[s.pending_player].hand.size()):
+					if _validate_mulligan(s, s.pending_player, mask) == "":
+						out.append(Action.choose(s.pending_player, mask))
+			else:
+				for i: int in s.pending_choice.size():
+					out.append(Action.choose(s.pending_player, i))
 		GameState.Phase.MAIN:
 			var hand: Array[CardData] = s.players[p].hand
 			for i: int in hand.size():

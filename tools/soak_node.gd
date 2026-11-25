@@ -27,6 +27,10 @@ func _ready() -> void:
 			await get_tree().process_frame
 			frames += 1
 			# Dream Up: the picker waits for a click; pick the first card.
+			if m.mulligan.is_open() and m.human_choosing():
+				m.mulligan.toggle(0)
+				m.mulligan.confirm()
+				continue
 			if m.picker.is_open() and m.human_choosing():
 				m.picker.choose(0)
 				continue

@@ -31,7 +31,8 @@ var pending_choice: Array[CardData] = []
 var pending_player: int = -1
 ## The pending choice is a Dark Gift: the pick gets a random Gifts bonus.
 var pending_gift: bool = false
-## &"" for a Dream Up card pick; &"direction" for Dark Moon's left (0) / right (1).
+## &"" for a Dream Up card pick; &"direction" for Dark Moon's left (0) / right (1); &"mulligan" for
+## the starting-hand redraw (choice = bitmask of hand indices).
 var pending_kind: StringName = &""
 ## Choices waiting behind the pending one (echoed Dream Ups): {"player", "kind", "land", "gift"}.
 var pending_queue: Array[Dictionary] = []
@@ -55,6 +56,8 @@ class PlayerState:
 	var spell_discount: int = 0
 	## Your next N spells happen twice (next_spell_twice).
 	var spell_twice: int = 0
+	## Still to choose which starting cards to redraw (at the start of their first turn).
+	var mulligan_pending: bool = false
 	## Highest max magic the turn growth reaches (Deep Roots raises it, up to MAGIC_CAP_MAX).
 	var magic_cap: int = MAGIC_CAP
 	var deck: Array[CardData] = []
@@ -101,6 +104,7 @@ class PlayerState:
 		p.cards_played = cards_played
 		p.spell_discount = spell_discount
 		p.spell_twice = spell_twice
+		p.mulligan_pending = mulligan_pending
 		p.magic_cap = magic_cap
 		p.deck = deck.duplicate()
 		p.hand = hand.duplicate()

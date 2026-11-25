@@ -104,6 +104,7 @@ static func load_match() -> MatchController:
 	session.set("player_deck", &"blaze_rush")
 	session.set("ai_deck", &"deep_freeze")
 	session.set("seed", 1)
+	session.set("mulligan", false)
 	var m := (load("res://view/match.tscn") as PackedScene).instantiate() as MatchController
 	tree.root.add_child(m)
 	await tree.process_frame

@@ -163,6 +163,13 @@ func _play_one(e: GameEvent) -> void:
 			await _follower_entered(d)
 		&"creature_summoned":
 			await DarkMoonFx.summoned(self, d)
+		&"mulligan_done":
+			if int(d["count"]) > 0:
+				if int(d["player"]) == MatchController.HUMAN:
+					for i: int in int(d["count"]):
+						m.hand.expect_draw(m.hud.deck_screen_pos())
+				await DarkMoonFx.word(self, d["player"], "REDREW %d" % int(d["count"]), Color("#bfe8ff"))
+				await _wait(0.3)
 		&"dark_moon":
 			await DarkMoonFx.dark_moon(self, d)
 		&"creature_stolen":

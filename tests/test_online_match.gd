@@ -27,9 +27,11 @@ func _start(relay_seed: int, first: int, with_brain: bool) -> Array:
 	var relay := FakeRelay.new(relay_seed)
 	relay.force_first = first
 	var remote := OnlineSession.new(relay.transport(&"host"), "Botty", CardDB.deck(&"deep_freeze"), VER)
+	remote.mulligan = false
 	remote.hello()
 	relay.pump()
 	var local := OnlineSession.new(relay.transport(), "Me", CardDB.deck(&"blaze_rush"), VER)
+	local.mulligan = false
 	local.hello()
 	relay.pump()
 	var online: Node = _tree().root.get_node("Online")

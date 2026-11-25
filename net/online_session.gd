@@ -47,6 +47,10 @@ var _result_sent: bool = false
 var _dumped: bool = false
 
 
+## Starting-hand redraws (both seats must agree; tests that script a match turn it off).
+var mulligan: bool = true
+
+
 func _init(l: Object, player_name: String, deck: DeckData, ver: String, saved_token: String = "") -> void:
 	my_name = player_name
 	my_deck = deck
@@ -142,7 +146,7 @@ func _start(msg: Dictionary) -> void:
 	seed = int(msg["seed"])
 	first = int(msg["first"])
 	match_no = int(msg.get("match", 0))
-	state = Rules.setup(decks[0], decks[1], seed, first)
+	state = Rules.setup(decks[0], decks[1], seed, first, mulligan)
 	_opening = Rules.start_turn(state)
 	applied = 0
 	moves.clear()

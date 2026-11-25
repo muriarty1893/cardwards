@@ -34,6 +34,7 @@ var player: EventPlayer
 var timing_bar: TimingBar
 var results: Results
 var picker: DreamUpPicker
+var mulligan: MulliganPanel
 var overlay: UnitOverlay
 var attack_arrow: AttackArrow
 var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
@@ -83,7 +84,7 @@ func _ready() -> void:
 		difficulty = Session.difficulty
 		deck_a = CardDB.deck(Session.player_deck)
 		deck_b = CardDB.deck(Session.resolve_ai_deck(seed))
-		seats = SeatView.new(Rules.setup(deck_a, deck_b, seed), HUMAN)
+		seats = SeatView.new(Rules.setup(deck_a, deck_b, seed, -1, Session.mulligan), HUMAN)
 		state = seats.view
 		driver = AiRival.new(AIPlayer.new(AI, difficulty, seed + 7919))
 		driver.m = self
@@ -240,6 +241,8 @@ func _begin(opening: Array[GameEvent]) -> void:
 		Audio.sfx(&"magic_gain")
 		await get_tree().create_timer(0.9).timeout
 	await driver.begin()
+	# The human's mulligan, once the rival driver runs (an AI that went first has played its turn).
+	await _human_dream_up()
 	busy = false
 	refresh_ui()
 
@@ -250,6 +253,9 @@ func _process(delta: float) -> void:
 		driver.process(delta)
 	if picker and picker.is_open() and not human_choosing():
 		picker.force(-1)
+	# The pick was settled elsewhere (online turn clock): close the mulligan with what is marked.
+	if mulligan and mulligan.is_open() and (not human_choosing() or results.visible):
+		mulligan.confirm()
 	_watch_drag()
 	if board == null:
 		return
@@ -492,6 +498,9 @@ func _build_ui() -> void:
 	picker.m = self
 	root.add_child(picker)
 	picker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mulligan = MulliganPanel.new()
+	root.add_child(mulligan)
+	mulligan.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	timing_bar = TimingBar.new()
 	root.add_child(timing_bar)
 	hud.pause_overlay.reparent(root)
@@ -612,6 +621,12 @@ func _on_action_requested(a: Action) -> void:
 ## Dream Up: the picker shows the offered cards and the player keeps one. If the pick is settled
 ## elsewhere meanwhile (online: the room ended the turn), the picker just closes.
 func _human_dream_up() -> void:
+	if state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN and state.pending_kind == &"mulligan":
+		input.cancel()
+		var mask: int = await mulligan.open(state.players[HUMAN].hand.duplicate())
+		if state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN and state.pending_kind == &"mulligan":
+			await driver.submit(Action.choose(HUMAN, mask))
+		return
 	if state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
 		input.cancel()
 		var title: String = "DREAM UP"

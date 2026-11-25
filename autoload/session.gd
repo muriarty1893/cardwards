@@ -5,6 +5,8 @@ var player_deck: StringName = &"grove_guard"
 ## Empty = pick one of the other decks at random at match start.
 var ai_deck: StringName = &""
 var difficulty: AIPlayer.Difficulty = AIPlayer.Difficulty.MEDIUM
+## Each player may redraw starting cards at the start of their first turn (tests turn it off).
+var mulligan: bool = true
 ## 0 = new random seed each match. --seed=<n> on the command line fixes it.
 var seed: int = 0
 

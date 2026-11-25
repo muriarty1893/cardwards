@@ -13,6 +13,8 @@ const WIN_SCORE := 1000.0
 ## Chance that Easy plays a random legal action instead of its best one.
 const EASY_RANDOM := 0.25
 const HAND_CARD := 0.6
+## The AI throws back starting cards that cost this much or more.
+const MULLIGAN_COST := 5
 ## A curse in hand or deck (Dark Moon): worth less than nothing.
 const CURSE_VALUE := -1.0
 ## Per point of attack/health a changed copy in hand gained.
@@ -49,6 +51,8 @@ func _init(p: int, d: Difficulty, seed: int) -> void:
 ## improves the position. Attacks come back as normal, unblocked hits: the caller rolls the bars.
 func choose_action(s: GameState) -> Action:
 	if s.phase == GameState.Phase.CHOOSING:
+		if s.pending_kind == &"mulligan":
+			return Action.choose(player, mulligan_mask(s.players[player].hand))
 		return _best_choice(s)
 	if difficulty == Difficulty.HARD:
 		var plan: Array[Action] = AIPlanner.plan(s, self, BEAM, MAX_STATES)
@@ -89,6 +93,15 @@ func _best_choice(s: GameState) -> Action:
 			best = a
 			best_score = score
 	return best
+
+
+## Starting cards to redraw: anything costing MULLIGAN_COST or more (never the Star Shard).
+static func mulligan_mask(hand: Array[CardData]) -> int:
+	var mask: int = 0
+	for i: int in hand.size():
+		if hand[i].cost >= MULLIGAN_COST and hand[i].id != &"star_shard":
+			mask |= 1 << i
+	return mask
 
 
 func roll_hit() -> Action.Hit:

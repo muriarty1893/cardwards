@@ -71,6 +71,8 @@ func sfx(name: StringName, pitch_jitter: float = 0.08) -> void:
 	var stream: AudioStream = _stream(paths[randi() % paths.size()])
 	if stream == null:
 		return
+	if _players.is_empty():
+		return  # not set up (headless tools)
 	var p: AudioStreamPlayer = _players[_next]
 	_next = (_next + 1) % POOL
 	p.stream = stream
