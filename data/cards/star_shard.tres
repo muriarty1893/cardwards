@@ -15,4 +15,5 @@ id = &"star_shard"
 display_name = "Star Shard"
 kind = 2
 land = 4
+deck_legal = false
 effects = Array[ExtResource("1_suqvp")]([SubResource("Resource_7p1ix")])

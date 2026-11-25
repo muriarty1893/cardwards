@@ -49,6 +49,44 @@ static func merge_partners(into: StringName) -> Array[CardData]:
 	return out
 
 
+## A changed copy of `c` (Dark Moon spec 3.1): the printed card with the same id, plus `c`'s
+## changes, plus `delta`. Deltas add up; "keywords" are unioned; "gift" replaces. The copy keeps
+## the id so models, art and lookups by id still find it.
+static func variant(c: CardData, delta: Dictionary) -> CardData:
+	var printed: CardData = _cards.get(c.id, c) if has_card(c.id) else c
+	var total: Dictionary = c.changes.duplicate(true)
+	for k: String in delta:
+		match k:
+			"keywords":
+				var kws: Array = total.get("keywords", [])
+				for kw: Variant in delta[k]:
+					if not kw in kws:
+						kws.append(kw)
+				total["keywords"] = kws
+			"gift":
+				total["gift"] = delta[k]
+			_:
+				total[k] = int(total.get(k, 0)) + int(delta[k])
+	var v: CardData = printed.duplicate()
+	v.cost = maxi(printed.cost + int(total.get("cost", 0)), 0)
+	v.attack = maxi(printed.attack + int(total.get("attack", 0)), 0)
+	v.health = maxi(printed.health + int(total.get("health", 0)), 1) if printed.is_creature() else printed.health
+	var kws: Array[StringName] = printed.keywords.duplicate()
+	for kw: Variant in total.get("keywords", []):
+		if not StringName(kw) in kws:
+			kws.append(StringName(kw))
+	v.keywords = kws
+	v.effects = printed.effects.duplicate()
+	if total.has("gift"):
+		v.effects.append_array(Gifts.effects(StringName(total["gift"])))
+	v.changes = total
+	return v
+
+
+static func is_changed(c: CardData) -> bool:
+	return c != null and not c.changes.is_empty()
+
+
 ## Tests: adds a card to the database until remove_test_card.
 static func add_test_card(c: CardData) -> void:
 	_ensure_loaded()
@@ -63,11 +101,11 @@ static func remove_test_card(id: StringName) -> void:
 		_cards.erase(id)
 
 
-## Cards Dream Up may offer: never neutral ones or non-collectible ones. -1 means any kind / any land.
+## Cards Dream Up may offer: deck-legal collectible cards, never curses. -1 means any kind / any land.
 static func dream_up_pool(filter_kind: int, filter_land: int) -> Array[CardData]:
 	var out: Array[CardData] = []
 	for c: CardData in collectible_cards():
-		if c.land == CardData.Land.NEUTRAL:
+		if not c.deck_legal or c.curse:
 			continue
 		if (filter_kind < 0 or c.kind == filter_kind) and (filter_land < 0 or c.land == filter_land):
 			out.append(c)

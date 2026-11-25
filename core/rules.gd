@@ -18,6 +18,7 @@ static func setup(deck_a: DeckData, deck_b: DeckData, seed: int, first: int = -1
 			lane.land = Lands.MEADOW
 			ps.lanes.append(lane)
 		ps.deck = deck.cards.duplicate()
+		GameHistory.record_start(ps, ps.deck)
 		_shuffle(s, ps.deck)
 		s.players.append(ps)
 	for p: int in 2:
@@ -374,6 +375,7 @@ static func _play(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 			Effects.run(s, p, a.lane, c, &"on_play", a.targets, ev)
 		CardData.Kind.SPELL:
 			ev.append(GameEvent.make(&"spell_cast", {"player": p, "card": c.id}))
+			GameHistory.record_spell(ps, c)
 			if c.field:
 				Fields.set_field(s, p, c, ev)
 			Effects.run(s, p, -1, c, &"on_play", a.targets, ev)
@@ -806,6 +808,7 @@ static func resolve_deaths(s: GameState, ev: Array[GameEvent]) -> void:
 					s.players[p].put(l, null)
 					s.players[p].discard.append(cr.card)
 					ev.append(GameEvent.make(&"creature_destroyed", {"player": p, "lane": l, "card": cr.card.id}))
+					GameHistory.record_death(s.players[p])
 					_promote_follower(s, p, l, ev)
 					if not cr.hushed:
 						Effects.run(s, p, l, cr.card, &"on_destroyed", [], ev)

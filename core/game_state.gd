@@ -53,6 +53,10 @@ class PlayerState:
 	var hand: Array[CardData] = []
 	var discard: Array[CardData] = []
 	var lanes: Array[LaneState] = []
+	## What happened this game (Dark Moon spec 3.2), kept by GameHistory: "spells" (ids in cast
+	## order), "spell_lands" (their lands), "deaths_own", "stolen", "start_size",
+	## "start_no_dupes", "start_ids".
+	var history: Dictionary = GameHistory.fresh()
 
 	## The creature in a spot (0..3 main, 4..7 follower), or null.
 	func at(spot: int) -> CreatureState:
@@ -94,6 +98,7 @@ class PlayerState:
 		p.discard = discard.duplicate()
 		for l: LaneState in lanes:
 			p.lanes.append(l.clone())
+		p.history = history.duplicate(true)
 		return p
 
 
@@ -212,7 +217,8 @@ func digest() -> String:
 ## classes, cards as their id, the generator as seed + state.
 static func _dump(v: Variant) -> Variant:
 	if v is CardData:
-		return String((v as CardData).id)
+		var cd := v as CardData
+		return String(cd.id) if cd.changes.is_empty() else [String(cd.id), _dump(cd.changes)]
 	if v is RandomNumberGenerator:
 		return [(v as RandomNumberGenerator).seed, (v as RandomNumberGenerator).state]
 	if v is Array:

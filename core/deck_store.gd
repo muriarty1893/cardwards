@@ -5,6 +5,8 @@ extends RefCounted
 ## player going second always gets one).
 
 const DECK_SIZE := 30
+## With a card that allows it (allows_40).
+const BIG_DECK_SIZE := 40
 const MAX_COPIES := 2
 const ID_PREFIX := "custom_"
 
@@ -14,24 +16,41 @@ static var _decks: Array[DeckData] = []
 static var _loaded_from: String = ""
 
 
-## Why these cards aren't a legal deck, or "" when they are.
+## Why these cards aren't a legal deck, or "" when they are: 30 cards (40 if one of them allows
+## it), at most 2 of each and 1 of each legendary, nothing that can't go in decks (Star Shard,
+## tokens, merged forms).
 static func validate(cards: Array[CardData]) -> String:
-	if cards.size() != DECK_SIZE:
-		return "A deck needs %d cards (%d now)" % [DECK_SIZE, cards.size()]
+	var want: int = size_for(cards)
+	if cards.size() != want:
+		if cards.size() == 40:
+			return "A 40-card deck needs a card that allows it"
+		return "A deck needs %d cards (%d now)" % [want, cards.size()]
 	var counts: Dictionary = {}
 	for c: CardData in cards:
-		if c.land == CardData.Land.NEUTRAL or not c.collectible:
+		if not c.deck_legal or not c.collectible or c.curse:
 			return "%s can't go in a deck" % c.display_name
 		counts[c.id] = int(counts.get(c.id, 0)) + 1
-		if counts[c.id] > MAX_COPIES:
-			return "At most %d of %s" % [MAX_COPIES, c.display_name]
+		var most: int = 1 if c.legendary else MAX_COPIES
+		if counts[c.id] > most:
+			return "At most %d of %s" % [most, c.display_name]
 	return ""
 
 
+## 40 when the cards include one that allows a 40-card deck, else 30.
+static func size_for(cards: Array[CardData]) -> int:
+	for c: CardData in cards:
+		if c.allows_40:
+			return BIG_DECK_SIZE
+	return DECK_SIZE
+
+
 static func can_add(cards: Array[CardData], c: CardData) -> bool:
-	if c.land == CardData.Land.NEUTRAL or not c.collectible or cards.size() >= DECK_SIZE:
+	if not c.deck_legal or not c.collectible or c.curse:
 		return false
-	return cards.count(c) < MAX_COPIES
+	var room: int = BIG_DECK_SIZE if (c.allows_40 or size_for(cards) == BIG_DECK_SIZE) else DECK_SIZE
+	if cards.size() >= room:
+		return false
+	return cards.count(c) < (1 if c.legendary else MAX_COPIES)
 
 
 static func is_custom(id: StringName) -> bool:
