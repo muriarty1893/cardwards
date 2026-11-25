@@ -120,3 +120,20 @@ func test_menu_has_decks_button() -> bool:
 	await tree.process_frame
 	_restore(old)
 	return true
+
+
+func test_hover_preview_is_big() -> bool:
+	var old: String = _use_test_store()
+	var b := DeckBuilder.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(b)
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	b._show_preview(CardDB.card(&"dark_moon"))
+	var p: CardWidget = b.preview()
+	assert_true(p.visible, "shown")
+	assert_true(p.scale.x >= 2.0, "at least twice the card size (was 1.2)")
+	var r := Rect2(p.global_position, CardWidget.SIZE * p.scale)
+	var vp: Vector2 = b.get_viewport_rect().size
+	assert_true(Rect2(Vector2.ZERO, vp).encloses(r), "fully on screen")
+	b.close()
+	_restore(old)
+	return true

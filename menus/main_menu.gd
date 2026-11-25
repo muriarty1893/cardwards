@@ -51,6 +51,8 @@ func _ready() -> void:
 		for arg: String in OS.get_cmdline_user_args():
 			if arg == "--deck-builder-new":
 				builder.copy_deck()
+			if arg.begins_with("--preview-card="):
+				builder._show_preview(CardDB.card(StringName(arg.substr(15))))
 
 
 func _process(delta: float) -> void:

@@ -10,6 +10,8 @@ signal deck_chosen(id: StringName)
 
 const FILTERS: Array[String] = ["ALL", "MUSHROOM", "EMBER", "CANDY", "FROST", "DUNES", "NEUTRAL", "SPELLS"]
 const THUMB := 0.72
+## The hovered card's big preview, floating over the left column.
+const PREVIEW_SCALE := 2.1
 const COLUMNS := 6
 
 var deck_id: StringName = &""
@@ -93,10 +95,12 @@ func _build_left() -> Control:
 	_preview = CardWidget.new()
 	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_preview.visible = false
+	# Floats above everything (top_level) so it can be bigger than the column it sits over.
 	var holder := Control.new()
-	holder.custom_minimum_size = CardWidget.SIZE * 1.2
+	holder.top_level = true
+	holder.z_index = 50
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_preview.scale = Vector2.ONE * 1.2
+	_preview.scale = Vector2.ONE * PREVIEW_SCALE
 	holder.add_child(_preview)
 	col.add_child(holder)
 	return col
@@ -461,8 +465,16 @@ func _show_preview(c: CardData) -> void:
 	_preview = CardWidget.new()
 	_preview.setup(c, 0)
 	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_preview.scale = Vector2.ONE * 1.2
+	_preview.scale = Vector2.ONE * PREVIEW_SCALE
 	holder.add_child(_preview)
+	# Left edge, vertically centred on the screen.
+	var vp: Vector2 = get_viewport_rect().size
+	var big: Vector2 = CardWidget.SIZE * PREVIEW_SCALE
+	(holder as Control).global_position = Vector2(18.0, maxf(8.0, (vp.y - big.y) * 0.5))
+
+
+func preview() -> CardWidget:
+	return _preview
 
 
 func _unhandled_key_input(event: InputEvent) -> void:

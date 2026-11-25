@@ -42,3 +42,17 @@ func test_dark_gift_copies_still_fit() -> bool:
 		w.free()
 	assert_eq(bad, [] as Array[String], "Dark Gift (Last Breath) copies whose text overflows")
 	return true
+
+
+func test_every_card_name_fits_its_ribbon() -> bool:
+	var bad: Array[String] = []
+	for c: CardData in CardDB.all_cards():
+		var w := CardWidget.new()
+		w.setup(c, 0)
+		var l: Label = w.name_label()
+		var need: float = l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, l.get_theme_font_size("font_size")).x
+		if need > CardWidget.NAME_WIDTH or l.size.x > CardWidget.SIZE.x - 8.0 + 0.5:
+			bad.append("%s (%d > %d, label %d)" % [c.id, int(need), int(CardWidget.NAME_WIDTH), int(l.size.x)])
+		w.free()
+	assert_eq(bad, [] as Array[String], "names wider than the ribbon")
+	return true

@@ -4,6 +4,8 @@ extends Control
 ## type line, rules text, cost gem and (creatures) sword and heart badges.
 
 const SIZE := Vector2(140, 196)
+## Room for the name inside the ribbon (its width less a little margin for the outline).
+const NAME_WIDTH := 124.0
 const ART := Rect2(8, 8, 124, 93)
 const KIND_NAMES: Array[String] = ["CREATURE", "BUILDING", "SPELL"]
 ## Cost gem number while a discount lowers the cost.
@@ -33,6 +35,7 @@ var _combo: Panel
 var _ready: Panel
 static var _bold: FontVariation
 var _cost: Label
+var _name: Label
 var _atk: Label
 var _hp: Label
 var _frame_color: Color
@@ -71,14 +74,24 @@ func setup(c: CardData, i: int) -> void:
 	# Name ribbon across the bottom of the picture.
 	var ribbon := _panel(Rect2(4, 92, SIZE.x - 8, 26), land.darkened(0.25), 3, 6)
 	frame.add_child(ribbon)
-	var name_l := UiStyle.title(UiStyle.label(c.display_name, 15 if c.display_name.length() <= 13 else 14, Color.WHITE)) as Label
-	name_l.size = ribbon.size
+	var name_l := UiStyle.title(UiStyle.label(c.display_name, 15, Color.WHITE)) as Label
+	# Clip first: a Label never shrinks below its (cached) minimum size, which is the whole text until it clips.
+	name_l.clip_text = true
+	# Long names shrink (15 down to 9) until they fit the ribbon.
+	var name_font: Font = name_l.get_theme_font("font")
+	var nfs: int = 15
+	while nfs > 9 and name_font.get_string_size(c.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > NAME_WIDTH:
+		nfs -= 1
+	name_l.add_theme_font_size_override("font_size", nfs)
+	_name = name_l
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_l.clip_text = true
 	name_l.add_theme_color_override("font_outline_color", Palette.INK)
 	name_l.add_theme_constant_override("outline_size", 6)
 	ribbon.add_child(name_l)
+	# Pinned to the ribbon (a Label grows to its text otherwise, pushing long names off it).
+	name_l.position = Vector2.ZERO
+	name_l.size = Vector2(SIZE.x - 8, 26)
 	var kind := UiStyle.bold(UiStyle.label(type_line(c), 10, Palette.INK))
 	kind.position = Vector2(4, 118)
 	kind.size = Vector2(SIZE.x - 8, 13)
@@ -178,6 +191,10 @@ static func text_height(font: Font, text: String, width: float, fs: int) -> floa
 		lines += 1
 	var lh: float = font.get_height(fs)
 	return lines * lh + (lines - 1) * LINE_GAP + 2.0
+
+
+func name_label() -> Label:
+	return _name
 
 
 func attack_label() -> Label:
