@@ -82,3 +82,8 @@ Change: the black background square was removed so the icons are white on transp
 - `monsters/forged/`: every creature, modelled, rigged and animated for this game in Blender. Mycelia
   (`mycelia_spore_weaver.glb`, source `art_src/Mycelia.blend`) was made by hand; the rest are built by the
   recipes in `art_src/forge/creatures/` (run them in Blender, see `art_src/forge/core.py`).
+
+- Dressed creatures in `monsters/forged/` (Dune Raptor, Emberkit, Sand Fox, Taffy Wolf Matron, Snow Wolf,
+  Carrion Hound, Shiba Shepherd, Oasis Alpaca, Bog Toad) start from Quaternius's animated animals
+  (Velociraptor, Fox, Wolf, Shiba Inu, Alpaca, Frog; CC0, https://quaternius.com, via https://poly.pizza),
+  recoloured and given card props in Blender (`art_src/forge/dress.py`, sources in `art_src/models/`).

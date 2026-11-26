@@ -509,6 +509,16 @@ def run(cid, export=True):
     # Legends keep full sculpt detail; everyone else is smaller on the board and gets 60% of the polygons
     # (keeps the web download in check).
     C.budget_scale = 1.0 if "legend)" in (mod.__doc__ or "") else 0.6
+    if hasattr(mod, "DRESS"):
+        from . import dress
+        rig, meshes, D = dress.build(C, mod)
+        if export:
+            dress.export(C, rig, meshes)
+        lo, hi = D.bounds()
+        dims = hi - lo
+        fit = game_fit(cid, dims)
+        flag = "  <-- SHRUNK" if fit < 0.75 else ""
+        return f"{cid}: dressed {mod.DRESS['src']}, {dims.x:.2f} x {dims.y:.2f} x {dims.z:.2f}, in-game size {fit:.2f}{flag}"
     mod.build(C)
     rig, body = C.finish(export)
     preview_setup(rig)
