@@ -1,33 +1,50 @@
-"""Barkbeetle (Mushroom Forest, 3): a heavy stag beetle armoured in living bark, branching antler mandibles,
-moss in the seams of its carapace and six thick knobbly legs."""
+"""Barkbeetle (Mushroom Forest, 3): a heavy stag beetle armoured in living bark. Sculpted: a broad, domed
+carapace split into two bark wing-cases with moss and leaves growing in the seam, a heavy pronotum
+shield, a low wide head with huge branching antler mandibles, and six thick knobbly legs."""
+import math
 from mathutils import Vector as V
-from forge import kits
+from forge.sculpt import Clay, recolor, smoothstep, cracks
 
 
 def build(C):
     C.palette(bark="4a3420", bark2="6a4a2a", moss="5f9a2e", eye="ffcf3a", leg="2a1e14", horn="7a5a3a", leaf="3a8a2a")
-    C.attack = "ram"
-    kits.quad(C, "leg", hip=(0.28, 0.42), chest=(-0.16, 0.46), neck=(-0.3, 0.46), head=(-0.55, 0.42),
-              r_hip=0.2, r_chest=0.2, r_waist=0.2, r_neck=0.12, r_head=0.15, r_snout=0.1, r_leg=0.045, r_paw=0.05,
-              knee=0.25, leg_x=0.3, tail=((0.42, 0.4),), r_tail=0.05, jaw=False, head_m="bark")
-    at = C.at
-    # bark carapace: two wing cases with a seam of moss
+    C.plan, C.attack = "quad", "ram"
+    C.bone("root", (0, 0, 0), (0, 0, 0.3), deform=False)
+    C.bone("hips", (0, 0.28, 0.42), (0, 0.0, 0.44), "root")
+    C.bone("chest", (0, 0.0, 0.44), (0, -0.26, 0.44), "hips")
+    C.bone("head", (0, -0.26, 0.42), (0, -0.5, 0.4), "chest")
+    C.spine, C.head = ["hips", "chest"], "head"
+    for side, sx in (("L", -1), ("R", 1)):
+        for k, y in enumerate((-0.18, 0.04, 0.24)):
+            up, lo = f"leg{k}.{side}", f"shin{k}.{side}"
+            C.bone(up, (0.22 * sx, y, 0.32), (0.4 * sx, y - 0.02 * (1 - k), 0.32), "chest" if y < 0 else "hips")
+            C.bone(lo, (0.4 * sx, y - 0.02 * (1 - k), 0.32), (0.46 * sx, y + 0.04 * (k - 1), 0.02), up)
+            if k != 1:
+                C.legs.append((up, lo, (0.0 if side == "L" else 0.5) if k == 0 else (0.5 if side == "L" else 0.0)))
+    cl = Clay(C, "Body", res=0.02)
+    cl.add((0, 0.16, 0.46), (0.32, 0.36, 0.22), group="bark")                       # wing cases
+    cl.add((0, 0.16, 0.66), (0.03, 0.32, 0.04), group="moss")                        # mossy seam
+    cl.add((0, -0.16, 0.46), (0.28, 0.16, 0.16), group="bark2")                      # pronotum shield
+    cl.add((0, -0.36, 0.42), (0.2, 0.12, 0.1), group="bark")                         # head
+    cl.add((0, 0.16, 0.28), (0.24, 0.3, 0.08), group="leg")
+    body = cl.build({"bark": "bark", "bark2": "bark2", "moss": "moss", "leg": "leg"}, voxel=0.01, budget=8000, relax=2,
+                    texture={"type": 'STUCCI', "scale": 0.03, "strength": 0.015})
+    recolor(body, lambda p, n: smoothstep(0.2, 0.7, math.sin(p.y * 40 + math.sin(p.x * 18) * 2)) * 0.6
+            * (1.0 if p.z > 0.4 else 0.0), "bark2")
+    recolor(body, lambda p, n: cracks(p, 0.09, 0.05, seed=61) * smoothstep(0.5, 0.9, n.z) * 0.7, "moss")
     for mx in (-1, 1):
-        C.ellipsoid(f"Elytra{mx}", (0.15 * mx, 0.12, 0.56), (0.18, 0.4, 0.17), "bark2", "hips",
-                    rot=(0, 10 * mx, 0))
-        for k in range(3):
-            C.decal(f"Ridge{mx}{k}", 0.15 * mx, 3, (0.03, 0.22, 0.02), "bark", "hips", part=f"Elytra{mx}",
-                    dir=(0, 0, -1), y=0.05 + 0.08 * (k - 1))
-    C.ellipsoid("Seam", (0, 0.12, 0.7), (0.04, 0.38, 0.04), "moss", "hips")
-    C.ellipsoid("Pronotum", (0, -0.18, 0.56), (0.24, 0.17, 0.14), "bark", "chest")
-    # antler mandibles
-    for mx in (-1, 1):
-        base = V(at("snout", 0.08, -0.04, 0.0, mx))
-        pts = [base, base + V((0.12 * mx, -0.16, 0.1)), base + V((0.08 * mx, -0.32, 0.22)), base + V((-0.02 * mx, -0.38, 0.3))]
-        C.tube(f"Mandible{mx}", pts, [0.04, 0.032, 0.022, 0.005], "horn", "head")
-        C.tube(f"Prong{mx}", [V(pts[1]), V(pts[1]) + V((0.1 * mx, -0.06, 0.12))], [0.02, 0.004], "horn", "head")
-        C.ellipsoid(f"Eye{mx}", at("brow", 0.11, -0.02, 0.02, mx), (0.03, 0.03, 0.025), "eye", "head")
-        # middle legs (rigid on the hips/chest)
-        C.tube(f"MidLeg{mx}", [V((0.18 * mx, 0.0, 0.4)), V((0.34 * mx, -0.02, 0.32)), V((0.38 * mx, 0.02, 0.02))],
-               [0.04, 0.035, 0.025], "leg", "chest")
-    C.ellipsoid("Leaf", (0.08, 0.3, 0.73), (0.07, 0.04, 0.015), "leaf", "hips", rot=(0, 0, 30))
+        C.ellipsoid(f"Eye{mx}", (0.14 * mx, -0.42, 0.46), (0.03, 0.03, 0.03), "eye", "head")
+        b = V((0.1 * mx, -0.44, 0.42))
+        main = [b, b + V((0.08 * mx, -0.16, 0.06)), b + V((0.04 * mx, -0.32, 0.14)), b + V((-0.06 * mx, -0.4, 0.16))]
+        C.tube(f"Mandible{mx}", main, [0.04, 0.035, 0.025, 0.006], "horn", "head")
+        for k, d in enumerate([(0.08 * mx, -0.04, 0.12), (0.06 * mx, 0.02, 0.1)]):
+            p = V(main[k + 1])
+            C.tube(f"Tine{mx}{k}", [p, p + V(d)], [0.018, 0.004], "horn", "head")
+        side = "L" if mx < 0 else "R"
+        for k, y in enumerate((-0.18, 0.04, 0.24)):
+            a, b2, c = V((0.22 * mx, y, 0.32)), V((0.4 * mx, y - 0.02 * (1 - k), 0.36)), V((0.46 * mx, y + 0.04 * (k - 1), 0.02))
+            C.tube(f"Leg{side}{k}", [a, b2, c], [0.04, 0.035, 0.015], "leg", None, allowed=[f"leg{k}.{side}", f"shin{k}.{side}"])
+            C.ellipsoid(f"Knob{side}{k}", tuple(b2), (0.045,) * 3, "bark2", f"leg{k}.{side}")
+    for k in range(4):
+        C.ellipsoid(f"Leaf{k}", (0.06 * (k % 2 * 2 - 1), -0.02 + 0.12 * k, 0.69), (0.05, 0.03, 0.012), "leaf", "hips",
+                    rot=(0, 0, 40 * (k % 2 * 2 - 1)))

@@ -1,34 +1,46 @@
-"""Bog Toad (Mushroom Forest, 3): a hulking marsh toad, slick dark-green skin with poison-yellow streaks,
-a crown of cattail reeds, a lily pad slung over its back and a sticky tongue curled in its wide mouth."""
+"""Bog Toad (Mushroom Forest, 3): a hulking marsh toad. Sculpted: a heavy, warty body squatting on thick
+folded hind legs, a broad flat head with a huge wide mouth and a sticky tongue curled inside, bulging
+orange eyes, slick dark-green skin with poison-yellow streaks, a crown of cattail reeds and a lily pad
+slung over its back."""
+import math
+import random
 from mathutils import Vector as V
-from forge import kits
+from forge import skulpt
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
-    C.palette(skin="2f5a2a", streak="d8e03a", belly="c8c890", eye="ff8a1a", pupil="0a0a08", mouth="3a1418",
-              tongue="e85a7a", reed="7a5a2a", reedtop="4a2a14", pad="3a8a3a")
+    C.palette(skin="2f5a2a", streak="d8e03a", belly="c8c890", eye="ff8a1a", pupil="0a0a08", mouth="3a1418", tongue="e85a7a",
+              reed="7a5a2a", reedtop="4a2a14", pad="3a8a3a")
     C.attack = "bite"
-    C.relax = 0.7
-    kits.quad(C, "skin", hip=(0.26, 0.52), chest=(-0.14, 0.6), neck=(-0.3, 0.66), head=(-0.56, 0.6),
-              r_hip=0.32, r_chest=0.36, r_waist=0.36, r_neck=0.28, r_head=0.28, r_snout=0.2, r_leg=0.09, r_paw=0.11,
-              knee=0.26, leg_x=0.32, tail=((0.45, 0.48),), r_tail=0.1, muscle=1.35)
-    at = C.at
-    C.ellipsoid("Lip", at("snout", 0, -0.03, -0.07), (0.3, 0.18, 0.03), "mouth", "head")
-    C.ellipsoid("Jaw", at("snout", 0, 0.02, -0.13), (0.27, 0.22, 0.08), "belly", "jaw")
-    C.ellipsoid("Tongue", at("snout", 0, -0.12, -0.08), (0.08, 0.06, 0.04), "tongue", "jaw")
-    C.decal("Belly", 0, 0.3, (0.34, 0.42, 0.06), "belly", "chest", dir=(0, 0, 1), y=-0.05, spin=90)
-    for mx in (-1, 1):
-        C.ellipsoid(f"EyeBump{mx}", at("cran", 0.17, -0.06, 0.17, mx), (0.11, 0.11, 0.09), "skin", "head")
-        C.ellipsoid(f"Eye{mx}", at("cran", 0.18, -0.13, 0.19, mx), (0.07, 0.05, 0.055), "eye", "head")
-        C.ellipsoid(f"Pupil{mx}", at("cran", 0.18, -0.175, 0.19, mx), (0.045, 0.01, 0.015), "pupil", "head")
-        for k in range(3):
-            C.decal(f"Streak{mx}{k}", 0, 0.62, (0.025, 0.14, 0.02), "streak", "chest" if k < 2 else "hips",
-                    dir=(-mx, 0, 0), y=-0.15 + 0.2 * k, spin=10)
-    # cattail crown and lily pad
-    for k, x in enumerate((-0.08, 0.0, 0.08)):
-        b = V(at("cran", x, 0.02, 0.22))
-        C.tube(f"Reed{k}", [b, b + V((x * 0.5, 0.03, 0.22 + 0.05 * (k == 1)))], [0.012, 0.01], "reed", "head")
-        C.ellipsoid(f"Cattail{k}", tuple(b + V((x * 0.5, 0.03, 0.24 + 0.05 * (k == 1)))), (0.025, 0.025, 0.06), "reedtop",
-                    "head")
-    loc = C.surf(0, 3, dir=(0, 0, -1), y=0.12)[0]
-    C.ellipsoid("Pad", tuple(loc + V((0.05, 0, 0.02))), (0.26, 0.24, 0.02), "pad", "hips", rot=(8, -6, 0))
+    cl, at = skulpt.quad(C, hip=(0.24, 0.42), chest=(-0.16, 0.52), r_chest=(0.3, 0.26, 0.26), r_belly=(0.32, 0.3, 0.24),
+                         r_hips=(0.3, 0.24, 0.22), leg_x=0.3, r_thigh=0.12, r_shin=0.06, r_paw=0.09, paw_len=1.2,
+                         neck=((-0.3, 0.6),), r_neck=(0.24,), head=(-0.4, 0.66), r_head=(0.28, 0.22, 0.17),
+                         snout=(-0.6, 0.6), r_snout=(0.2, 0.12), tail=((0.44, 0.36),), r_tail=(0.06, 0.03),
+                         digi=False, group="skin", belly_group="belly", jaw=True)
+    h = at["head"]
+    cl.mirror((0.3, 0.26, 0.26), (0.14, 0.24, 0.16), group="skin")                 # folded hind legs
+    cl.add((0, -0.48, 0.56), (0.26, 0.18, 0.03), group="mouth", neg=True)            # wide mouth
+    for sx in (-1, 1):
+        cl.add((0.15 * sx, h.y - 0.04, h.z + 0.14), (0.09, 0.09, 0.09), group="skin")
+    rnd = random.Random(7)
+    for k in range(18):                                                              # warts
+        a, b = rnd.uniform(0, 6.28), rnd.uniform(0.4, 1.3)
+        cl.add((math.cos(a) * 0.3 * math.sin(b), 0.05 + math.sin(a) * 0.32 * math.sin(b), 0.5 + 0.26 * math.cos(b)),
+               (0.035, 0.035, 0.03), group="skin")
+    body = cl.build({"skin": "skin", "belly": "belly", "mouth": "mouth"}, voxel=0.012, budget=9000, relax=2,
+                    texture={"type": 'CLOUDS', "scale": 0.025, "strength": 0.012})
+    recolor(body, lambda p, n: smoothstep(0.75, 0.95, math.sin(p.y * 16 + abs(p.x) * 5)) * smoothstep(0.2, 0.7, n.z),
+            "streak")
+    skulpt.eyes(C, [(0.15, h.y - 0.13, h.z + 0.18)], 0.055, "eye", "pupil")
+    C.tube("Tongue", [V((0, -0.4, 0.55)), V((0, -0.56, 0.55)), V((0.04, -0.6, 0.6)), V((0.02, -0.56, 0.63))],
+           [0.04, 0.035, 0.03, 0.02], "tongue", "jaw")
+    for k in range(5):
+        a = math.pi * (0.2 + 0.6 * k / 4)
+        b = V((math.cos(a) * 0.14, h.y + 0.08 - math.sin(a) * 0.04, h.z + 0.14))
+        top = b + V((math.cos(a) * 0.06, 0.04, 0.32 + 0.06 * (k % 2)))
+        C.tube(f"Reed{k}", [b, top], [0.012, 0.008], "reed", "head")
+        C.ellipsoid(f"ReedTop{k}", tuple(top - V((0, 0, 0.06))), (0.025, 0.025, 0.07), "reedtop", "head")
+    C.lathe("Pad", [(0.001, 0.0), (0.24, 0.0), (0.25, 0.015)], "pad", "hips", segs=16)
+    C.parts[-1][0].data.transform(__import__("mathutils").Matrix.Translation((0.06, 0.16, 0.74)) @
+                                  __import__("mathutils").Matrix.Rotation(0.3, 4, 'Y'))

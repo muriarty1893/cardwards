@@ -180,12 +180,18 @@ def wing_bones(C, shoulder, elbow, tip, parent="chest"):
         C.wings.append((f"wing.{side}", f"wing2.{side}", side))
 
 
-def eyes(C, pts, r, m_eye="eye", m_pupil=None, bone="head", slit=False, look=(0, -1, 0)):
-    """Crisp eyes at right-side points (mirrored); a pupil a little in front if m_pupil."""
+def eyes(C, pts, r, m_eye="eye", m_pupil=None, bone="head", slit=False, look=(0, -1, 0), seat=True):
+    """Crisp eyes at right-side points (mirrored); a pupil a little in front if m_pupil. seat: the eye is
+    moved onto the sculpted body's real surface (seen from the front), half sunk in, since overlapping
+    clay swells past the lumps' nominal sizes."""
     lk = V(look).normalized()
     for k, p in enumerate(pts):
         for sx in (-1, 1):
             c = V((p[0] * sx, p[1], p[2]))
+            if seat and any(q[0].name == "Body" for q in C.parts):
+                hit, nor = C.surf(c.x, c.z, dir=tuple(-lk))
+                if hit is not None and abs(hit.y - c.y) < 0.35:
+                    c = hit + lk * (-r * 0.35)
             C.ellipsoid(f"Eye{k}{sx}", tuple(c), (r, r * 0.7, r * 0.85), m_eye, bone)
             if m_pupil:
                 pr = (r * 0.25, r * 0.3, r * 0.75) if slit else (r * 0.45, r * 0.35, r * 0.45)
