@@ -63,6 +63,7 @@ class Creature:
         self.relax = 0.4         # Laplacian smoothing on skin bodies (up to 1.0 for big round bodies)
         self.warps = []
         self.auto_weight = set()  # part names weighted by Blender's heat weighting (sculpted bodies)
+        self.hexes = {}          # palette name -> hex (clay colours may name palette entries)
         self.anch = {}           # named points set by kits (brow, snout, chest, back...)
 
     def surf(self, x, z, part="Body", dir=(0, 1, 0), y=None, sink=0.0):
@@ -102,6 +103,7 @@ class Creature:
     def mat(self, name, hexcol, rough=0.75, metal=0.0):
         if name in self.mats:
             return self.mats[name]
+        self.hexes[name] = hexcol
         m = bpy.data.materials.new(name)
         m.use_nodes = True
         p = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")

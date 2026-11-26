@@ -1,28 +1,34 @@
-"""Hot Head (Ember Flats, 1): a short-fused fire imp whose whole head is a living flame, a charcoal body
-with clenched glowing fists, stomping goat hooves and a permanent snarl in the blaze."""
+"""Hot Head (Ember Flats, 1): a short-fused fire imp. Sculpted: a squat, barrel-chested little brawler of
+charcoal with magma veins, long arms ending in clenched glowing fists, goat legs on stomping hooves, two
+stubby horns, and a whole head that is a living flame snarling with glowing eyes."""
 from mathutils import Vector as V
-from forge import kits, props
+from forge import props, skulpt
+from forge.sculpt import recolor, smoothstep, cracks, crease
 
 
 def build(C):
     C.palette(body="2a2024", vein="ff5a1a", fire="ff6a1a", hot="ffd03a", core="fff4c0", eye="1a0a08", hoof="140c0c",
               horn="3a2a2a")
     C.attack = "swipe"
-    kits.biped(C, "body", hip=0.45, chest=0.75, neck=0.88, head_top=1.1, shoulder_x=0.2, hip_x=0.1,
-               hand=(0.32, -0.08, 0.45), r_hip=0.15, r_waist=0.13, r_chest=0.19, r_neck=0.08, r_head=0.15,
-               r_arm=0.06, r_hand=0.07, r_leg=0.07, r_foot=0.07, skin_head=False, lean=0.05, knee_fwd=0.05)
-    h = V((0, -0.06, 0.98))
-    C.ellipsoid("HeadCore", tuple(h), (0.16, 0.15, 0.15), "hot", "head")
-    props.flame(C, h + V((0, 0.02, 0.0)), 0.3, "head", "fire", "hot", n=7, lean=(0, 0.25, 0), m_core="core", spread=0.9)
+    cl, at = skulpt.biped(C, hip=0.5, chest=0.86, head=1.08, lean=0.08, shoulder_x=0.26, hip_x=0.12,
+                          r_chest=(0.25, 0.2, 0.2), r_waist=(0.16, 0.13, 0.12), r_hips=(0.17, 0.13, 0.11),
+                          r_head=(0.15, 0.15, 0.15), r_arm=(0.07, 0.06), r_hand=0.085, r_leg=(0.09, 0.05),
+                          r_foot=(0.05, 0.07, 0.05), arm_len=0.5, group="body", digi=True)
+    h = at["head"]
+    cl.mirror((0.1, -0.16, 0.8), (0.1, 0.07, 0.09), group="body")                 # pecs
+    cl.mirror((0.06, h.y - 0.12, h.z + 0.02), (0.03, 0.03, 0.03), group="core", neg=True)
+    cl.add((0, h.y - 0.13, h.z - 0.07), (0.07, 0.03, 0.03), group="core", neg=True)   # snarl
+    body = cl.build({"body": "body", "core": "hot"}, voxel=0.01, budget=9000, relax=2,
+                    texture={"type": 'VORONOI', "scale": 0.03, "strength": 0.01})
+    recolor(body, lambda p, n: 0.9 * cracks(p, 0.3, 0.05, seed=23) * (1.0 if p.z < 0.98 else 0.0), "vein")
+    crease(body, "vein", 0.62, 0.86, fn=lambda p, n: 1.0 if p.z < 0.98 else 0.0)
+    recolor(body, lambda p, n: smoothstep(0.95, 1.05, p.z), "hot")
+    recolor(body, lambda p, n: smoothstep(1.06, 1.2, p.z) * 0.8, "core")
     for mx in (-1, 1):
-        C.ellipsoid(f"Eye{mx}", tuple(h + V((0.06 * mx, -0.14, 0.02))), (0.035, 0.015, 0.02), "eye", "head",
-                    rot=(0, -20 * mx, 0))
-        C.horn(f"Horn{mx}", tuple(h + V((0.1 * mx, 0, 0.08))), tuple(h + V((0.2 * mx, 0.06, 0.25))), 0.035, "horn", "head")
-        hd = V(C.anch["hdL" if mx < 0 else "hdR"])
-        C.ellipsoid(f"Fist{mx}", tuple(hd), (0.085, 0.085, 0.08), "vein", "forearm.L" if mx < 0 else "forearm.R")
-    C.box("Snarl", tuple(h + V((0, -0.15, -0.07))), (0.12, 0.015, 0.03), "eye", "head", bevel=0.3)
-    for k, (x, z) in enumerate([(0.08, 0.75), (-0.08, 0.65), (0.0, 0.55)]):
-        C.decal(f"Vein{k}", x, z, (0.07, 0.015, 0.015), "vein", "chest", spin=60 + 30 * k)
-    for side in ("L", "R"):
-        ft = C.bones[f"shin.{side}"]["tail"]
-        C.ellipsoid(f"Hoof{side}", (ft.x, ft.y - 0.03, 0.04), (0.07, 0.08, 0.05), "hoof", f"shin.{side}")
+        C.ellipsoid(f"Eye{mx}", (0.06 * mx, h.y - 0.13, h.z + 0.02), (0.028, 0.012, 0.02), "core", "head")
+        C.cone(f"Horn{mx}", (0.1 * mx, h.y, h.z + 0.08), (0.17 * mx, h.y + 0.04, h.z + 0.2), 0.04, "horn", "head", segs=6)
+        hd = at["hd" + ("L" if mx < 0 else "R")]
+        C.ellipsoid(f"Fist{mx}", tuple(hd + V((0, -0.01, -0.05))), (0.09, 0.09, 0.09), "fire", f"forearm.{'L' if mx < 0 else 'R'}")
+        ft = at["ft" + ("L" if mx < 0 else "R")]
+        C.ellipsoid(f"Hoof{mx}", tuple(ft + V((0, -0.02, -0.02))), (0.06, 0.07, 0.04), "hoof", f"shin.{'L' if mx < 0 else 'R'}")
+    props.flame(C, tuple(h + V((0, 0.02, 0.05))), 0.34, "head", "fire", "hot", n=6, lean=(0, 0.4, 0), m_core="core")

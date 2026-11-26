@@ -1,6 +1,7 @@
 """Ember Hornet (Ember Flats, 2): a giant fire hornet, ember-striped abdomen with a white-hot stinger,
 four amber wings, hooked mandibles and burning red eyes."""
 import math
+from mathutils import Vector as V
 
 
 def build(C):
@@ -15,23 +16,34 @@ def build(C):
     C.bone("tail1", (0, 0.1, 0.9), (0, 0.5, 0.8), "chest")
     C.bone("tail2", (0, 0.5, 0.8), (0, 0.85, 0.55), "tail1")
     C.spine, C.head, C.tail = ["chest"], "head", ["tail1", "tail2"]
-    # thorax + head + abdomen
-    C.skin("Body", {"th": (0, -0.05, 0.92, 0.2, 0.18), "nk": (0, -0.28, 0.95, 0.09),
-                    "hd": (0, -0.42, 0.95, 0.17, 0.15)}, [("th", "nk"), ("nk", "hd")], "chitin", subdiv=2)
-    C.skin("Abdomen", {"a0": (0, 0.18, 0.88, 0.1), "a1": (0, 0.4, 0.82, 0.25, 0.22), "a2": (0, 0.66, 0.7, 0.22, 0.2),
-                       "a3": (0, 0.86, 0.52, 0.1)}, [("a0", "a1"), ("a1", "a2"), ("a2", "a3")], "chitin", subdiv=2,
-           allowed=["tail1", "tail2"])
-    # ember stripes ringing the abdomen
-    from mathutils import Vector
-    axis = [Vector((0, 0.18, 0.88)), Vector((0, 0.4, 0.82)), Vector((0, 0.66, 0.7)), Vector((0, 0.86, 0.52))]
-    for i, (t, r) in enumerate([(0.75, 0.215), (1.25, 0.235), (1.75, 0.2), (2.25, 0.14)]):
-        k = int(t)
-        a, b = axis[k], axis[k + 1]
-        p = a.lerp(b, t - k)
-        d = (b - a).normalized()
+    # sculpted: a hunched armoured thorax, a pinched waist, a heavy banded abdomen with ridged plates,
+    # a wedge head with a heavy brow over the compound eyes
+    from forge.sculpt import Clay, recolor, smoothstep
+    cl = Clay(C, "Body", res=0.022)
+    cl.add((0, -0.05, 0.92), (0.19, 0.22, 0.18), group="chitin")                     # thorax
+    cl.add((0, -0.1, 1.04), (0.14, 0.14, 0.08), group="chitin")                      # scutum hump
+    cl.add((0, 0.12, 0.9), (0.07, 0.08, 0.07), group="chitin")                       # waist
+    axis = [V((0, 0.2, 0.88)), V((0, 0.4, 0.83)), V((0, 0.64, 0.72)), V((0, 0.86, 0.54))]
+    cl.chain(axis, [0.13, 0.24, 0.21, 0.08], group="chitin")
+    for k, t in enumerate((0.25, 0.45, 0.65, 0.85)):
+        seg = min(int(t * 3), 2)
+        p0 = axis[seg].lerp(axis[seg + 1], t * 3 - seg)
+        r = [0.2, 0.25, 0.22, 0.15][k]
+        d = (axis[seg + 1] - axis[seg]).normalized()
         ang = math.degrees(math.atan2(-d.z, d.y))
-        C.ellipsoid(f"Stripe{i}", tuple(p), (r + 0.012, 0.045, r * 0.9 + 0.012), "stripe",
-                    "tail1" if i == 0 else "tail2", rot=(-ang, 0, 0))
+        cl.add(tuple(p0), (r, 0.05, r * 0.92), rot=(-ang, 0, 0), group="chitin")      # ridged plates
+    cl.add((0, -0.3, 0.95), (0.08, 0.08, 0.08), group="chitin")                      # neck
+    cl.add((0, -0.44, 0.95), (0.16, 0.12, 0.15), group="chitin")                     # head
+    cl.add((0, -0.52, 0.86), (0.09, 0.08, 0.06), group="chitin")                     # clypeus
+    cl.mirror((0.07, -0.53, 1.04), (0.07, 0.04, 0.03), rot=(0, 0, -15), group="chitin")   # brow
+    body = cl.build({"chitin": "chitin"}, voxel=0.011, budget=8000, texture={"type": 'VORONOI', "scale": 0.02,
+                                                                               "strength": 0.006})
+    def bands(p, n):
+        if p.y < 0.22:
+            return 0.0
+        return smoothstep(0.1, 0.6, math.sin((p.y * 0.8 - p.z * 0.45) * 30))
+    recolor(body, bands, "stripe")
+    recolor(body, lambda p, n: smoothstep(0.55, 0.95, n.z) * 0.35 * (1.0 if p.y > 0.2 else 0.0), "hot")
     C.cone("Stinger", (0, 0.9, 0.48), (0, 1.12, 0.22), 0.05, "hot", "tail2", segs=8)
     # red compound eyes and mandibles
     for mx in (-1, 1):

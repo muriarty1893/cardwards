@@ -18,6 +18,8 @@ import bmesh
 from mathutils import Vector as V, Euler, Matrix
 from .core import srgb
 
+_HEX = {}        # palette of the creature being built: colours may be given by palette name
+
 FIELD_K = 1.76   # metaball size per unit of visible radius (measured: threshold 0.6, stiffness 2)
 
 
@@ -26,6 +28,8 @@ class Clay:
 
     def __init__(self, C, name="Body", res=0.035):
         self.C = C
+        _HEX.clear()
+        _HEX.update(getattr(C, "hexes", {}))
         self.name = name
         self.res = res
         self.els = []    # (center, radii, rot Euler, group, negative, stiffness)
@@ -128,7 +132,7 @@ class Clay:
     def paint(self, ob, colors, ao, top_light, under_dark):
         """Vertex colours: blended group colours, lit from above, darkened below and in the creases."""
         me = ob.data
-        lin = {g: V(srgb(h)) for g, h in colors.items()}
+        lin = {g: V(srgb(_HEX.get(h, h))) for g, h in colors.items()}
         default = next(iter(lin.values()))
         groups = [e for e in self.els if not e[4]]
         cols = []
@@ -193,7 +197,7 @@ def recolor(ob, fn, hexcol, soft=True):
     me = ob.data
     attr = me.color_attributes["Col"]
     shade = me.attributes["Shade"]
-    c = V(srgb(hexcol))
+    c = V(srgb(_HEX.get(hexcol, hexcol)))
     for i, v in enumerate(me.vertices):
         w = max(0.0, min(1.0, fn(v.co, v.normal)))
         if w <= 0:
@@ -230,3 +234,22 @@ def cracks(p, scale=0.12, width=0.18, seed=1):
                 elif d < d2:
                     d2 = d
     return smoothstep(width, 0.0, d2 - d1)
+
+
+def crease(ob, hexcol, lo=0.6, hi=0.85, strength=1.0, fn=None):
+    """Colours the body's creases and seams (where the baked occlusion is darkest) - lava between rock
+    plates, moss in the folds. Unlike recolor, the colour is laid on unshaded so it glows. fn(p, n) can
+    limit where it applies."""
+    me = ob.data
+    attr = me.color_attributes["Col"]
+    shade = me.attributes["Shade"]
+    c = V(srgb(_HEX.get(hexcol, hexcol)))
+    for i, v in enumerate(me.vertices):
+        w = smoothstep(hi, lo, shade.data[i].value) * strength
+        if fn:
+            w *= max(0.0, min(1.0, fn(v.co, v.normal)))
+        if w <= 0:
+            continue
+        old = V(attr.data[i].color[:3])
+        mix = old.lerp(c, min(1.0, w))
+        attr.data[i].color = (mix.x, mix.y, mix.z, 1.0)
