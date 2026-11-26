@@ -151,7 +151,7 @@ const ENTRIES: Dictionary = {
 	&"grave_toad": {"model": "big/Frog", "tint": &"moss"},
 	&"moss_ape_matriarch": {"model": "big/Monkroose", "tint": &"none"},
 	&"mycel_gravekeeper": {"model": "big/Orc_Skull", "tint": &"moss"},
-	&"mycelia_spore_weaver": {"model": "extra/Spider.fbx", "tint": &"moss"},
+	&"mycelia_spore_weaver": {"model": "extra/Mycelia.glb", "tint": &"none"},
 	&"ancient_hollowneck": {"model": "extra/Apatosaurus.fbx", "tint": &"leaf"},
 	&"ember_hornet": {"model": "flying/Armabee_Evolved", "tint": &"ember"},
 	&"flame_tiki": {"model": "big/Tribal", "tint": &"none"},

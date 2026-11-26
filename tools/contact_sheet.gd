@@ -2,6 +2,7 @@ extends Node3D
 ## Dev: grids of monster models in the cartoon style.
 ##   --cards            the 24 creatures as VisualDB maps them, one land per row, sized by level
 ##   --group=<dir>      every model under res://assets/monsters/<dir> (for picking alternates)
+##   --ids=a,b,c        just these cards, in a row, closer up (for checking new models)
 ##   godot --path . res://tools/contact_sheet.tscn -- --cards --shot=/tmp/sheet.png
 
 ## Standing height by level (spec 5.2).
@@ -24,7 +25,15 @@ func _ready() -> void:
 	sun.look_at_from_position(Vector3(3, 8, 6), Vector3.ZERO)
 	var cam := Camera3D.new()
 	add_child(cam)
-	if "--cards" in OS.get_cmdline_user_args():
+	var ids: PackedStringArray = []
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--ids="):
+			ids = a.substr(6).split(",")
+	if not ids.is_empty():
+		_ids(ids)
+		cam.fov = 32
+		cam.look_at_from_position(Vector3(0, 4.2, 7.5), Vector3(0, 0.55, 0))
+	elif "--cards" in OS.get_cmdline_user_args():
 		_cards()
 		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 		cam.size = 13.5
@@ -53,6 +62,18 @@ func _cards() -> void:
 			add_child(mdl)
 			_idle(mdl)
 			_label("%s L%d" % [c.display_name, c.level], pos + Vector3(0, -0.1, 1.2))
+
+
+func _ids(ids: PackedStringArray) -> void:
+	for i: int in ids.size():
+		var c: CardData = CardDB.card(StringName(ids[i]))
+		var pos := Vector3((i - (ids.size() - 1) / 2.0) * 2.2, 0, 0)
+		var mdl: Node3D = Palette.model(VisualDB.model_path(c.id), 1.6)
+		Toon.apply(mdl, VisualDB.tint(c.id))
+		mdl.position = pos
+		add_child(mdl)
+		_idle(mdl)
+		_label(c.display_name, pos + Vector3(0, -0.1, 1.0))
 
 
 func _group() -> void:
