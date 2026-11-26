@@ -1,37 +1,41 @@
-"""Frostwisp (Frost Peaks, 2): a drifting spirit of the blizzard, a core of blue ice crystal wrapped in
-whirling streamers of snow, two cold slit eyes and frost crystals orbiting it."""
+"""Frostwisp (Frost Peaks, 2): a drifting spirit of the blizzard. Sculpted: a faceted core of blue ice
+crystal with two cold slit eyes, wrapped in swirling streamers of snow that spiral down into a tail of
+mist, with frost crystals orbiting it."""
 import math
 from mathutils import Vector as V
-from forge import props
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
     C.palette(ice="7ad8ff", ice2="e0faff", core="ffffff", mist="cfeaff", eye="0a2a4a", crystal="aef4ff")
     C.plan, C.attack, C.hover = "hover", "cast", 0.4
     C.bone("root", (0, 0, 0), (0, 0, 0.3), deform=False)
-    C.bone("hips", (0, 0, 0.3), (0, 0, 0.65), "root")
-    C.bone("chest", (0, 0, 0.65), (0, 0, 0.95), "hips")
-    C.bone("head", (0, 0, 0.95), (0, -0.2, 0.95), "chest", deform=False)
-    C.bone("tail1", (0, 0, 0.3), (0, 0.05, 0.05), "hips")
-    C.spine, C.head, C.tail = ["hips", "chest"], "head", ["tail1"]
-    C.cone("CoreTop", (0, 0, 0.7), (0, 0, 1.15), 0.18, "ice", "chest", segs=6)
-    C.cone("CoreBot", (0, 0, 0.72), (0, 0, 0.38), 0.17, "ice", "hips", segs=6)
-    C.ellipsoid("Glow", (0, -0.08, 0.72), (0.1, 0.06, 0.1), "core", "chest")
+    C.bone("hips", (0, 0, 0.5), (0, 0, 0.8), "root")
+    C.bone("head", (0, 0, 0.8), (0, 0, 1.1), "hips")
+    C.bone("tail1", (0, 0, 0.5), (0.05, 0.05, 0.25), "hips")
+    C.bone("tail2", (0.05, 0.05, 0.25), (-0.04, 0.08, 0.05), "tail1")
+    C.spine, C.head, C.tail = ["hips"], "head", ["tail1", "tail2"]
+    cl = Clay(C, "Body", res=0.018)
+    for k in range(18):                                                         # spiral streamers
+        t = k / 17
+        a = t * 4 * math.pi
+        r = 0.28 * (1 - t * 0.7)
+        cl.add((math.cos(a) * r, math.sin(a) * r, 0.95 - 0.85 * t), (0.08 - 0.03 * t, 0.08 - 0.03 * t, 0.05),
+               rot=(0, 0, math.degrees(a)), group="mist")
+    cl.add((0, 0, 0.82), (0.17, 0.17, 0.2), group="ice")                         # crystal core
+    cl.mirror((0.06, -0.15, 0.86), (0.04, 0.03, 0.012), rot=(0, 0, -20), group="ice", neg=True)
+    body = cl.build({"mist": "mist", "ice": "ice"}, voxel=0.01, budget=7000, relax=2,
+                    texture={"type": 'CLOUDS', "scale": 0.03, "strength": 0.012})
+    recolor(body, lambda p, n: smoothstep(0.5, 0.1, p.z) * 0.6, "ice2")
+    for k in range(5):                                                          # facets on the core
+        a = 2 * math.pi * k / 5
+        C.cone(f"Facet{k}", (math.cos(a) * 0.08, math.sin(a) * 0.08, 0.86), (math.cos(a) * 0.22, math.sin(a) * 0.2, 1.08),
+               0.05, "crystal", "head", segs=4)
     for mx in (-1, 1):
-        C.ellipsoid(f"Eye{mx}", (0.06 * mx, -0.17, 0.8), (0.035, 0.012, 0.012), "eye", "chest", rot=(0, -20 * mx, 0))
-    # whirling snow streamers
+        C.ellipsoid(f"Eye{mx}", (0.06 * mx, -0.165, 0.86), (0.035, 0.01, 0.01), "eye", "head", rot=(0, 20 * mx, 0))
+    C.bone("orbit", (0, 0, 0.7), (0, 0, 0.9), "root")
     for k in range(5):
         a = 2 * math.pi * k / 5
-        pts = []
-        for j in range(5):
-            b = a + j * 0.7
-            r = 0.34 - j * 0.04
-            pts.append(V((math.cos(b) * r, math.sin(b) * r, 0.95 - j * 0.16)))
-        C.tube(f"Streamer{k}", pts, [0.05, 0.045, 0.035, 0.025, 0.006], "mist" if k % 2 else "ice2", None,
-               allowed=["chest", "hips", "tail1"])
-    C.bone("orbit", (0, 0, 0.7), (0, 0, 0.9), "root")
-    for k in range(4):
-        a = 2 * math.pi * k / 4
-        p = V((math.cos(a) * 0.48, math.sin(a) * 0.48, 0.75))
-        C.cone(f"Crystal{k}", tuple(p - V((0, 0, 0.07))), tuple(p + V((0, 0, 0.09))), 0.04, "crystal", "orbit", segs=4)
-    C.extra_idle.append(lambda P, t: P.r("orbit", 'Z', -90 * t))
+        p = V((math.cos(a) * 0.42, math.sin(a) * 0.42, 0.7 + 0.1 * math.sin(3 * a)))
+        C.cone(f"Shard{k}", tuple(p - V((0, 0, 0.07))), tuple(p + V((0, 0, 0.09))), 0.04, "ice2", "orbit", segs=4)
+    C.extra_idle.append(lambda P, t: P.r("orbit", 'Z', 72 * t))

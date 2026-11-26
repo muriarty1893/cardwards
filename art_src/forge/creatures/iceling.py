@@ -1,35 +1,40 @@
-"""Iceling (Frost Peaks, 2): a small fierce elemental grown from shards of blue ice, jagged crystals for
-shoulders and a crown, glowing white eyes in a faceted head and claws of clear ice."""
+"""Iceling (Frost Peaks, 2): a small fierce elemental grown from shards of blue ice. Sculpted: a squat,
+wide-shouldered little brute of faceted ice with long arms, a hunched faceted head with glowing white eyes
+under a jagged brow, crystal shards for shoulders and a crown, and claws of clear ice."""
 import math
 from mathutils import Vector as V
-from forge import kits
+from forge import skulpt
+from forge.sculpt import recolor, smoothstep, cracks
 
 
 def build(C):
     C.palette(ice="5aa8e8", ice2="aee8ff", clear="e8faff", eye="ffffff", dark="0a2a4a")
     C.attack = "swipe"
-    C.relax = 0.0
-    kits.biped(C, "ice", hip=0.45, chest=0.72, neck=0.84, head_top=1.04, shoulder_x=0.18, hip_x=0.09,
-               hand=(0.3, -0.1, 0.42), r_hip=0.13, r_waist=0.11, r_chest=0.17, r_neck=0.06, r_head=0.13,
-               r_arm=0.05, r_hand=0.05, r_leg=0.06, r_foot=0.065, subdiv=1)
-    h = V(C.anch["head"])
-    C.ellipsoid("Facet", tuple(h + V((0, -0.06, 0))), (0.13, 0.1, 0.13), "ice2", "head", segs=6, rings=4, smooth=False)
+    cl, at = skulpt.biped(C, hip=0.42, chest=0.76, head=0.98, lean=0.12, shoulder_x=0.26, hip_x=0.12,
+                          r_chest=(0.24, 0.18, 0.2), r_waist=(0.15, 0.12, 0.12), r_hips=(0.16, 0.12, 0.1),
+                          r_head=(0.13, 0.13, 0.12), r_arm=(0.08, 0.07), r_hand=0.08, r_leg=(0.09, 0.07),
+                          r_foot=(0.07, 0.09, 0.05), arm_len=0.52, group="ice")
+    h = at["head"]
+    cl.add((0, h.y - 0.1, h.z + 0.05), (0.12, 0.05, 0.035), rot=(-10, 0, 0), group="dark")
+    cl.mirror((0.05, h.y - 0.11, h.z + 0.0), (0.03, 0.025, 0.02), group="ice", neg=True)
+    body = cl.build({"ice": "ice", "dark": "ice"}, voxel=0.009, budget=8000, relax=1,
+                    texture={"type": 'VORONOI', "scale": 0.06, "strength": 0.025})
+    recolor(body, lambda p, n: cracks(p, 0.08, 0.06, seed=43) * 0.8, "clear")
+    recolor(body, lambda p, n: smoothstep(0.5, 1.0, n.z) * 0.5, "ice2")
     for mx in (-1, 1):
-        C.ellipsoid(f"Eye{mx}", tuple(h + V((0.05 * mx, -0.15, 0.01))), (0.03, 0.012, 0.016), "eye", "head",
-                    rot=(0, -20 * mx, 0))
-        sh = V(C.anch["shL" if mx < 0 else "shR"])
+        C.ellipsoid(f"Eye{mx}", (0.05 * mx, h.y - 0.125, h.z), (0.025, 0.01, 0.014), "eye", "head", rot=(0, -15 * mx, 0))
+        side = "L" if mx < 0 else "R"
+        sh = at["sh" + side]
         for k in range(3):
-            C.cone(f"Shoulder{mx}{k}", tuple(sh), tuple(sh + V((0.12 * mx * (k + 1) * 0.6, 0.04 * k, 0.18 - 0.03 * k))), 0.05,
-                   "clear", "arm.L" if mx < 0 else "arm.R", segs=4)
-        hd = V(C.anch["hdL" if mx < 0 else "hdR"])
-        for k in range(3):
-            C.cone(f"Claw{mx}{k}", tuple(hd), tuple(hd + V((0.035 * (k - 1), -0.08, -0.1))), 0.018, "clear",
-                   "forearm.L" if mx < 0 else "forearm.R", segs=4)
+            a = math.radians(-30 + 30 * k)
+            C.cone(f"Shoulder{side}{k}", tuple(sh), tuple(sh + V((0.12 * mx + math.sin(a) * 0.08 * mx, math.sin(a) * 0.1, 0.22 - 0.04 * k))),
+                   0.05, "ice2", f"arm.{side}", segs=4)
+        hd = at["hd" + side]
+        for k in (-1, 0, 1):
+            C.cone(f"Claw{side}{k}", tuple(hd + V((0.03 * k, -0.04, -0.06))), tuple(hd + V((0.04 * k, -0.1, -0.18))), 0.018,
+                   "clear", f"forearm.{side}", segs=4)
     for k in range(5):
         a = math.pi * (0.15 + 0.7 * k / 4)
-        C.cone(f"Crown{k}", tuple(h + V((math.cos(a) * 0.1, 0.02, 0.08))),
-               tuple(h + V((math.cos(a) * 0.16, 0.04, 0.24 + 0.06 * (k == 2)))), 0.035, "clear", "head", segs=4)
-    c = V(C.anch["chest"])
-    for k in range(4):
-        C.cone(f"Back{k}", tuple(c + V((0.08 * (k - 1.5), 0.12, 0.0))), tuple(c + V((0.12 * (k - 1.5), 0.3, 0.12))), 0.04,
-               "ice2", "chest", segs=4)
+        b = h + V((math.cos(a) * 0.09, 0.02 - math.sin(a) * 0.04, 0.08))
+        C.cone(f"Crown{k}", tuple(b), tuple(b + V((math.cos(a) * 0.05, 0.02, 0.12 + 0.06 * (k == 2)))), 0.03, "clear", "head",
+               segs=4)

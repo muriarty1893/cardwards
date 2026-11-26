@@ -506,6 +506,9 @@ def run(cid, export=True):
     mod = importlib.import_module("forge.creatures." + cid)
     importlib.reload(mod)
     C = Creature(cid)
+    # Legends keep full sculpt detail; everyone else is smaller on the board and gets 60% of the polygons
+    # (keeps the web download in check).
+    C.budget_scale = 1.0 if "legend)" in (mod.__doc__ or "") else 0.6
     mod.build(C)
     rig, body = C.finish(export)
     preview_setup(rig)

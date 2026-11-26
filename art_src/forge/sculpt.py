@@ -106,6 +106,7 @@ class Clay:
             dp.texture = tex
             dp.strength = texture.get("strength", 0.01)
             dp.mid_level = 0.5
+        budget = int(budget * getattr(C, "budget_scale", 1.0))
         dc = tmp.modifiers.new("Budget", 'DECIMATE')
         dg = bpy.context.evaluated_depsgraph_get()
         n = len(tmp.evaluated_get(dg).data.polygons)
