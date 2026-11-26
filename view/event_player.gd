@@ -1009,78 +1009,116 @@ func _attack(d: Dictionary) -> void:
 	var tl: int = int(d.get("target_lane", -1))
 	var tv: CreatureView = _view(foe, tl) if tl >= 0 else null
 	var home: Vector3 = v.position
+	var face0: float = v.rotation.y
 	var hero: bool = tl < 0
-	var target: Vector3
+	# contact: where the blow lands; run_to: where the charge ends and the lunge begins.
+	var contact: Vector3
+	var tv_face: float = tv.rotation.y if tv else 0.0
 	if tv:
 		tv.busy = true
-		# Stop just short of the target, wherever it stands.
 		var to: Vector3 = tv.position
 		var gap := Vector3(to.x - home.x, 0.0, to.z - home.z)
-		target = to - gap.normalized() * minf(0.35, gap.length() * 0.5)
+		contact = to - gap.normalized() * minf(0.42, gap.length() * 0.5)
+		contact.y = home.y
 	else:
-		target = m.board.hero_point(foe, lane)
-		target.x = home.x
+		contact = m.board.hero_point(foe, lane)
+		contact.x = home.x
+		contact.y = home.y
+	var dir := Vector3(contact.x - home.x, 0.0, contact.z - home.z)
+	var dist: float = dir.length()
+	dir = dir.normalized() if dist > 0.01 else Vector3(0, 0, -1)
+	var lunge: float = minf(0.45, dist * 0.4)
+	var run_to: Vector3 = contact - dir * lunge
+	var flier: bool = v.card != null and v.card.tribe == &"flyer"
 	v.busy = true
-	var out_t: float = 0.3 / speed
-	var back_t: float = 0.4 / speed
-	m.rig.close_up(v.global_position, Vector3(target.x, home.y, target.z), (0.2 + 0.3 + 0.15 + 0.4 + (0.35 if hero else 0.0)) / speed)
+	var run_t: float = clampf(dist / 5.5, 0.16, 0.38) / speed
+	m.rig.close_up(v.global_position, contact, (0.12 + run_t * speed + 0.5 + 0.6 + (0.35 if hero else 0.0)) / speed)
 	# A big attacker makes the small creatures on that side duck.
 	if v.card and (v.card.attack >= 5 or v.height >= 0.9):
 		for o: Variant in m.creature_views[foe]:
 			if is_instance_valid(o) and o != tv and (o as CreatureView).height < 0.7:
 				(o as CreatureView).cower()
-	# Wind-up squash with a glint, the target bracing and turning to face it, then the run (the
-	# impact plays with the damage event that follows).
-	Burst.spawn(m, &"stars", v.global_position + Vector3(0, v.height + 0.2, 0), Palette.GOLD, 0.5)
+	# The target turns to face it and braces.
 	if tv:
 		var face := Vector2(v.position.x - tv.position.x, v.position.z - tv.position.z)
 		if face.length() > 0.01:
-			tv.rotation.y = atan2(face.x, face.y)
+			tv.create_tween().tween_property(tv, "rotation:y", atan2(face.x, face.y), 0.15 / speed)
 		if tv.body:
 			var tb: Vector3 = tv.rest_scale()
 			var brace := tv.create_tween()
-			brace.tween_property(tv.body, "scale", tb * Vector3(1.1, 0.88, 1.1), 0.12 / speed)
-			brace.tween_property(tv.body, "scale", tb, 0.3 / speed).set_delay(0.25 / speed)
+			brace.tween_property(tv.body, "scale", tb * Vector3(1.08, 0.9, 1.08), 0.15 / speed)
+			brace.tween_property(tv.body, "scale", tb, 0.3 / speed).set_delay(0.3 / speed)
+	# 1. Turn toward the target with a short crouch, a glint in the eye.
+	var aim: float = atan2(dir.x, dir.z)
 	var base: Vector3 = v.rest_scale()
-	var wind := v.create_tween()
-	wind.tween_property(v.body, "scale", base * Vector3(1.15, 0.8, 1.15), 0.12 / speed)
-	wind.tween_property(v.body, "scale", base, 0.08 / speed)
-	await wind.finished
+	var turn := v.create_tween().set_parallel(true)
+	turn.tween_property(v, "rotation:y", face0 + wrapf(aim - face0, -PI, PI), 0.12 / speed).set_trans(Tween.TRANS_SINE)
+	turn.tween_property(v.body, "scale", base * Vector3(1.06, 0.9, 1.06), 0.12 / speed)
+	Burst.spawn(m, &"stars", v.global_position + Vector3(0, v.height + 0.2, 0), Palette.GOLD, 0.45)
+	await turn.finished
 	if not is_instance_valid(v):
 		return
-	var flat := Vector2(target.x - home.x, target.z - home.z)
-	if flat.length() > 0.01:
-		v.rotation.y = atan2(flat.x, flat.y)
-	v.play_attack()
+	v.body.scale = base
+	# 2. The charge: a fast run along the ground, accelerating, dust kicked up behind.
+	if dist - lunge > 0.05:
+		v.play_charge(true, 1.9 * speed)
+		var puffs: Array[float] = [0.3, 0.65]
+		var run := v.create_tween()
+		run.tween_method(func(k: float) -> void:
+			v.position = home.lerp(run_to, k)
+			if flier:
+				v.position.y = home.y - sin(k * PI) * 0.12
+			elif not puffs.is_empty() and k >= puffs[0]:
+				puffs.pop_front()
+				Burst.spawn(m, &"dust_ring", v.global_position + Vector3(0, 0.05, 0), Color(1, 1, 1, 0.55), 0.35),
+			0.0, 1.0, run_t).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		await run.finished
+		if not is_instance_valid(v):
+			return
+	v.play_charge(false)
+	# 3. The strike: the attack clip winds up as it closes the last stretch, and the blow lands on
+	# arrival (the impact itself plays with the damage event that follows).
+	var rate: float = 1.25 * speed
+	var strike: float = v.play_attack(rate)
+	if strike <= 0.0:
+		strike = 0.22 / speed
 	if Rules.has_keyword(m.state, p, lane, &"flurry"):
-		_flurry_swoosh(v, target)
-	var trail := Burst.spawn(v, &"dust_ring", v.global_position, Color(1, 1, 1, 0.6), 0.4)
-	trail.one_shot = false
-	var out := v.create_tween()
-	out.tween_method(func(k: float) -> void:
-		v.position = home.lerp(target, k * k) + Vector3(0, sin(k * PI) * 0.5, 0), 0.0, 1.0, out_t)
-	await out.finished
-	if is_instance_valid(trail):
-		trail.queue_free()
+		_flurry_swoosh(v, contact)
+	var close := v.create_tween()
+	close.tween_interval(strike * 0.55)
+	close.tween_method(func(k: float) -> void:
+		v.position = run_to.lerp(contact, k), 0.0, 1.0, strike * 0.45).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	await close.finished
 	if not is_instance_valid(v):
 		return
-	var turn_back: Vector3 = target
+	Burst.spawn(m, &"dust_ring", v.global_position + Vector3(0, 0.05, 0), Color(1, 1, 1, 0.7), 0.6)
+	var turn_back: Vector3 = contact
 	if hero:
-		turn_back = await _hero_leap(v, target, foe)
+		turn_back = await _hero_leap(v, contact, foe)
 		if not is_instance_valid(v):
 			return
 	if tv:
 		var t_ref: CreatureView = tv
-		get_tree().create_timer(0.6 / speed).timeout.connect(func() -> void:
+		get_tree().create_timer(0.7 / speed).timeout.connect(func() -> void:
 			if is_instance_valid(t_ref):
-				t_ref.busy = false)
+				t_ref.busy = false
+				t_ref.create_tween().tween_property(t_ref, "rotation:y", tv_face, 0.25 / speed))
+	# 4. Follow-through, then a steady walk home and a turn to face the front again.
+	var back_t: float = clampf(dist / 3.2, 0.3, 0.6) / speed
 	var back := v.create_tween()
-	back.tween_interval(0.15 / speed)
+	back.tween_interval(0.35 / speed)
+	back.tween_callback(func() -> void:
+		var hd := Vector3(home.x - v.position.x, 0, home.z - v.position.z)
+		if hd.length() > 0.05:
+			v.create_tween().tween_property(v, "rotation:y", v.rotation.y + wrapf(atan2(hd.x, hd.z) - v.rotation.y, -PI, PI), 0.14 / speed)
+		v.play_charge(true, 1.2 * speed))
 	back.tween_method(func(k: float) -> void:
-		v.position = turn_back.lerp(home, k) + Vector3(0, sin(k * PI) * 0.3, 0), 0.0, 1.0, back_t)
+		v.position = turn_back.lerp(home, k), 0.0, 1.0, back_t).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	back.tween_callback(func() -> void:
 		v.position = home
-		v.busy = false)
+		v.play_charge(false))
+	back.tween_property(v, "rotation:y", face0, 0.18 / speed).set_trans(Tween.TRANS_SINE)
+	back.tween_callback(func() -> void: v.busy = false)
 
 
 ## From the board's edge: a leap at the rival (who flinches with the damage) or, when the rival's

@@ -13,6 +13,8 @@ const HIT_ANIMS: Array[StringName] = [&"HitReact", &"HitRecieve"]
 const IDLE_ANIMS: Array[StringName] = [&"Idle", &"Flying_Idle", &"Flying"]
 const FIDGET_ANIMS: Array[StringName] = [&"Wave", &"Yes", &"Dance"]
 ## Clips for walking around the lane, first found wins (flyers drift with their flying loops).
+## Fraction of an attack clip where the blow lands.
+const STRIKE_AT := 0.48
 const MOVE_ANIMS: Array[StringName] = [&"Walk", &"Fast_Flying", &"Flying_Idle", &"Run", &"Flying"]
 
 var card: CardData
@@ -212,8 +214,31 @@ func _play_first(names: Array[StringName]) -> float:
 	return 0.0
 
 
-func play_attack() -> void:
-	_play_first(ATTACK_ANIMS)
+## Plays the attack clip at `rate` and returns the seconds until its blow lands (the forged clips
+## wind up for 36% and strike at 48% of their length; other models hit about halfway).
+func play_attack(rate: float = 1.0) -> float:
+	if _anim == null:
+		return 0.0
+	for n: StringName in ATTACK_ANIMS:
+		if _anim.has_animation(n):
+			_anim.play(n, 0.06, rate)
+			return _anim.get_animation(n).length * STRIKE_AT / maxf(rate, 0.01)
+	return 0.0
+
+
+## Running at a target: the walk / flying loop played fast, without the idle bob.
+func play_charge(on: bool, rate: float = 1.8) -> void:
+	_moving = on
+	if _anim == null or _dying:
+		return
+	if on:
+		for n: StringName in MOVE_ANIMS:
+			if _anim.has_animation(n):
+				_anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+				_anim.play(n, 0.1, rate)
+				return
+	else:
+		_play_idle()
 
 
 func play_hit() -> void:
