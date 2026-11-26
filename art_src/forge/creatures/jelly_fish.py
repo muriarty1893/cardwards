@@ -1,7 +1,9 @@
-"""Jelly Fish (Candy Hills, 2): a drifting jelly-candy medusa, a glossy raspberry bell, a frill of sour-
-sugar crystals and long licorice tentacles that sting."""
+"""Jelly Fish (Candy Hills, 2): a drifting jelly-candy medusa. Sculpted: a glossy raspberry bell with a
+lighter crown, a frilled skirt of sour-sugar crystals around the rim, two glaring eyes on the front, and
+long trailing licorice tentacles that sting, banded red."""
 import math
 from mathutils import Vector as V
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
@@ -9,29 +11,28 @@ def build(C):
               sugar="fff4fa")
     C.plan, C.attack, C.hover = "hover", "dive", 0.45
     C.bone("root", (0, 0, 0), (0, 0, 0.3), deform=False)
-    C.bone("chest", (0, 0, 0.65), (0, 0, 1.05), "root")
-    C.bone("head", (0, 0, 1.05), (0, -0.2, 1.05), "chest", deform=False)
-    C.bone("tail1", (0, 0, 0.65), (0, 0.04, 0.35), "chest")
-    C.bone("tail2", (0, 0.04, 0.35), (0, 0.1, 0.05), "tail1")
-    C.spine, C.head, C.tail = ["chest"], "head", ["tail1", "tail2"]
-    C.lathe("Bell", [(0.001, 1.1), (0.22, 1.08), (0.38, 0.96), (0.44, 0.8), (0.42, 0.68), (0.3, 0.7), (0.001, 0.72)],
-            "bell", "chest", segs=28)
-    C.lathe("Rim", [(0.4, 0.68), (0.47, 0.65), (0.44, 0.62)], "bell2", "chest", segs=28, wave=(10, 0.2, 0.3))
-    for k in range(10):
-        a = 2 * math.pi * k / 10
-        C.cone(f"Frill{k}", (math.cos(a) * 0.44, math.sin(a) * 0.44, 0.66), (math.cos(a) * 0.5, math.sin(a) * 0.5, 0.56), 0.05,
-               "frill", "chest", segs=4)
-    for k in range(6):
-        a = 2 * math.pi * k / 6 + 0.5
-        C.decal(f"Spot{k}", math.cos(a) * 0.25, 2, (0.05, 0.05, 0.02), "bell2", "chest", part="Bell", dir=(0, 0, -1),
-                y=math.sin(a) * 0.25)
+    C.bone("hips", (0, 0, 0.62), (0, 0, 0.86), "root")
+    C.bone("head", (0, 0, 0.86), (0, -0.05, 1.06), "hips")
+    C.bone("tail1", (0, 0, 0.62), (0, 0.03, 0.36), "hips")
+    C.bone("tail2", (0, 0.03, 0.36), (0, 0.06, 0.08), "tail1")
+    C.spine, C.head, C.tail = ["hips"], "head", ["tail1", "tail2"]
+    cl = Clay(C, "Body", res=0.016)
+    cl.add((0, 0, 0.82), (0.3, 0.3, 0.24), group="bell")
+    cl.add((0, 0, 0.98), (0.16, 0.16, 0.1), group="bell2")
+    for k in range(14):
+        a = 2 * math.pi * k / 14
+        cl.add((math.cos(a) * 0.29, math.sin(a) * 0.29, 0.62), (0.07, 0.07, 0.06), group="frill")
+    body = cl.build({"bell": "bell", "bell2": "bell2", "frill": "frill"}, voxel=0.009, budget=6000, relax=2,
+                    texture={"type": 'CLOUDS', "scale": 0.03, "strength": 0.005})
+    recolor(body, lambda p, n: smoothstep(0.85, 1.0, n.z) * 0.5, "sugar")
     for mx in (-1, 1):
-        C.ellipsoid(f"Eye{mx}", (0.12 * mx, -0.38, 0.86), (0.05, 0.03, 0.05), "eye", "chest")
-        C.ellipsoid(f"Pupil{mx}", (0.12 * mx, -0.41, 0.85), (0.02, 0.012, 0.035), "pupil", "chest")
-        C.box(f"Brow{mx}", (0.12 * mx, -0.4, 0.93), (0.08, 0.02, 0.02), "tent", "chest", rot=(0, 25 * mx, 0), bevel=0.3)
+        C.ellipsoid(f"Eye{mx}", (0.08 * mx, -0.27, 0.8), (0.04, 0.02, 0.04), "eye", "head")
+        C.ellipsoid(f"Pupil{mx}", (0.08 * mx, -0.29, 0.79), (0.015, 0.012, 0.02), "pupil", "head")
     for k in range(8):
         a = 2 * math.pi * k / 8
-        top = V((math.cos(a) * 0.25, math.sin(a) * 0.25, 0.68))
-        pts = [top, top + V((math.cos(a) * 0.06, math.sin(a) * 0.06 + 0.04, -0.25)), top + V((0, 0.1, -0.5)),
-               top + V((math.cos(a) * 0.08, 0.12, -0.62))]
-        C.tube(f"Tentacle{k}", pts, [0.035, 0.03, 0.02, 0.005], "tent" if k % 2 else "tent2", None, allowed=["tail1", "tail2"])
+        b = V((math.cos(a) * 0.18, math.sin(a) * 0.18, 0.6))
+        pts = [b, b + V((math.cos(a) * 0.05, 0, -0.22)), b + V((-math.cos(a) * 0.03, 0.04, -0.42)), b + V((math.cos(a) * 0.04, 0.06, -0.6))]
+        C.tube(f"Tentacle{k}", pts, [0.03, 0.024, 0.016, 0.004], "tent", None, allowed=["tail1", "tail2"])
+        for j in range(3):
+            C.ellipsoid(f"Band{k}{j}", tuple(V(pts[0]).lerp(V(pts[3]), 0.2 + 0.25 * j)), (0.03 - 0.006 * j,) * 2 + (0.012,),
+                        "tent2", "tail1" if j < 2 else "tail2")

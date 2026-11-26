@@ -1,38 +1,46 @@
-"""Lollibat (Candy Hills, 3): a sugar-mad fruit bat, wings striped like peppermint, big sour-green eyes,
-oversized ears and a mouth stained blue from stolen lollipops; one clutched in its feet."""
+"""Lollibat (Candy Hills, 3): a sugar-mad fruit bat. Sculpted: a round, fuzzy purple body with a pale
+chest, a fox-like face with huge sour-green eyes and oversized ears, a mouth stained blue from stolen
+lollipops with little fangs, peppermint-striped wings, and a lollipop clutched in its feet."""
+import math
 from mathutils import Vector as V
-from forge import kits
+from forge import kits, skulpt
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
     C.palette(fur="5a2a6a", fur2="c88ad8", wing="ff3a7a", wing2="fff0f6", bone="3a1a3a", eye="c8ff3a", pupil="0a1a04",
               fang="ffffff", stick="ffffff", pop="3ad8ff", tongue="3a8aff")
     C.attack = "dive"
-    kits.quad(C, "fur", hip=(0.1, 0.62), chest=(-0.06, 0.78), neck=(-0.12, 0.92), head=(-0.3, 0.98),
-              r_hip=0.15, r_chest=0.19, r_waist=0.16, r_neck=0.1, r_head=0.16, r_snout=0.07, r_leg=0.035, r_paw=0.04,
-              knee=0.4, leg_x=0.1, tail=((0.2, 0.55),), r_tail=0.04, front=False)
     C.plan, C.hover = "flyer", 0.45
-    at = C.at
-    C.ellipsoid("Ruff", at("chest", 0, -0.04, 0.1), (0.2, 0.17, 0.12), "fur2", "chest")
+    C.bone("root", (0, 0, 0), (0, 0, 0.3), deform=False)
+    C.bone("hips", (0, 0.04, 0.52), (0, 0.0, 0.72), "root")
+    C.bone("chest", (0, 0.0, 0.72), (0, -0.02, 0.86), "hips")
+    C.bone("head", (0, -0.02, 0.86), (0, -0.06, 1.1), "chest")
+    C.spine, C.head = ["hips", "chest"], "head"
+    for side, sx in (("L", -1), ("R", 1)):
+        C.bone(f"leg.{side}", (0.07 * sx, 0.04, 0.48), (0.08 * sx, 0.0, 0.36), "hips")
+        C.bone(f"shin.{side}", (0.08 * sx, 0.0, 0.36), (0.06 * sx, -0.04, 0.28), f"leg.{side}")
+        C.legs.append((f"leg.{side}", f"shin.{side}", 0.0 if side == "L" else 0.5))
+    cl = Clay(C, "Body", res=0.014)
+    cl.add((0, 0.02, 0.64), (0.16, 0.15, 0.19), group="fur")
+    cl.add((0, -0.08, 0.64), (0.1, 0.08, 0.13), group="fur2")
+    cl.add((0, -0.04, 0.9), (0.14, 0.13, 0.12), group="fur")
+    cl.chain([(0, -0.12, 0.88), (0, -0.22, 0.86)], [(0.07, 0.06, 0.06), (0.04, 0.03, 0.035)], group="fur2")
+    for sx in (-1, 1):
+        cl.chain([(0.08 * sx, -0.02, 0.98), (0.15 * sx, 0.0, 1.12), (0.18 * sx, 0.01, 1.22)],
+                 [(0.07, 0.025, 0.06), (0.06, 0.02, 0.05), 0.01], group="fur")
+        cl.chain([(0.07 * sx, 0.04, 0.48), (0.08 * sx, 0.0, 0.34)], [0.04, 0.025], group="fur")
+    body = cl.build({"fur": "fur", "fur2": "fur2"}, voxel=0.007, budget=6000, relax=2,
+                    texture={"type": 'CLOUDS', "scale": 0.015, "strength": 0.01})
+    recolor(body, lambda p, n: smoothstep(0.02, 0.0, abs(p.z - 0.85)) * (1.0 if p.y < -0.18 else 0.0), "tongue")
+    skulpt.eyes(C, [(0.06, -0.14, 0.93)], 0.04, "eye", "pupil")
     for mx in (-1, 1):
-        C.cone(f"Ear{mx}", at("cran", 0.09, 0.02, 0.08, mx), at("cran", 0.22, 0.04, 0.36, mx), 0.08, "fur", "head", segs=6,
-               smooth=True)
-        C.cone(f"EarIn{mx}", at("cran", 0.09, -0.02, 0.1, mx), at("cran", 0.21, 0.0, 0.32, mx), 0.05, "wing", "head", segs=6,
-               smooth=True)
-        C.ellipsoid(f"Eye{mx}", at("brow", 0.07, -0.07, 0.03, mx), (0.05, 0.03, 0.05), "eye", "head")
-        C.ellipsoid(f"Pupil{mx}", at("brow", 0.075, -0.1, 0.03, mx), (0.015, 0.01, 0.035), "pupil", "head")
-        C.cone(f"Fang{mx}", at("snout", 0.025, -0.05, -0.04, mx), at("snout", 0.025, -0.06, -0.11, mx), 0.014, "fang", "head",
-               segs=4)
-    C.ellipsoid("Tongue", at("snout", 0, -0.05, -0.06), (0.035, 0.02, 0.02), "tongue", "head")
-    kits.wings(C, "bone", "wing", shoulder=(0.14, -0.04, 0.84), span=0.75, up=0.5, sweep=0.25, r=0.03, droop=0.6,
-               fingers=4, thick=0.015)
+        C.cone(f"Fang{mx}", (0.02 * mx, -0.22, 0.84), (0.02 * mx, -0.22, 0.8), 0.008, "fang", "head", segs=4)
+    kits.wings(C, "bone", "wing", shoulder=(0.12, 0.0, 0.76), span=0.62, up=0.32, sweep=0.18, r=0.025, droop=0.45,
+               fingers=4, thick=0.014)
     for side, mx in (("L", -1), ("R", 1)):
-        el = V(C.bones[f"wing2.{side}"]["head"])
         for k in range(3):
-            C.ellipsoid(f"Stripe{side}{k}", tuple(el + V((0.14 * mx * k, 0.1 + 0.05 * k, -0.15 - 0.08 * k))),
-                        (0.05, 0.12, 0.015), "wing2", f"wing2.{side}", rot=(0, 0, 40 * mx))
-    # lollipop clutched in the feet
-    paw = V(C.bones["shin_b.R"]["tail"])
-    C.tube("Stick", [paw + V((-0.1, 0, 0)), paw + V((-0.1, -0.05, -0.25))], [0.012, 0.012], "stick", "shin_b.R")
-    C.ellipsoid("Pop", tuple(paw + V((-0.1, -0.06, -0.3))), (0.09, 0.025, 0.09), "pop", "shin_b.R")
-    C.ellipsoid("PopSwirl", tuple(paw + V((-0.1, -0.085, -0.3))), (0.05, 0.01, 0.05), "wing2", "shin_b.R")
+            C.ellipsoid(f"Stripe{side}{k}", (0.3 * mx + 0.1 * mx * k, 0.1 + 0.04 * k, 0.86 - 0.05 * k), (0.03, 0.1, 0.012),
+                        "wing2", f"wing2.{side}" if k else f"wing.{side}", rot=(0, 0, -30 * mx))
+    C.tube("PopStick", [V((0, -0.06, 0.28)), V((0, -0.08, 0.1))], [0.008, 0.008], "stick", "shin.R")
+    C.ellipsoid("Pop", (0, -0.08, 0.06), (0.07, 0.025, 0.07), "pop", "shin.R")

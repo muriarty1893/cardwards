@@ -1,7 +1,10 @@
-"""Gumdrop (Candy Hills, 2): a hulking sugar-crusted gumdrop slime, one big suspicious eye, a wide frown,
-and the half-dissolved candies it has swallowed floating inside its lime jelly."""
+"""Gumdrop (Candy Hills, 2): a hulking sugar-crusted gumdrop slime. Sculpted: a heavy, sagging gumdrop
+dome of lime jelly that pools out at the base, a crust of sugar crystals over the top, one big suspicious
+eye under a heavy brow, a wide frown, and half-dissolved candies floating inside."""
 import math
+import random
 from mathutils import Vector as V
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
@@ -9,24 +12,29 @@ def build(C):
               c2="ffd23a", c3="7a5aff")
     C.plan, C.attack, C.hover = "hover", "slam", 0.0
     C.bone("root", (0, 0, 0), (0, 0, 0.3), deform=False)
-    C.bone("hips", (0, 0, 0.05), (0, 0, 0.45), "root")
-    C.bone("chest", (0, 0, 0.45), (0, 0, 0.85), "hips")
-    C.bone("head", (0, 0, 0.85), (0, -0.2, 0.9), "chest", deform=False)
+    C.bone("hips", (0, 0, 0.1), (0, 0, 0.45), "root")
+    C.bone("chest", (0, 0, 0.45), (0, -0.02, 0.75), "hips")
+    C.bone("head", (0, -0.02, 0.75), (0, -0.04, 0.95), "chest")
     C.spine, C.head = ["hips", "chest"], "head"
-    C.lathe("Body", [(0.001, 0.0), (0.42, 0.02), (0.48, 0.12), (0.42, 0.4), (0.28, 0.68), (0.12, 0.86), (0.001, 0.9)],
-            "gum", None, segs=28)
-    C.extra_idle.append(lambda P, t: (P.s("chest", 1.0 + 0.04 * math.sin(6.283 * t)), P.r("chest", 'Y', 3 * math.sin(6.283 * t))))
-    import random
-    rnd = random.Random(5)
-    for k in range(26):
-        a = rnd.uniform(0, 2 * math.pi)
-        z = rnd.uniform(0.1, 0.8)
-        r = 0.46 - 0.4 * max(0, z - 0.15) / 0.75
-        C.decal(f"Sugar{k}", math.cos(a) * r, z, (0.02, 0.02, 0.018), "sugar", "chest" if z > 0.45 else "hips",
-                dir=(-math.cos(a), -math.sin(a), 0), y=math.sin(a) * r)
-    C.ellipsoid("Eye", (0, -0.36, 0.5), (0.13, 0.06, 0.12), "eye", "chest")
-    C.ellipsoid("Pupil", (0.02, -0.41, 0.48), (0.05, 0.02, 0.055), "pupil", "chest")
-    C.box("Lid", (0, -0.39, 0.6), (0.3, 0.06, 0.05), "gum2", "chest", rot=(0, -10, 0), bevel=0.5)
-    C.box("Frown", (0, -0.43, 0.3), (0.2, 0.02, 0.03), "mouth", "hips", bevel=0.4)
-    for k, (x, z, m) in enumerate([(0.18, 0.25, "c1"), (-0.2, 0.32, "c2"), (0.05, 0.15, "c3")]):
-        C.ellipsoid(f"Swallowed{k}", (x, -0.38, z), (0.05, 0.03, 0.05), m, "hips", rot=(0, 30 * k, 0))
+    cl = Clay(C, "Body", res=0.018)
+    cl.add((0, 0, 0.42), (0.36, 0.34, 0.38), group="gum")
+    cl.add((0, 0, 0.12), (0.44, 0.42, 0.12), group="gum")                         # pooled base
+    cl.add((0, 0, 0.78), (0.18, 0.17, 0.1), group="gum")
+    cl.add((0, -0.28, 0.6), (0.14, 0.06, 0.04), rot=(-15, 0, 0), group="gum2")     # heavy brow
+    cl.add((0, -0.32, 0.54), (0.08, 0.06, 0.07), group="gum", neg=True)           # eye socket
+    cl.add((0, -0.34, 0.36), (0.12, 0.04, 0.02), group="mouth", neg=True)
+    body = cl.build({"gum": "gum", "gum2": "gum2", "mouth": "mouth"}, voxel=0.01, budget=7000, relax=2,
+                    texture={"type": 'VORONOI', "scale": 0.012, "strength": 0.012})
+    recolor(body, lambda p, n: smoothstep(0.4, 0.9, n.z) * 0.9, "sugar")
+    recolor(body, lambda p, n: smoothstep(0.3, 0.0, p.z) * 0.4, "gum2")
+    C.ellipsoid("Eye", (0, -0.3, 0.54), (0.07, 0.05, 0.065), "eye", "head")
+    C.ellipsoid("Pupil", (0.01, -0.35, 0.53), (0.025, 0.012, 0.03), "pupil", "head")
+    rnd = random.Random(29)
+    for k in range(6):                                                         # swallowed candies, half sunk in
+        a = math.radians(40 + 50 * k)
+        z = rnd.uniform(0.2, 0.5)
+        hit, nor = C.surf(0, z, dir=(-math.cos(a), -math.sin(a), 0), y=0)
+        if hit is None:
+            continue
+        C.ellipsoid(f"Candy{k}", tuple(hit - nor * 0.02), (0.05, 0.04, 0.035), ("c1", "c2", "c3")[k % 3], "hips",
+                    rot=(rnd.uniform(0, 90), 0, rnd.uniform(0, 90)))
