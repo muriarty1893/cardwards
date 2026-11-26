@@ -1,36 +1,39 @@
-"""Sandwraith (Sunny Dunes, 4): the ghost of a desert raider, a hooded skull in tattered wrappings, a body
-that dissolves into a whirling column of sand below the waist, and a pitted old scimitar."""
+"""Sandwraith (Sunny Dunes, 4): the ghost of a desert raider. Sculpted: a gaunt torso in tattered,
+flapping wrappings, a hooded skull with cold glowing eyes, bony arms, and a body that dissolves below the
+waist into a whirling column of sand; a pitted old scimitar in one hand."""
 import math
 from mathutils import Vector as V
-from forge import kits, props
+from forge import props, skulpt
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
     C.palette(wrap="c8b080", wrap2="8a7a58", bone="e8dcc0", dark="1a1408", eye="3affd8", sand="e0c088", sand2="c8a060",
               metal="9a9a90", gold="c8902a")
     C.attack = "swipe"
-    kits.biped(C, "wrap", hip=0.85, chest=1.28, neck=1.45, head_top=1.72, shoulder_x=0.26, hip_x=0.12,
-               hand=(0.45, -0.12, 0.88), r_hip=0.18, r_waist=0.14, r_chest=0.22, r_neck=0.07, r_head=0.14,
-               r_arm=0.06, r_hand=0.05, legs=False, hover=0.3)
-    h = V(C.anch["head"])
-    props.hooded_face(C, "wrap2", "dark", "eye", h, r=0.17, eye_gap=0.05, eye_size=0.025)
-    C.ellipsoid("Skull", tuple(h + V((0, -0.1, -0.02))), (0.1, 0.06, 0.11), "bone", "head")
+    cl, at = skulpt.biped(C, hip=0.9, chest=1.26, head=1.5, lean=0.12, shoulder_x=0.24, hip_x=0.1,
+                          r_chest=(0.19, 0.14, 0.18), r_waist=(0.12, 0.1, 0.12), r_hips=(0.14, 0.12, 0.1),
+                          r_head=(0.1, 0.11, 0.12), r_arm=(0.045, 0.035), r_hand=0.04, arm_len=0.56, legs=False,
+                          hover=0.15, group="wrap")
+    h = at["head"]
+    for k in range(14):                                                        # whirling sand column
+        t = k / 13
+        a = t * 4 * math.pi
+        r = 0.12 + 0.16 * t
+        cl.add((math.cos(a) * r * 0.6, 0.04 + math.sin(a) * r * 0.6, 0.86 - 0.8 * t), (0.1 + 0.08 * t, 0.1 + 0.08 * t, 0.07),
+               group="sand")
+    cl.add((0, h.y, h.z + 0.02), (0.13, 0.14, 0.15), group="wrap2")                 # hood
+    cl.add((0, h.y - 0.1, h.z), (0.09, 0.08, 0.11), group="dark", neg=True)
+    cl.add((0, h.y - 0.02, h.z - 0.01), (0.075, 0.08, 0.09), group="bone")          # skull
+    cl.mirror((0.03, h.y - 0.08, h.z + 0.01), (0.022, 0.02, 0.02), group="dark", neg=True)
+    for k in range(6):                                                         # tattered strips
+        a = 2 * math.pi * k / 6
+        cl.add((math.cos(a) * 0.15, math.sin(a) * 0.12, 0.98), (0.045, 0.02, 0.14), rot=(0, 0, math.degrees(a) + 90),
+               group="wrap2")
+    body = cl.build({"wrap": "wrap", "wrap2": "wrap2", "sand": "sand", "bone": "bone", "dark": "dark"}, voxel=0.009,
+                    budget=7000, relax=2, texture={"type": 'CLOUDS', "scale": 0.025, "strength": 0.015})
+    recolor(body, lambda p, n: smoothstep(0.6, 0.9, math.sin(p.z * 40 + math.atan2(p.x, p.y) * 3)) * (1.0 if p.z < 0.85 else 0.0),
+            "sand2")
     for mx in (-1, 1):
-        C.ellipsoid(f"Socket{mx}", tuple(h + V((0.04 * mx, -0.155, 0.01))), (0.025, 0.012, 0.025), "dark", "head")
-        C.ellipsoid(f"Glow{mx}", tuple(h + V((0.04 * mx, -0.165, 0.01))), (0.012, 0.008, 0.012), "eye", "head")
-    # whirling sand column instead of legs
-    for k in range(6):
-        a = k * 1.1
-        pts = [V((math.cos(a + j * 0.9) * (0.24 - 0.035 * j), math.sin(a + j * 0.9) * (0.24 - 0.035 * j), 0.85 - 0.16 * j))
-               for j in range(6)]
-        C.tube(f"Sand{k}", pts, [0.06, 0.055, 0.045, 0.035, 0.025, 0.006], "sand" if k % 2 else "sand2", None,
-               allowed=["hips", "tail1", "tail2"])
-    # trailing wrappings
-    c = V(C.anch["chest"])
-    for k in range(4):
-        C.box(f"Wrap{k}", tuple(c + V((-0.15 + 0.1 * k, 0.15, -0.3))), (0.06, 0.02, 0.35), "wrap2", "chest",
-              rot=(15, 0, 10 * (k - 1.5)), bevel=0.3)
-    for side in ("L", "R"):
-        C.ellipsoid(f"Hand{side}", C.anch["hd" + side], (0.05, 0.05, 0.06), "bone", f"forearm.{side}")
-    props.blade(C, C.anch["hdR"], "metal", "gold", "forearm.R", length=0.6, width=0.07, direction=(0, -0.35, -1),
-                curve=0.12, guard=0.14)
+        C.ellipsoid(f"Eye{mx}", (0.03 * mx, h.y - 0.095, h.z + 0.01), (0.014, 0.008, 0.012), "eye", "head")
+    props.blade(C, at["hdR"], "metal", "gold", "forearm.R", length=0.55, width=0.1, direction=(0, -0.4, 1), guard=0.12)

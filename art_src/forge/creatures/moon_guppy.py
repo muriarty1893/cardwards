@@ -1,33 +1,46 @@
-"""Moon Guppy (Dark Moon, 2): a little deep-night fish that swims through the air, a lantern lure dangling
-over a toothy underbite, big moon-silver eyes and a flowing veil tail that glows at the edges."""
+"""Moon Guppy (Dark Moon, 2): a little deep-night fish that swims through the air. Sculpted: a plump
+round fish with a big head and a toothy underbite, huge moon-silver eyes, a lantern lure dangling on a
+stalk over its face, small fins and a long flowing veil tail whose edges glow."""
+import math
 from mathutils import Vector as V
-from forge import kits
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
-    C.palette(body="2a3a7a", belly="8ab0e8", glow="aef4ff", eye="f0f4ff", pupil="0a0a1a", tooth="ffffff",
-              fin="5a7ad8", stalk="1a2a5a")
-    C.attack = "bite"
-    kits.fish(C, "body", [(-0.55, 0.32, 0.12), (-0.42, 0.32, 0.3), (-0.12, 0.34, 0.34), (0.15, 0.36, 0.26),
-                          (0.38, 0.38, 0.14), (0.52, 0.4, 0.07)], mid=3, hover=0.35)
-    for k in range(4):
-        y = -0.35 + 0.18 * k
-        C.decal(f"Belly{k}", 0, -1, (0.18, 0.12, 0.04), "belly", "chest" if y < 0.0 else "hips", dir=(0, 0, 1), y=y)
+    C.palette(body="2a3a7a", belly="8ab0e8", glow="aef4ff", eye="f0f4ff", pupil="0a0a1a", tooth="ffffff", fin="5a7ad8",
+              stalk="1a2a5a")
+    C.plan, C.attack, C.hover = "swimmer", "bite", 0.5
+    C.bone("root", (0, 0, 0), (0, 0, 0.3), deform=False)
+    C.bone("hips", (0, 0.06, 0.6), (0, -0.08, 0.62), "root")
+    C.bone("head", (0, -0.08, 0.62), (0, -0.3, 0.6), "hips")
+    C.bone("jaw", (0, -0.12, 0.52), (0, -0.3, 0.5), "head")
+    C.bone("tail1", (0, 0.06, 0.6), (0, 0.26, 0.64), "hips")
+    C.bone("tail2", (0, 0.26, 0.64), (0, 0.5, 0.66), "tail1")
+    C.spine, C.head, C.jaw, C.tail = ["hips"], "head", "jaw", ["tail1", "tail2"]
+    cl = Clay(C, "Body", res=0.014)
+    cl.add((0, -0.04, 0.6), (0.17, 0.22, 0.17), group="body")
+    cl.add((0, -0.1, 0.5), (0.13, 0.16, 0.07), group="belly")
+    cl.add((0, -0.24, 0.5), (0.11, 0.08, 0.06), group="belly")                        # underbite jaw
+    cl.add((0, -0.26, 0.56), (0.1, 0.06, 0.02), group="body", neg=True)
+    cl.chain([(0, 0.14, 0.62), (0, 0.26, 0.64)], [0.08, 0.04], group="body")
+    for sx in (-1, 1):
+        cl.chain([(0.14 * sx, -0.06, 0.54), (0.24 * sx, 0.0, 0.48)], [(0.02, 0.05, 0.04), (0.01, 0.03, 0.02)], group="fin")
+    cl.chain([(0, -0.04, 0.76), (0, 0.06, 0.84), (0, 0.16, 0.78)], [(0.02, 0.06, 0.04), (0.015, 0.06, 0.04), 0.01], group="fin")
+    body = cl.build({"body": "body", "belly": "belly", "fin": "fin"}, voxel=0.007, budget=5000, relax=2,
+                    texture={"type": 'CLOUDS', "scale": 0.02, "strength": 0.003})
+    recolor(body, lambda p, n: smoothstep(-0.2, -0.7, n.z) * 0.8, "belly")
     for mx in (-1, 1):
-        C.ellipsoid(f"Eye{mx}", (0.2 * mx, -0.4, 0.42), (0.09, 0.07, 0.09), "eye", "head")
-        C.ellipsoid(f"Pupil{mx}", (0.24 * mx, -0.45, 0.42), (0.04, 0.03, 0.05), "pupil", "head")
-        C.membrane(f"Pec{mx}", [(0.25 * mx, -0.15, 0.3), (0.45 * mx, -0.05, 0.18), (0.42 * mx, 0.05, 0.3)][::(1 if mx > 0 else -1)],
-                   "fin", "chest", thick=0.02)
-    # underbite of needle teeth
-    C.ellipsoid("Jaw", (0, -0.48, 0.24), (0.15, 0.14, 0.06), "belly", "jaw")
-    for k, x in enumerate((-0.1, -0.05, 0.0, 0.05, 0.1)):
-        C.cone(f"Tooth{k}", (x, -0.58 + abs(x) * 0.5, 0.26), (x, -0.59 + abs(x) * 0.5, 0.36), 0.015, "tooth", "jaw", segs=4)
-    # lantern lure
-    C.tube("Stalk", [V((0, -0.3, 0.62)), V((0, -0.42, 0.85)), V((0, -0.65, 0.8))], [0.02, 0.015, 0.012], "stalk", "head")
-    C.ellipsoid("Lure", (0, -0.68, 0.72), (0.07, 0.07, 0.08), "glow", "head")
-    # veil tail and dorsal fin
-    C.membrane("Veil", [(0, 0.45, 0.42), (-0.32, 0.85, 0.75), (-0.1, 0.95, 0.4), (0, 0.9, 0.36), (0.1, 0.95, 0.4),
-                        (0.32, 0.85, 0.75)], "fin", "tail2", thick=0.02)
-    C.membrane("VeilLow", [(0, 0.45, 0.38), (-0.25, 0.8, 0.05), (0, 0.75, 0.22), (0.25, 0.8, 0.05)], "glow", "tail2",
-               thick=0.025)
-    C.membrane("Dorsal", [(0, -0.2, 0.62), (0, 0.05, 0.82), (0, 0.2, 0.58)], "fin", "hips", thick=0.02)
+        C.ellipsoid(f"Eye{mx}", (0.1 * mx, -0.16, 0.64), (0.06, 0.05, 0.06), "eye", "head")
+        C.ellipsoid(f"Pupil{mx}", (0.12 * mx, -0.2, 0.64), (0.025, 0.02, 0.03), "pupil", "head")
+    for k in range(7):
+        a = math.pi * (0.1 + 0.8 * k / 6)
+        x, y = math.cos(a) * 0.09, -0.24 - math.sin(a) * 0.06
+        C.cone(f"Tooth{k}", (x, y, 0.53), (x, y - 0.005, 0.58 + 0.01 * (k % 2)), 0.01, "tooth", "jaw", segs=4)
+    C.tube("Lure", [V((0, -0.16, 0.76)), V((0, -0.26, 0.86)), V((0, -0.36, 0.8)), V((0, -0.38, 0.72))],
+           [0.012, 0.01, 0.008, 0.006], "stalk", "head")
+    C.ellipsoid("Lantern", (0, -0.38, 0.69), (0.04, 0.04, 0.04), "glow", "head")
+    for k in range(5):                                                          # flowing veil tail
+        a = math.radians(-40 + 20 * k)
+        pts = [(0, 0.26, 0.64), (math.sin(a) * 0.12, 0.42, 0.64 + math.cos(a) * 0.08), (math.sin(a) * 0.2, 0.6, 0.6 + math.cos(a) * 0.14)]
+        C.tube(f"Veil{k}", [V(p) for p in pts], [0.03, 0.05, 0.012], "fin", None, allowed=["tail1", "tail2"])
+        C.ellipsoid(f"VeilGlow{k}", pts[-1], (0.03, 0.03, 0.03), "glow", "tail2")

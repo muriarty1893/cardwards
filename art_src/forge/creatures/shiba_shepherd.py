@@ -1,41 +1,43 @@
-"""Shiba Shepherd (Dark Moon, 4): a stout guardian hound who herds lost dreams home, russet coat with a
-cream mask, a night-blue mantle clasped with a moon brooch, a shepherd's lantern hanging from its collar."""
+"""Shiba Shepherd (Dark Moon, 4): a stout guardian hound who herds lost dreams home. Sculpted: a sturdy,
+deep-chested shiba with a russet coat and a cream mask and chest, pricked ears, a curled plume of a tail,
+a night-blue mantle over the shoulders clasped with a moon brooch, and a shepherd's lantern hanging from
+its collar."""
+import math
 from mathutils import Vector as V
-from forge import kits, props
+from forge import skulpt
+from forge.sculpt import Clay, recolor, smoothstep
 
 
 def build(C):
-    C.palette(fur="c8642a", cream="fff0d8", dark="1a0e08", eye="2a1a10", mantle="1a2a5a", trim="d8c8ff",
-              moon="f0f4ff", lamp="ffe08a", metal="8a8aa0", nose="1a1010")
+    C.palette(fur="c8642a", cream="fff0d8", dark="1a0e08", eye="2a1a10", mantle="1a2a5a", trim="d8c8ff", moon="f0f4ff",
+              lamp="ffe08a", metal="8a8aa0", nose="1a1010")
     C.attack = "bite"
-    kits.quad(C, "fur", hip=(0.3, 0.7), chest=(-0.24, 0.78), neck=(-0.44, 1.0), head=(-0.78, 0.98),
-              r_hip=0.26, r_chest=0.32, r_waist=0.25, r_neck=0.17, r_head=0.21, r_snout=0.1, r_leg=0.085, r_paw=0.1,
-              knee=0.36, leg_x=0.22, tail=((0.48, 0.95), (0.4, 1.12)), r_tail=0.09, muscle=1.2, head_drop=0.03)
-    at = C.at
-    C.ellipsoid("Mask", at("snout", 0, 0.0, -0.02), (0.11, 0.14, 0.09), "cream", "head")
-    C.ellipsoid("Cheeks", at("brow", 0, -0.02, -0.06), (0.17, 0.1, 0.08), "cream", "head")
-    C.ellipsoid("Nose", at("nose", 0, -0.08, 0.03), (0.04, 0.03, 0.03), "nose", "head")
-    C.ellipsoid("Jaw", at("snout", 0, 0.0, -0.1), (0.08, 0.12, 0.035), "cream", "jaw")
-    for mx in (-1, 1):
-        C.ellipsoid(f"Eye{mx}", at("brow", 0.085, -0.08, 0.03, mx), (0.03, 0.02, 0.025), "eye", "head")
-        C.box(f"Brow{mx}", at("brow", 0.085, -0.08, 0.075, mx), (0.08, 0.04, 0.02), "cream", "head", rot=(0, 20 * mx, 0),
-              bevel=0.4)
-        C.cone(f"Ear{mx}", at("cran", 0.11, 0.02, 0.12, mx), at("cran", 0.14, 0.05, 0.32, mx), 0.07, "fur", "head", segs=6,
-               smooth=True)
-    C.decal("Chest", 0, 0.78, (0.2, 0.22, 0.05), "cream", "chest")
-    # curled tail
-    C.ellipsoid("TailCurl", C.anch["t1"], (0.1, 0.1, 0.1), "fur", "tail2")
-    # night mantle with a moon brooch
-    n = V(C.anch["neck"])
-    C.lathe("Collar", [(0.2, 0.0), (0.22, 0.06)], "metal", "neck", segs=16)
-    C.parts[-1][0].data.transform(__import__("mathutils").Matrix.Translation(n) @ __import__("mathutils").Matrix.Rotation(0.6, 4, 'X'))
-    C.ellipsoid("Mantle", at("back", 0, -0.18, 0.02), (0.32, 0.3, 0.1), "mantle", "chest")
-    for mx in (-1, 1):
-        C.box(f"MantleSide{mx}", at("chest", 0.3, 0.05, 0.0, mx), (0.04, 0.34, 0.3), "mantle", "chest", bevel=0.3)
-        C.box(f"MantleTrim{mx}", at("chest", 0.32, 0.05, -0.15, mx), (0.04, 0.36, 0.04), "trim", "chest", bevel=0.3)
-    C.ellipsoid("Brooch", at("chest", 0, -0.32, 0.12), (0.06, 0.03, 0.06), "moon", "chest")
-    # lantern hanging from the collar
-    lp = V(at("chest", 0, -0.36, -0.12))
-    C.tube("LampChain", [n + V((0, -0.18, -0.08)), lp + V((0, 0, 0.12))], [0.01, 0.01], "metal", "neck")
-    C.lathe("Lamp", [(0.03, -0.08), (0.06, -0.05), (0.06, 0.05), (0.03, 0.09)], "lamp", "neck", segs=10)
-    C.parts[-1][0].data.transform(__import__("mathutils").Matrix.Translation(lp))
+    cl, at = skulpt.quad(C, hip=(0.28, 0.58), chest=(-0.2, 0.64), r_chest=(0.22, 0.24, 0.24), r_belly=(0.18, 0.24, 0.17),
+                         r_hips=(0.18, 0.18, 0.18), leg_x=0.15, r_thigh=0.09, r_shin=0.055, r_paw=0.07, paw_len=1.1,
+                         neck=((-0.34, 0.78),), r_neck=(0.14,), head=(-0.44, 0.86), r_head=(0.14, 0.13, 0.12),
+                         snout=(-0.64, 0.8), r_snout=(0.08, 0.06), tail=((0.42, 0.74), (0.4, 0.92)), r_tail=(0.08, 0.06),
+                         group="fur", belly_group="cream", jaw=True)
+    h, s = at["head"], at["snout"]
+    for sx in (-1, 1):
+        cl.chain([(0.08 * sx, h.y + 0.02, h.z + 0.09), (0.11 * sx, h.y + 0.03, h.z + 0.2)], [(0.05, 0.025, 0.05), 0.012],
+                 group="fur")
+        cl.add((0.08 * sx, h.y - 0.06, h.z - 0.05), (0.06, 0.06, 0.05), group="cream")      # cream cheeks
+    cl.add(tuple(s + V((0, 0.02, -0.02))), (0.07, 0.08, 0.05), group="cream")
+    cl.add((0, -0.32, 0.58), (0.13, 0.08, 0.16), group="cream")
+    cl.chain([(0, 0.42, 0.74), (0, 0.4, 0.92), (0, 0.3, 0.98), (0, 0.24, 0.9)], [0.08, 0.09, 0.07, 0.04], group="fur")
+    body = cl.build({"fur": "fur", "cream": "cream"}, voxel=0.011, budget=9000, relax=2,
+                    texture={"type": 'CLOUDS', "scale": 0.025, "strength": 0.01})
+    skulpt.eyes(C, [(0.06, h.y - 0.11, h.z + 0.03)], 0.02, "eye", None)
+    C.ellipsoid("Nose", tuple(s + V((0, -0.06, 0.02))), (0.028, 0.02, 0.02), "nose", "head")
+    mantle = Clay(C, "Mantle", res=0.014)
+    for k in range(11):
+        a = math.radians(-80 + 16 * k)
+        mantle.add((math.sin(a) * 0.27, -0.2, 0.66 + math.cos(a) * 0.27), (0.07, 0.2, 0.02), rot=(0, math.degrees(a), 0),
+                   group="m")
+    mb = mantle.build({"m": "mantle"}, voxel=0.009, relax=2, budget=2000, ao=0.3)
+    recolor(mb, lambda p, n: smoothstep(0.03, 0.0, abs(p.y + 0.38)), "trim")
+    C.ellipsoid("Brooch", (0, -0.42, 0.76), (0.04, 0.015, 0.04), "moon", "chest")
+    C.tube("Collar", [V((-0.12, -0.36, 0.78)), V((0, -0.42, 0.72)), V((0.12, -0.36, 0.78))], [0.015, 0.015, 0.015], "metal",
+           "neck")
+    C.tube("LampHook", [V((0, -0.42, 0.7)), V((0, -0.44, 0.6))], [0.006, 0.006], "metal", "neck")
+    C.ellipsoid("Lantern", (0, -0.44, 0.55), (0.04, 0.04, 0.05), "lamp", "neck")

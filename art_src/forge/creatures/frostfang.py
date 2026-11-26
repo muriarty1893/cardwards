@@ -7,8 +7,4 @@ from forge.creatures import moonlit_stalker
 def build(C):
     C.palette(fur="8a9ab0", fur2="5a6a80", moon="e0faff", eye="3ad8ff", star="ffffff", wisp="cfeaff", claw="ffffff",
               mouth="2a3a5a", sabre="f0fcff")
-    moonlit_stalker.build(C)
-    at = C.at
-    for mx in (-1, 1):
-        C.cone(f"Sabre{mx}", at("snout", 0.055, -0.05, -0.04, mx), at("snout", 0.06, -0.08, -0.3, mx), 0.03, "sabre",
-               "head", segs=6, smooth=True)
+    moonlit_stalker.build(C, sabres=True)
