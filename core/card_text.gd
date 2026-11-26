@@ -83,6 +83,9 @@ static func mechanics(c: CardData) -> Array[StringName]:
 			used.append(&"dark_gift")
 		if e.when == &"on_destroyed" and not &"last_breath" in used:
 			used.append(&"last_breath")
+		if (e.when == &"on_draw" or (e.op == &"shuffle_into_deck" and CardDB.has_card(e.card_id)
+				and CardDB.card(e.card_id).has_effect(&"on_draw"))) and not &"when_drawn" in used:
+			used.append(&"when_drawn")
 	if c.field:
 		used.push_front(&"field")
 	if c.curse:

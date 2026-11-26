@@ -137,6 +137,19 @@ static func curse_triggered(ep: EventPlayer, d: Dictionary) -> void:
 	await ep._wait(0.45)
 
 
+## A boon went off as it was drawn: a golden burst over its drawer, its name, then the spell's own effects.
+static func drawn_cast(ep: EventPlayer, d: Dictionary) -> void:
+	var m: MatchController = ep.m
+	var c: CardData = CardDB.card(d["card"])
+	var col: Color = Palette.LAND_CARD[c.land].lightened(0.25)
+	var pos: Vector3 = FxDirector._hero_pos(m, int(d["player"]))
+	Burst.spawn(m, &"stars", pos + Vector3(0, 0.5, 0), Palette.GOLD, 1.3)
+	Burst.spawn(m, &"sparks", pos + Vector3(0, 0.6, 0), col, 1.0)
+	DamageNumber.spawn(m, pos + Vector3(0, 1.0, 0), "%s!" % c.display_name.to_upper(), col, 48)
+	Audio.sfx(&"magic_gain")
+	await ep._wait(0.4)
+
+
 ## Dark Gift: the pick's bonus is announced over its owner.
 static func dark_gift(ep: EventPlayer, d: Dictionary) -> void:
 	var m: MatchController = ep.m

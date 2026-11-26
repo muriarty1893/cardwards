@@ -302,3 +302,15 @@ func test_gems_sparkle_when_filled() -> bool:
 	assert_true(not g.is_processing(), "and it ends")
 	g.queue_free()
 	return true
+
+
+func test_dark_gift_cards_glow_red() -> bool:
+	var gifted := CardWidget.new()
+	gifted.setup(CardDB.variant(CardDB.card(&"grave_toad"), Gifts.delta(&"big")), 0)
+	assert_true(gifted.has_node("GiftGlow"), "a Dark Gift card glows")
+	var plain := CardWidget.new()
+	plain.setup(CardDB.card(&"grave_toad"), 0)
+	assert_true(not plain.has_node("GiftGlow"), "a plain card doesn't")
+	gifted.free()
+	plain.free()
+	return true

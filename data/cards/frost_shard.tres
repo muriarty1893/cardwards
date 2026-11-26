@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://core/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://core/effect_data.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="eff_frost_shard_0"]
+script = ExtResource("2_eff")
+when = &"on_draw"
+op = &"damage"
+who = &"all_enemy_creatures"
+amount = 1
+
+[resource]
+script = ExtResource("1_card")
+id = &"frost_shard"
+display_name = "Frost Shard"
+kind = 2
+land = 3
+level = 0
+cost = 0
+effects = Array[ExtResource("2_eff")]([SubResource("eff_frost_shard_0")])
+collectible = false
+deck_legal = false

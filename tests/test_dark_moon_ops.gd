@@ -326,3 +326,34 @@ func test_neutral_creature_needs_no_land() -> bool:
 	s.players[0].magic = 10
 	assert_eq(Rules.validate(s, Action.play(0, s.players[0].hand.size() - 1, 0)), "", "a neutral creature fits any land")
 	return true
+
+
+func test_when_drawn_casts_then_draws_another() -> bool:
+	var s: GameState = Fx.blank()
+	var ps: GameState.PlayerState = s.players[0]
+	ps.deck.clear()
+	ps.hand.clear()
+	var plain: CardData = Fx.card(&"t_plain", C, 1, 1, 1)
+	ps.deck.append(plain)
+	ps.deck.append(CardDB.card(&"sun_coin"))
+	var ev: Array[GameEvent] = []
+	Rules.draw(s, 0, ev)
+	assert_eq(ps.armour, 2, "the Sun Coin went off as it was drawn")
+	assert_true(not ps.hand.any(func(c: CardData) -> bool: return c.id == &"sun_coin"), "and never stayed in hand")
+	assert_true(plain in ps.hand, "then its drawer drew another card")
+	assert_true(&"drawn_cast" in Fx.types(ev), "a drawn_cast event for the view")
+	# The last card in the deck: no replacement, and no fatigue for it.
+	ps.deck.append(CardDB.card(&"healing_spore"))
+	var hp: int = ps.hero_hp
+	Rules.draw(s, 0, ev)
+	assert_true(ps.hero_hp >= hp, "an empty deck after it costs nothing")
+	return true
+
+
+func test_cache_shuffles_into_own_deck() -> bool:
+	var s: GameState = Fx.blank()
+	var n: int = s.players[0].deck.size()
+	_cast(s, CardDB.card(&"ember_cache"))
+	assert_eq(s.players[0].deck.size(), n + 2, "two Ember Sparks into your own deck")
+	assert_eq(s.players[0].deck.filter(func(c: CardData) -> bool: return c.id == &"ember_spark").size(), 2, "both sparks")
+	return true

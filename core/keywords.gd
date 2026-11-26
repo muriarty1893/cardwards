@@ -10,7 +10,7 @@ const NAMES: Dictionary = {
 	&"leech": "Leech", &"flurry": "Flurry", &"hidden": "Hidden", &"second_wind": "Second Wind",
 	&"hush": "Hush", &"dream_up": "Dream Up", &"combo": "Combo", &"spell_power": "Spell Power",
 	&"field": "Field", &"armour": "Armour", &"level_up": "Level up", &"sturdy": "Sturdy", &"bask": "Bask", &"hardened": "Battle-hardened",
-	&"last_breath": "Last Breath", &"drain": "Drain", &"scaling": "Grows", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo", &"follower": "Follower",
+	&"last_breath": "Last Breath", &"drain": "Drain", &"scaling": "Grows", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo", &"follower": "Follower", &"when_drawn": "When drawn",
 }
 
 const RULES: Dictionary = {
@@ -35,6 +35,7 @@ const RULES: Dictionary = {
 	&"drain": "Deals the damage, and this creature gains that much HP (a spell or building heals your hero instead). An empty lane drains the enemy hero.",
 	&"scaling": "The number grows during the game. The card in your hand shows what it is right now.",
 	&"curse": "A bad card made for the rival. Some go off when drawn.",
+	&"when_drawn": "Casts itself the moment it is drawn, then you draw another card in its place.",
 	&"dark_gift": "Choose one of 3 random creatures, each showing a different bonus; you keep it with its bonus.",
 	&"follower": "Shares its leader's land. It fights and can be hit on its own, and takes over the land if its leader falls.",
 	&"echo": "While this is in play, your creatures' and buildings' on-play effects happen twice.",

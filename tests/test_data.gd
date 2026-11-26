@@ -126,6 +126,16 @@ const SPEC: Dictionary = {
 	&"overcharge": [0, 1, 0, 0, [], 0],
 	&"hex_of_cinders": [0, 2, 0, 0, [], 0],
 	&"smolder": [0, 0, 0, 0, [], 0],
+	&"ember_cache": [0, 2, 0, 0, [], 0],
+	&"ember_spark": [0, 0, 0, 0, [], 0],
+	&"spore_cache": [0, 2, 0, 0, [], 0],
+	&"healing_spore": [0, 0, 0, 0, [], 0],
+	&"sugar_stash": [0, 1, 0, 0, [], 0],
+	&"sugar_drop": [0, 0, 0, 0, [], 0],
+	&"snowdrift_cache": [0, 3, 0, 0, [], 0],
+	&"frost_shard": [0, 0, 0, 0, [], 0],
+	&"buried_treasure": [0, 2, 0, 0, [], 0],
+	&"sun_coin": [0, 0, 0, 0, [], 0],
 	&"lava_wave": [0, 3, 0, 0, [], 0],
 	&"kindle_pups": [0, 3, 0, 0, [], 0],
 	&"sprinkle_sprite": [1, 1, 1, 1, [], 0],
@@ -350,6 +360,16 @@ const SPEC_TEXT: Dictionary = {
 	&"overcharge": "Your next spell happens twice.",
 	&"hex_of_cinders": "Shuffle two Smolders into your rival's deck. Deal 2 damage to the enemy hero.",
 	&"smolder": "When drawn: Deal 3 damage to your hero.",
+	&"ember_cache": "Deal 1 damage to the enemy hero. Shuffle two Ember Sparks into your deck.",
+	&"ember_spark": "When drawn: Deal 2 damage to the enemy hero.",
+	&"spore_cache": "Heal your hero 2. Shuffle two Healing Spores into your deck.",
+	&"healing_spore": "When drawn: Heal your hero 3.",
+	&"sugar_stash": "Shuffle two Sugar Drops into your deck.",
+	&"sugar_drop": "When drawn: Gain 1 magic.",
+	&"snowdrift_cache": "Deal 1 damage to all enemy creatures. Shuffle two Frost Shards into your deck.",
+	&"frost_shard": "When drawn: Deal 1 damage to all enemy creatures.",
+	&"buried_treasure": "Gain 2 armour. Shuffle two Sun Coins into your deck.",
+	&"sun_coin": "When drawn: Gain 2 armour.",
 	&"lava_wave": "Deal 2 damage to all enemy creatures. If you're holding an Ember Flats card: Deal 2 damage to the enemy hero.",
 	&"kindle_pups": "Summon two 2/1 Cinderpups.",
 	&"sprinkle_sprite": "On play: Give the creatures in your hand +1/+1.",
@@ -428,13 +448,14 @@ const SPEC_TEXT: Dictionary = {
 
 func test_card_count() -> bool:
 	var cards: Array[CardData] = CardDB.all_cards()
-	assert_eq(cards.size(), 216, "216 cards (47 + card expansion 2's 41 + Sunny Dunes 14 + 16 more + Dark Moon's 80 + Legends & Grudges 18)")
-	assert_eq(CardDB.collectible_cards().size(), 200, "200 collectible (Dark Moon adds 73 and 7 tokens, Legends & Grudges 18)")
+	assert_eq(cards.size(), 226, "226 cards (47 + card expansion 2's 41 + Sunny Dunes 14 + 16 more + Dark Moon's 80 + Legends & Grudges 18 + 5 caches and their 5 when-drawn cards)")
+	assert_eq(CardDB.collectible_cards().size(), 205, "205 collectible (Dark Moon adds 73 and 7 tokens, Legends & Grudges 18, 5 caches)")
 	# 10 per land from Rules 2.0, each land's field spell, the two armour spells, then expansion 2 (10 per land,
 	# Frost 11 with the Snowman token), then 4 per land and Sunny Dunes' 14.
 	# Dark Moon: 12 Mushroom, 13 Ember, 13 Candy, 11 Frost, 12 Dunes, 19 Neutral.
 	# Legends & Grudges: 4 Mushroom, 3 Ember, 2 Candy, 2 Frost, 3 Dunes, 4 Neutral.
-	var per_land: Dictionary = {0: 42, 1: 41, 2: 41, 3: 39, 5: 29}
+	# Caches: one cache and its when-drawn card for each land but Dark Moon.
+	var per_land: Dictionary = {0: 44, 1: 43, 2: 43, 3: 41, 5: 31}
 	for land: int in per_land:
 		assert_eq(cards.filter(func(c: CardData) -> bool: return c.land == land).size(), per_land[land], "%d cards for land %d" % [per_land[land], land])
 	var neutral: Array = cards.filter(func(c: CardData) -> bool: return c.land == CardData.Land.NEUTRAL)

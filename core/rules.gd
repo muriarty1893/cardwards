@@ -95,11 +95,14 @@ static func draw(s: GameState, p: int, ev: Array[GameEvent]) -> void:
 		ps.hand.append(c)
 		ev.append(GameEvent.make(&"card_drawn", {"player": p, "card": c.id}))
 		if c.has_effect(&"on_draw"):
-			# Curses that go off when drawn: they act on their drawer, then are gone.
+			# Cards cast when drawn (curses and boons): they act on their drawer, are gone, and the
+			# drawer draws another card in their place.
 			ps.hand.erase(c)
-			ev.append(GameEvent.make(&"curse_triggered", {"player": p, "card": c.id}))
+			ev.append(GameEvent.make(&"curse_triggered" if c.curse else &"drawn_cast", {"player": p, "card": c.id}))
 			Effects.run(s, p, -1, c, &"on_draw", [], ev)
 			ps.discard.append(c)
+			if s.phase != GameState.Phase.OVER and not ps.deck.is_empty():
+				draw(s, p, ev)
 
 
 # --- Validation --------------------------------------------------------------

@@ -159,6 +159,7 @@ func setup(c: CardData, i: int) -> void:
 		(mark.get_node("Symbol") as TextureRect).modulate = Color(1, 1, 1, 0.95)
 		mark.tooltip_text = "Dark Gift: %s" % Gifts.TEXT.get(StringName(c.changes["gift"]), "")
 		add_child(mark)
+		_add_gift_glow()
 
 
 ## Smallest rules-text size; below this a card's text would be unreadable even zoomed.
@@ -226,6 +227,32 @@ static func bold_font() -> FontVariation:
 		_bold.base_font = ThemeDB.fallback_font
 		_bold.variation_embolden = 0.9
 	return _bold
+
+
+## A pulsing red glow around a card carrying a Dark Gift, so a gifted card stands out in hand and in the
+## Dark Gift picker.
+const GIFT_RED := Color("#ff2a3a")
+
+
+func _add_gift_glow() -> void:
+	var g := Panel.new()
+	g.name = "GiftGlow"
+	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	g.position = Vector2(-4, -4)
+	g.size = SIZE + Vector2(8, 8)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0)
+	sb.border_color = GIFT_RED
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(15)
+	sb.shadow_color = Color(GIFT_RED, 0.85)
+	sb.shadow_size = 12
+	g.add_theme_stylebox_override("panel", sb)
+	add_child(g)
+	move_child(g, 0)
+	var tw := g.create_tween().set_loops()
+	tw.tween_property(g, "modulate:a", 0.5, 0.7).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(g, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
 
 
 ## Gold glow around a Combo card while its Combo is on (you already played a card this turn).

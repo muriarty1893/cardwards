@@ -25,7 +25,7 @@ const LAND_SOUNDS: Array[StringName] = [&"heal", &"fire_whoosh", &"candy_pop", &
 ## How each event changes the hand of the player it names (the rival's fan follows it live).
 const HAND_DELTA: Dictionary = {
 	&"card_drawn": 1, &"card_returned": 1, &"dream_up_chosen": 1, &"card_added": 1, &"card_copied": 1, &"card_stolen": 1,
-	&"curse_triggered": -1,
+	&"curse_triggered": -1, &"drawn_cast": -1,
 	&"creature_played": -1, &"building_played": -1, &"spell_cast": -1, &"creature_merged": -1,
 }
 
@@ -188,6 +188,8 @@ func _play_one(e: GameEvent) -> void:
 			await DarkMoonFx.card_taken(self, d, "COPIED!")
 		&"curse_triggered":
 			await DarkMoonFx.curse_triggered(self, d)
+		&"drawn_cast":
+			await DarkMoonFx.drawn_cast(self, d)
 		&"dark_gift":
 			await DarkMoonFx.dark_gift(self, d)
 		&"last_breath":
