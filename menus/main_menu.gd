@@ -32,7 +32,7 @@ func _ready() -> void:
 	var a: Array[int] = [0, 1, 5, 3]
 	var b: Array[int] = [3, 5, 1, 0]
 	board.build([a, b])
-	var demo: Array[StringName] = [&"elder_shroomhulk", &"inferno_drake", &"bonbon_behemoth", &"blizzard_titan"]
+	var demo: Array[StringName] = [&"mycelia_spore_weaver", &"inferno_drake", &"bonbon_behemoth", &"blizzard_titan"]
 	for l: int in 4:
 		var v := CreatureView.create(CardDB.card(demo[l]))
 		add_child(v)
