@@ -24,7 +24,7 @@ extends Resource
 ## Runs only if its owner controls at least `need` other creatures of `tribe`.
 @export var tribe: StringName = &""
 @export var need: int = 0
-## Dream Up: the pick is a Dark Gift (gets a random Gifts bonus).
+## Dream Up: a Dark Gift (each offered creature carries a different Gifts bonus).
 @export var gift: bool = false
 ## Runs only if Conditions.ok(owner, need_cond): "name" or "name:arg[:arg]".
 @export var need_cond: StringName = &""

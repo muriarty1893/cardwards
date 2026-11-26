@@ -1,6 +1,6 @@
 class_name Gifts
 extends RefCounted
-## Dark Gift bonuses (Dark Moon spec 3.3): a Dark Gift creature gets one of these at random.
+## Dark Gift bonuses (Dark Moon spec 3.3): each of the 3 offered creatures carries a different one.
 
 const ORDER: Array[StringName] = [&"big", &"guard", &"leech", &"cheap", &"haunt"]
 const TEXT: Dictionary = {

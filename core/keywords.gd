@@ -3,13 +3,13 @@ extends RefCounted
 ## Names and one-line rules of the keywords and card mechanics (spec section 4).
 
 ## Printed order on cards.
-const ORDER: Array[StringName] = [&"guard", &"bubble", &"dash", &"venom", &"leech", &"flurry", &"hidden", &"second_wind", &"sturdy", &"bask"]
+const ORDER: Array[StringName] = [&"guard", &"bubble", &"dash", &"venom", &"leech", &"flurry", &"hidden", &"second_wind", &"sturdy", &"bask", &"hardened"]
 
 const NAMES: Dictionary = {
 	&"guard": "Guard", &"bubble": "Bubble", &"dash": "Dash", &"venom": "Venom",
 	&"leech": "Leech", &"flurry": "Flurry", &"hidden": "Hidden", &"second_wind": "Second Wind",
 	&"hush": "Hush", &"dream_up": "Dream Up", &"combo": "Combo", &"spell_power": "Spell Power",
-	&"field": "Field", &"armour": "Armour", &"level_up": "Level up", &"sturdy": "Sturdy", &"bask": "Bask",
+	&"field": "Field", &"armour": "Armour", &"level_up": "Level up", &"sturdy": "Sturdy", &"bask": "Bask", &"hardened": "Battle-hardened",
 	&"last_breath": "Last Breath", &"drain": "Drain", &"scaling": "Grows", &"curse": "Curse", &"dark_gift": "Dark Gift", &"echo": "Echo", &"follower": "Follower",
 }
 
@@ -30,11 +30,12 @@ const RULES: Dictionary = {
 	&"armour": "Soaks damage to your hero before its HP does.",
 	&"sturdy": "Takes 1 less damage from every hit.",
 	&"bask": "At the end of your turn, if it didn't attack, it gets +1/+1.",
+	&"hardened": "Each time it attacks and survives, it gets +1/+1.",
 	&"last_breath": "Happens when this creature dies (not if it's Hushed).",
 	&"drain": "Deals the damage, and this creature gains that much HP (a spell or building heals your hero instead). An empty lane drains the enemy hero.",
 	&"scaling": "The number grows during the game. The card in your hand shows what it is right now.",
 	&"curse": "A bad card made for the rival. Some go off when drawn.",
-	&"dark_gift": "Choose one of 3 random creatures; the one you take gets a random bonus.",
+	&"dark_gift": "Choose one of 3 random creatures, each showing a different bonus; you keep it with its bonus.",
 	&"follower": "Shares its leader's land. It fights and can be hit on its own, and takes over the land if its leader falls.",
 	&"echo": "While this is in play, your creatures' and buildings' on-play effects happen twice.",
 	&"level_up": "A creature gains XP for each attack it survives (+1 more for a kill): Lv 2 at 2 XP, Lv 3 at 4 XP, +1/+1 each.",

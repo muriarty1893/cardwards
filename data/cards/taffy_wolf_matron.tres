@@ -13,5 +13,6 @@ level = 2
 cost = 6
 attack = 5
 health = 6
+keywords = Array[StringName]([&"hardened"])
 tribe = &"beast"
 follower_id = &"gummy_cub"

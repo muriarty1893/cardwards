@@ -99,6 +99,7 @@ func _build(cards: Array[CardData]) -> void:
 	title.size = Vector2(vp.x, 64)
 	sub.position = Vector2(0, top - 54.0)
 	sub.size = Vector2(vp.x, 30)
+	var gifts: bool = false
 	for i: int in cards.size():
 		var cw := CardWidget.new()
 		cw.setup(cards[i], i)
@@ -116,6 +117,9 @@ func _build(cards: Array[CardData]) -> void:
 			if mb and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and _open:
 				Audio.sfx(&"ui_click")
 				choose(i))
+		if cards[i].changes.has("gift"):
+			cw.add_child(_gift_tag(StringName(cards[i].changes["gift"])))
+			gifts = true
 		_content.add_child(cw)
 		_cards.append(cw)
 		var tw := cw.create_tween().set_parallel(true)
@@ -129,7 +133,35 @@ func _build(cards: Array[CardData]) -> void:
 	_peek.button_up.connect(func() -> void: set_peeking(false))
 	add_child(_peek)
 	_peek.reset_size()
-	_peek.position = Vector2((vp.x - _peek.size.x) / 2.0, top + CardWidget.SIZE.y * CARD_SCALE + 28.0)
+	_peek.position = Vector2((vp.x - _peek.size.x) / 2.0, top + CardWidget.SIZE.y * CARD_SCALE + (96.0 if gifts else 28.0))
+
+
+## The Dark Gift bonus a choice comes with, as a badge hanging under its card.
+func _gift_tag(gift: StringName) -> Control:
+	var panel := PanelContainer.new()
+	panel.name = "GiftTag"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.22, 0.08, 0.36, 0.95)
+	sb.border_color = Color(0.85, 0.6, 1.0)
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(14)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	panel.add_theme_stylebox_override("panel", sb)
+	var l := UiStyle.title(UiStyle.label("+ " + String(Gifts.TEXT.get(gift, gift)), 16, Color.WHITE)) as Label
+	l.add_theme_color_override("font_outline_color", Palette.INK)
+	l.add_theme_constant_override("outline_size", 6)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.name = "GiftText"
+	panel.add_child(l)
+	panel.position = Vector2(0, CardWidget.SIZE.y + 10.0)
+	panel.custom_minimum_size = Vector2(CardWidget.SIZE.x, 0)
+	panel.size = Vector2(CardWidget.SIZE.x, 0)
+	return panel
 
 
 ## PEEK held: everything but the button goes see-through and stops catching clicks.

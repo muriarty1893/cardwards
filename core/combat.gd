@@ -64,4 +64,7 @@ static func resolve(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	if s.phase != GameState.Phase.OVER and s.players[p].at(a.lane) == cr:
 		var killed: bool = defender != null and s.players[foe].at(a.target_lane) != defender
 		Levels.gain_xp(s, p, a.lane, 2 if killed else 1, ev)
+		# Battle-hardened: +1/+1 for every attack it lives through.
+		if s.phase != GameState.Phase.OVER and s.players[p].at(a.lane) == cr and Rules.has_keyword(s, p, a.lane, &"hardened"):
+			Rules.buff(s, p, a.lane, 1, 1, ev)
 		Rules.resolve_deaths(s, ev)

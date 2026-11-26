@@ -224,7 +224,7 @@ static func _phrase(e: EffectData, bold: bool) -> String:
 			var kind: String = _KIND_WORDS[e.filter_kind] if e.filter_kind >= 0 else "card"
 			var noun: String = land + kind
 			if e.gift:
-				s = "%s (Dream Up a creature with a random bonus)" % _b("Dark Gift", bold)
+				s = "%s (Dream Up a creature: each choice shows its own bonus)" % _b("Dark Gift", bold)
 			else:
 				s = "%s %s %s" % [_b("Dream Up", bold), "an" if noun.substr(0, 1).to_lower() in ["a", "e", "i", "o", "u"] else "a", noun]
 		&"lane_damage_taken":

@@ -29,7 +29,7 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Dream Up: the cards on offer and who picks.
 var pending_choice: Array[CardData] = []
 var pending_player: int = -1
-## The pending choice is a Dark Gift: the pick gets a random Gifts bonus.
+## The pending choice is a Dark Gift: each offered card carries its own Gifts bonus (card.changes.gift).
 var pending_gift: bool = false
 ## &"" for a Dream Up card pick; &"direction" for Dark Moon's left (0) / right (1); &"mulligan" for
 ## the starting-hand redraw (choice = bitmask of hand indices).

@@ -188,10 +188,19 @@ func test_dark_gift() -> bool:
 	_cast(s, _spell(&"t_offer", [_eff(&"on_play", &"dream_up", 0, &"own_hero", {"filter_kind": C, "gift": true})]))
 	assert_eq(s.phase, GameState.Phase.CHOOSING, "choose one")
 	assert_true(s.pending_gift, "a Dark Gift choice")
+	# Each offered creature shows its own, different gift before the pick.
+	var shown: Array[StringName] = []
+	for c: CardData in s.pending_choice:
+		assert_true(c.changes.has("gift"), "%s shows its gift" % c.id)
+		shown.append(StringName(c.changes.get("gift", &"")))
+	for i: int in shown.size():
+		assert_eq(shown.count(shown[i]), 1, "gifts differ")
+	var offered: CardData = s.pending_choice[0]
 	Rules.apply(s, Action.choose(0, 0))
 	var got: CardData = s.players[0].hand.back()
 	assert_true(got.changes.has("gift"), "the pick carries a gift")
 	assert_true(StringName(got.changes["gift"]) in Gifts.ORDER, "one of the gifts")
+	assert_eq(got.changes["gift"], offered.changes["gift"], "keeps the gift it showed")
 	assert_true(not s.pending_gift, "cleared")
 	return true
 

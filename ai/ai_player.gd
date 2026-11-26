@@ -33,7 +33,7 @@ const MAX_STATES := 1500
 ## Flat keyword worth; bubble and flurry also scale with ATK (see _creature_value).
 const KEYWORD_VALUE: Dictionary = {
 	&"guard": 1.5, &"bubble": 1.5, &"venom": 2.5, &"leech": 1.0, &"flurry": 0.0,
-	&"second_wind": 1.5, &"hidden": 1.0, &"dash": 0.3, &"sturdy": 1.5, &"bask": 1.0,
+	&"second_wind": 1.5, &"hidden": 1.0, &"dash": 0.3, &"sturdy": 1.5, &"bask": 1.0, &"hardened": 1.2,
 }
 
 var player: int

@@ -290,8 +290,8 @@ static func _choose(s: GameState, a: Action, ev: Array[GameEvent]) -> void:
 	s.pending_gift = false
 	s.phase = GameState.Phase.MAIN
 	if gift:
-		var g: StringName = Gifts.ORDER[s.rng.randi_range(0, Gifts.ORDER.size() - 1)]
-		c = CardDB.variant(c, Gifts.delta(g))
+		# The offered cards already carry their gifts (see offer_dream_up).
+		var g: StringName = StringName(c.changes.get("gift", &""))
 		ev.append(GameEvent.make(&"dark_gift", {"player": a.player, "card": c.id, "gift": g}))
 	ev.append(GameEvent.make(&"dream_up_chosen", {"player": a.player, "card": c.id}))
 	var ps: GameState.PlayerState = s.players[a.player]
@@ -802,8 +802,8 @@ static func reveal(s: GameState, p: int, lane: int, ev: Array[GameEvent]) -> voi
 
 
 ## Offers up to 3 different random cards matching the filter; play waits for CHOOSE.
-## A Dark Gift (`gift`) offers creatures and the pick gets a random bonus. While another choice
-## is open, the offer waits in the queue.
+## A Dark Gift (`gift`) offers creatures, each already carrying a different Gifts bonus that the
+## chooser can see. While another choice is open, the offer waits in the queue.
 static func offer_dream_up(s: GameState, p: int, filter_kind: int, filter_land: int, ev: Array[GameEvent], gift: bool = false) -> void:
 	if s.phase == GameState.Phase.CHOOSING:
 		s.pending_queue.append({"player": p, "kind": filter_kind, "land": filter_land, "gift": gift})
@@ -813,6 +813,15 @@ static func offer_dream_up(s: GameState, p: int, filter_kind: int, filter_land: 
 		return
 	_shuffle(s, pool)
 	s.pending_choice = pool.slice(0, mini(3, pool.size()))
+	if gift:
+		var gifts: Array[StringName] = Gifts.ORDER.duplicate()
+		for i: int in range(gifts.size() - 1, 0, -1):
+			var j: int = s.rng.randi_range(0, i)
+			var t: StringName = gifts[i]
+			gifts[i] = gifts[j]
+			gifts[j] = t
+		for i: int in s.pending_choice.size():
+			s.pending_choice[i] = CardDB.variant(s.pending_choice[i], Gifts.delta(gifts[i]))
 	s.pending_player = p
 	s.pending_gift = gift
 	s.phase = GameState.Phase.CHOOSING

@@ -249,3 +249,22 @@ func test_after_game_over() -> bool:
 	for a: Action in [Action.play(0, i, 0), Action.boop(0, 0), Action.attack(0, 0, -1), Action.end_turn(0), Action.choose(0, 0)]:
 		assert_eq(Rules.validate(s, a), "Game is over", "rejected %d" % a.type)
 	return true
+
+
+func test_battle_hardened_grows_when_it_survives() -> bool:
+	var s: GameState = Fx.blank()
+	Fx.put(s, 0, 0, _mk(3, 5, [&"hardened"]))
+	Fx.put(s, 0, 1, _mk(3, 5))
+	Fx.put(s, 1, 0, _mk(1, 9))
+	Fx.put(s, 1, 1, _mk(1, 9))
+	_hit(s, 0, 0)
+	_hit(s, 1, 1)
+	assert_eq([Rules.effective_attack(s, 0, 0), Rules.effective_max_hp(s, 0, 0)], [4, 6], "hardened: +1/+1")
+	assert_eq([Rules.effective_attack(s, 0, 1), Rules.effective_max_hp(s, 0, 1)], [3, 5], "plain: no growth")
+	# Dies in the trade: nothing to grow.
+	var s2: GameState = Fx.blank()
+	Fx.put(s2, 0, 0, _mk(1, 1, [&"hardened"]))
+	Fx.put(s2, 1, 0, _mk(5, 5))
+	_hit(s2, 0, 0)
+	assert_true(s2.players[0].at(0) == null, "the attacker died")
+	return true

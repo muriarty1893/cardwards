@@ -661,7 +661,7 @@ func _human_dream_up() -> void:
 			sub = "Turn the board left or right"
 		elif state.pending_gift:
 			title = "DARK GIFT"
-			sub = "Choose a creature: it gets a random bonus"
+			sub = "Choose a creature: each comes with the bonus below it"
 		var i: int = await picker.open(state.pending_choice.duplicate(), title, sub)
 		if i >= 0 and state.phase == GameState.Phase.CHOOSING and state.pending_player == HUMAN:
 			await driver.submit(Action.choose(HUMAN, i))
