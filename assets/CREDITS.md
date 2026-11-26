@@ -6,22 +6,7 @@ unless noted.
 
 ## Quaternius (https://quaternius.com), CC0 1.0
 
-- `monsters/`: "Ultimate Monsters" pack (creature models, Big / Blob / Flying).
-- `monsters/extra/`: single models from free Quaternius packs: Crab, Bee, Enemy ("Ultimate Platformer Pack", itch.io
-  quaternius.itch.io/ultimate-platformer-pack); Rat, Frog, Snake ("Easy Enemy Pack", itch.io); Velociraptor ("Animated
-  LowPoly Dinosaurs", itch.io); Fox, Bird, Fish ("Animals Pack"), Llama, Pig, Sheep ("Farm Animals"), Wolf ("Animal
-  Pack Vol.2"), Dragon, Skeleton, Slime ("Animated Monster Pack"), from the OpenGameArt mirrors
-  (opengameart.org/content/all-cc0-uploader-quaternius). Animation names normalised on import (extra_import.gd).
-  Dark Moon additions: Trex, Triceratops, Stegosaurus, Apatosaurus, Parasaurolophus ("Animated LowPoly Dinosaurs",
-  itch.io); Spider, Wasp ("Easy Enemy Pack", itch.io); Shark, Whale, Manta, Dolphin ("LowPoly Animated Fish", itch.io);
-  Zebra ("LowPoly Animated Animals", itch.io); Donkey, Horse_White, Cow, ShibaInu ("Ultimate Animated Animals",
-  quaternius.com).
-  Legends & Grudges additions (OpenGameArt mirrors): Bat ("Animated Monster Pack"); Cat, Dog ("Animal Pack Vol.2");
-  Chick ("Animals Pack"); Pug, Horse ("Farm Animals"); BogFish (Fish2 from "Animated Fish Pack"); Wizard, Warrior,
-  Rogue, Monk, Cleric, Ranger with their textures ("RPG Characters - Nov 2020",
-  opengameart.org/content/lowpoly-rpg-characters).
-- `monsters/cute/`: "Cute Animated Monsters" (Aug 2020), from the OpenGameArt mirror
-  https://opengameart.org/content/textured-cute-monster-pack. Textures brightened x1.5 for the game's lighting.
+- `monsters/` (`blob/Cat.gltf`): the room's cat, from the "Ultimate Monsters" pack.
 - `buildings/`: "Ultimate Fantasy RTS" pack (files renamed to card ids).
 - `nature/`: "Stylized Nature MegaKit" (Standard), https://quaternius.com/packs/stylizednaturemegakit.html,
   downloaded from the OpenGameArt mirror https://opengameart.org/content/stylized-nature-megakit.
@@ -94,5 +79,6 @@ Change: the black background square was removed so the icons are white on transp
 - `card_backs/`: card back designs made for this game by the project owner (backs_v4 set: Ember Reign,
   Frostbound, Verdant Bloom, Candy Realm), resized to 256x358. `card_backs/dunes.png` is Frostbound recoloured to sand gold
   (tools/make_dunes_back.gd).
-- `monsters/extra/Mycelia.glb`: Mycelia, Spore Weaver, modelled, rigged and animated for this game in Blender
-  (source file `art_src/Mycelia.blend`).
+- `monsters/forged/`: every creature, modelled, rigged and animated for this game in Blender. Mycelia
+  (`mycelia_spore_weaver.glb`, source `art_src/Mycelia.blend`) was made by hand; the rest are built by the
+  recipes in `art_src/forge/creatures/` (run them in Blender, see `art_src/forge/core.py`).

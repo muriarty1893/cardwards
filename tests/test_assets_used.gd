@@ -22,11 +22,11 @@ func test_monster_models_used() -> bool:
 	var used: Dictionary = {}
 	for id: StringName in VisualDB.ids():
 		used[VisualDB.model_path(id)] = true
-	for group: String in ["big", "blob", "flying"]:
-		for f: String in _files("res://assets/monsters/" + group, "gltf"):
-			assert_true(used.has("res://assets/monsters/%s/%s" % [group, f]), "monsters/%s/%s is used" % [group, f])
-	for f: String in _files("res://assets/monsters/cute", "fbx"):
-		assert_true(used.has("res://assets/monsters/cute/" + f), "monsters/cute/%s is used" % f)
+	for f: String in _files("res://assets/monsters/forged", "glb"):
+		assert_true(used.has("res://assets/monsters/forged/" + f), "monsters/forged/%s is used" % f)
+	# The room's sleeping cat is the one pack model left.
+	assert_true(ResourceLoader.exists(Room.CAT), "the room's cat model is there")
+	assert_eq(_files("res://assets/monsters/blob", "gltf"), PackedStringArray(["Cat.gltf"]), "only the cat is left in blob/")
 	return true
 
 

@@ -11,7 +11,7 @@ func _surfaces(root: Node) -> Array[Material]:
 
 
 func test_toon_apply_replaces_all_materials() -> bool:
-	var inst := (load("res://assets/monsters/blob/Mushnub.gltf") as PackedScene).instantiate()
+	var inst := (load(Room.CAT) as PackedScene).instantiate()
 	Toon.apply(inst, Color("#ff6a2a", 0.55))
 	var mats: Array[Material] = _surfaces(inst)
 	assert_true(mats.size() > 0, "has surfaces")
@@ -25,7 +25,7 @@ func test_toon_apply_replaces_all_materials() -> bool:
 
 
 func test_toon_fx_variant() -> bool:
-	var inst := (load("res://assets/monsters/blob/Mushnub.gltf") as PackedScene).instantiate()
+	var inst := (load(Room.CAT) as PackedScene).instantiate()
 	Toon.apply(inst, Toon.NO_TINT, 0.0, true)
 	for m: Material in _surfaces(inst):
 		var sm := m as ShaderMaterial

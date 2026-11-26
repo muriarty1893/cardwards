@@ -41,9 +41,3 @@ def build(C):
                    0.05, "wisp", "chest", segs=5, smooth=True)
     tip = V(C.anch["t2"])
     props.flame(C, tip, 0.12, "tail3", "wisp", "fur2", n=4, lean=(0, 0.8, 0.3), name="TailWisp")
-    for side in ("L", "R"):
-        for tag in ("f",):
-            paw = C.bones[f"shin_{tag}.{side}"]["tail"]
-            for k in (-1, 0, 1):
-                C.cone(f"Claw{side}{k}", (paw.x + 0.035 * k, paw.y - 0.11, 0.06), (paw.x + 0.04 * k, paw.y - 0.16, 0.01),
-                       0.016, "claw", f"shin_{tag}.{side}", segs=4)
