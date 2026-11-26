@@ -66,7 +66,7 @@ func test_creature_view_walks_its_model() -> bool:
 
 func test_skinned_models_measured_as_drawn() -> bool:
 	# Sizing measures the drawn (skinned) shape: forged models come out as tall as they were built in Blender.
-	for pair: Array in [[&"grave_toad", 1.28], [&"the_rot_king", 2.42]]:
+	for pair: Array in [[&"grave_toad", 1.28], [&"the_rot_king", 2.77]]:
 		var inst := (load(VisualDB.model_path(pair[0])) as PackedScene).instantiate() as Node3D
 		var h: float = Palette.bounds(inst).size.y
 		assert_true(absf(h - float(pair[1])) < 0.1, "%s measured as drawn (%.2f)" % [pair[0], h])

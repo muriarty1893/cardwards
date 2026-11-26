@@ -67,7 +67,9 @@ static func apply(root: Node, tint: Color = NO_TINT, sway: float = 0.0, fx: bool
 			if base:
 				tex = base.albedo_texture
 				col = base.albedo_color
-				vcol = base.vertex_color_use_as_albedo
+				# Forged creatures paint their sculpted bodies in vertex colours ("<part>_paint" materials);
+				# the glTF import does not switch vertex colours on by itself.
+				vcol = base.vertex_color_use_as_albedo or base.resource_name.ends_with("_paint")
 				if base.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR:
 					cut = base.alpha_scissor_threshold
 				elif base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and tex:

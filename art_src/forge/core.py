@@ -61,6 +61,8 @@ class Creature:
         self.stride = 1.0
         self.weight_power = 4.0
         self.relax = 0.4         # Laplacian smoothing on skin bodies (up to 1.0 for big round bodies)
+        self.warps = []
+        self.auto_weight = set()  # part names weighted by Blender's heat weighting (sculpted bodies)
         self.anch = {}           # named points set by kits (brow, snout, chest, back...)
 
     def surf(self, x, z, part="Body", dir=(0, 1, 0), y=None, sink=0.0):
@@ -325,7 +327,22 @@ class Creature:
             self.cone(f"{name}{i}", p, V(p) + V(down) * size, size * 0.35, m, bone, segs=5)
 
     # ---------- build
+    def warp(self, fn):
+        """Reshapes the whole creature (every part and bone) by fn(Vector) -> Vector before rigging, e.g. to lower
+        a body and shorten its legs without touching the feet."""
+        self.warps.append(fn)
+
+    def _apply_warps(self):
+        for fn in self.warps:
+            for ob, _, _ in self.parts:
+                for v in ob.data.vertices:
+                    v.co = fn(v.co.copy())
+                ob.data.update()
+            for b in self.bones.values():
+                b["head"], b["tail"] = fn(b["head"].copy()), fn(b["tail"].copy())
+
     def finish(self, export=True):
+        self._apply_warps()
         rig = self._make_rig()
         body = self._join_and_weight(rig)
         from . import motion
@@ -367,6 +384,9 @@ class Creature:
         deform = [n for n, b in self.bones.items() if b["deform"]]
         segs = {n: (self.bones[n]["head"], self.bones[n]["tail"]) for n in deform}
         for ob, bone, allowed in self.parts:
+            if ob.name in self.auto_weight:
+                self._heat_weight(ob, rig)
+                continue
             for n in deform:
                 ob.vertex_groups.new(name=n)
             if bone:
@@ -389,6 +409,13 @@ class Creature:
                     if w / tot > 0.02:
                         ob.vertex_groups[n].add([v.index], w / tot, 'REPLACE')
         objs = [p[0] for p in self.parts]
+        if self.auto_weight:
+            # painted bodies carry vertex colours; give every other part plain white so the colours join cleanly
+            for o in objs:
+                if "Col" not in o.data.color_attributes:
+                    a = o.data.color_attributes.new("Col", 'FLOAT_COLOR', 'POINT')
+                    for d in a.data:
+                        d.color = (1, 1, 1, 1)
         for o in bpy.context.selected_objects:
             o.select_set(False)
         for o in objs:
@@ -402,6 +429,30 @@ class Creature:
         mod = body.modifiers.new("Armature", 'ARMATURE')
         mod.object = rig
         return body
+
+    def _heat_weight(self, ob, rig):
+        """Blender's automatic (bone heat) weights for one sculpted part; falls back to envelope weights."""
+        for o in bpy.context.selected_objects:
+            o.select_set(False)
+        ob.select_set(True)
+        rig.select_set(True)
+        bpy.context.view_layer.objects.active = rig
+        try:
+            bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+        except RuntimeError:
+            bpy.ops.object.parent_set(type='ARMATURE_ENVELOPE')
+        ob.modifiers.clear()
+        mw = ob.matrix_world.copy()
+        ob.parent = None
+        ob.matrix_world = mw
+        deform = [n for n, b in self.bones.items() if b["deform"]]
+        for n in deform:
+            if n not in ob.vertex_groups:
+                ob.vertex_groups.new(name=n)
+        unweighted = [v.index for v in ob.data.vertices if not v.groups]
+        if unweighted:
+            ob.vertex_groups[deform[0]].add(unweighted, 1.0, 'REPLACE')
+        rig.select_set(False)
 
     def export(self, rig, body):
         import os
