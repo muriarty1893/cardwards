@@ -32,7 +32,8 @@ func _ready() -> void:
 	if not ids.is_empty():
 		_ids(ids)
 		cam.fov = 32
-		cam.look_at_from_position(Vector3(0, 4.2, 7.5), Vector3(0, 0.55, 0))
+		var far: float = 3.0 + 1.55 * ids.size()
+		cam.look_at_from_position(Vector3(0, far * 0.56, far), Vector3(0, 0.55, 0))
 	elif "--cards" in OS.get_cmdline_user_args():
 		_cards()
 		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
