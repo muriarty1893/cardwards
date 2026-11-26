@@ -206,3 +206,27 @@ def recolor(ob, fn, hexcol, soft=True):
 def smoothstep(a, b, x):
     t = max(0.0, min(1.0, (x - a) / (b - a)))
     return t * t * (3 - 2 * t)
+
+
+def _h3(i, j, k, s):
+    n = (i * 73856093) ^ (j * 19349663) ^ (k * 83492791) ^ (s * 2654435761)
+    n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
+    return (n & 0xFFFF) / 65535.0
+
+
+def cracks(p, scale=0.12, width=0.18, seed=1):
+    """0..1 weight along a web of thin cracks (cell borders of 3D Voronoi cells about `scale` across): magma
+    veins, ice fractures, stone seams. width is the crack thickness as a fraction of a cell."""
+    q = V((p.x / scale, p.y / scale, p.z / scale))
+    ci, cj, ck = math.floor(q.x), math.floor(q.y), math.floor(q.z)
+    d1 = d2 = 9.0
+    for i in range(ci - 1, ci + 2):
+        for j in range(cj - 1, cj + 2):
+            for k in range(ck - 1, ck + 2):
+                f = V((i + _h3(i, j, k, seed), j + _h3(i, j, k, seed + 7), k + _h3(i, j, k, seed + 13)))
+                d = (f - q).length
+                if d < d1:
+                    d1, d2 = d, d1
+                elif d < d2:
+                    d2 = d
+    return smoothstep(width, 0.0, d2 - d1)
